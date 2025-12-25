@@ -219,3 +219,15 @@ function countSentences(text) {
   const m = String(text || "").match(/[.!?]+/g);
   return m ? m.length : 1;
 }
+
+{
+  "quest_title": "Quest: Funnel Contamination",
+  "dm_intro": "Try precision. It’s unfashionable, but effective.",
+  "dm_midpoint": "Same elements. Same laws. New excuse?",
+  "dm_verdict": "Stabilized. Predictable outcome when you stop guessing.",
+  "used_voice_ids": ["EXP_INTRO_0001", "QUEST_OPEN_UR_0001"],
+  "paraphrases": [
+    { "source_id": "WIN_0007", "text": "Stabilized. Now explain why it worked." }
+  ],
+  "reasoning_tags": ["panic", "overcommitment"]
+}
