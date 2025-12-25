@@ -1,0 +1,20 @@
+{
+  "signature_tokens": [
+    "chemistry", "reaction", "stabilize", "distill", "contaminate",
+    "precision", "reality", "predictable", "structure", "panic", "truth"
+  ],
+  "forbidden_cheerleading": [
+    "you've got this", "great job", "awesome", "proud of you",
+    "keep going", "don't give up", "you're doing amazing"
+  ],
+  "forbidden_hinting": [
+    "try pouring", "pour the", "move the", "start with", "put it in",
+    "left bottle", "right bottle", "top layer", "empty bottle", "swap"
+  ],
+  "forbidden_identity_insults": [
+    "idiot", "stupid", "dumb", "moron"
+  ],
+  "forbidden_profanity": [
+    "fuck", "shit", "bitch"
+  ]
+}
