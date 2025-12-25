@@ -4,59 +4,43 @@
   <meta charset="utf-8" />
   <title>The Marketing Alchemist — Experimental Lab</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-
   <style>
-    :root {
-      --bg: #0b0f14;
-      --glass: rgba(255,255,255,0.9);
-      --glow: rgba(56,189,248,0.35);
-      --text: #cbd5e1;
-    }
-
+    :root { color-scheme: dark; }
     html, body {
       margin: 0;
       height: 100%;
-      background: radial-gradient(circle at top, #101826, #05070c);
       overflow: hidden;
+      background: radial-gradient(circle at top, #101826, #05070c);
       touch-action: none;
-      color: var(--text);
       font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      color: #cbd5e1;
     }
-
-    canvas {
-      display: block;
-      width: 100vw;
-      height: 100vh;
-    }
-
+    canvas { display:block; width:100vw; height:100vh; }
     .hud {
       position: fixed;
       left: 16px;
       bottom: 16px;
-      max-width: 280px;
+      max-width: 360px;
       font-size: 13px;
       line-height: 1.4;
-      opacity: 0.9;
+      opacity: 0.92;
+      user-select: none;
+      pointer-events: none;
     }
-
-    .title {
-      font-weight: 600;
-      margin-bottom: 6px;
-    }
+    .title { font-weight: 650; margin-bottom: 6px; }
+    .msg { opacity: 0.9; }
   </style>
 </head>
 <body>
-
   <canvas id="game"></canvas>
-
   <div class="hud">
-    <div class="title">Experiment 01: Contaminated Funnel</div>
-    The elements behave whether you respect them or not.
+    <div class="title" id="hudTitle">Experiment 01: Contaminated Funnel</div>
+    <div class="msg" id="hudMsg">Drag a vessel onto another. The elements behave whether you respect them or not.</div>
   </div>
 
 <script>
 /* ===========================
-   Canvas Setup
+   Canvas setup
 =========================== */
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -71,7 +55,17 @@ window.addEventListener("resize", resize);
 resize();
 
 /* ===========================
-   Compounds (Canon)
+   HUD messaging (Alchemist tone)
+=========================== */
+const hudMsg = document.getElementById("hudMsg");
+let msgTimer = 0;
+function say(text, seconds = 1.6) {
+  hudMsg.textContent = text;
+  msgTimer = seconds;
+}
+
+/* ===========================
+   Canon compounds
 =========================== */
 const COMPOUNDS = {
   clarity:   "#38bdf8",
@@ -82,127 +76,469 @@ const COMPOUNDS = {
 };
 
 /* ===========================
-   Labware Renderer
+   Helpers
+=========================== */
+function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+function lerp(a,b,t){ return a + (b-a)*t; }
+function dist(ax,ay,bx,by){ return Math.hypot(ax-bx, ay-by); }
+
+/* ===========================
+   Vessel
 =========================== */
 class Vessel {
   constructor(x, y, type, capacity, contents=[]) {
-    this.x = x;
-    this.y = y;
+    this.x = x; this.y = y;
+    this.ox = x; this.oy = y; // origin
     this.type = type;
     this.capacity = capacity;
-    this.contents = contents;
+    this.contents = contents.slice(); // bottom -> top (we'll treat last as top)
     this.selected = false;
+
+    // feedback
+    this.shakeT = 0;
+    this.shakeDir = 1;
   }
 
-  draw() {
-    ctx.save();
-    ctx.translate(this.x, this.y);
+  top() {
+    return this.contents.length ? this.contents[this.contents.length - 1] : null;
+  }
 
-    // outline
+  space() {
+    return this.capacity - this.contents.length;
+  }
+
+  // how many same-color units at top
+  topRunCount() {
+    const t = this.top();
+    if (!t) return 0;
+    let c = 0;
+    for (let i = this.contents.length - 1; i >= 0; i--) {
+      if (this.contents[i] === t) c++;
+      else break;
+    }
+    return c;
+  }
+
+  isStable() {
+    // stable if full and all one compound OR empty
+    if (this.contents.length === 0) return false;
+    if (this.contents.length !== this.capacity) return false;
+    return this.contents.every(v => v === this.contents[0]);
+  }
+
+  hit(px, py) {
+    return (px > this.x - 34 && px < this.x + 34 && py > this.y - 100 && py < this.y + 28);
+  }
+
+  nudgeShake() {
+    this.shakeT = 0.22;
+    this.shakeDir *= -1;
+  }
+
+  draw({overrideX=null, overrideY=null, tilt=0, lift=0, alpha=1} = {}) {
+    const x = overrideX ?? this.x;
+    const y = overrideY ?? this.y;
+
+    // shake offset
+    let sx = 0;
+    if (this.shakeT > 0) {
+      sx = Math.sin((1 - this.shakeT) * Math.PI * 10) * 6 * this.shakeDir;
+    }
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(x + sx, y - lift);
+    ctx.rotate(tilt);
+
+    // outline path (used for clipping)
     ctx.lineWidth = 2;
     ctx.strokeStyle = "rgba(255,255,255,0.85)";
     ctx.beginPath();
 
     if (this.type === "tube") {
-      ctx.moveTo(-18, -80);
+      ctx.moveTo(-18, -86);
       ctx.lineTo(-18, 0);
       ctx.quadraticCurveTo(0, 18, 18, 0);
-      ctx.lineTo(18, -80);
+      ctx.lineTo(18, -86);
     } else { // flask
-      ctx.moveTo(-26, -80);
-      ctx.lineTo(-12, -40);
-      ctx.lineTo(-28, 0);
-      ctx.quadraticCurveTo(0, 26, 28, 0);
-      ctx.lineTo(12, -40);
-      ctx.lineTo(26, -80);
+      ctx.moveTo(-26, -86);
+      ctx.lineTo(-12, -46);
+      ctx.lineTo(-30, 0);
+      ctx.quadraticCurveTo(0, 26, 30, 0);
+      ctx.lineTo(12, -46);
+      ctx.lineTo(26, -86);
     }
     ctx.closePath();
     ctx.stroke();
 
-    // glow if selected
+    // selection glow
     if (this.selected) {
+      ctx.save();
       ctx.shadowBlur = 18;
-      ctx.shadowColor = "rgba(56,189,248,0.6)";
+      ctx.shadowColor = "rgba(56,189,248,0.65)";
       ctx.stroke();
-      ctx.shadowBlur = 0;
+      ctx.restore();
     }
 
-    // clip liquid
+    // clip interior for liquid
+    ctx.save();
     ctx.clip();
 
-    const h = 80;
-    const unit = h / this.capacity;
+    // liquid geometry
+    const innerH = 86;               // height for stacking
+    const unit = innerH / this.capacity;
 
+    // draw from bottom upward
     for (let i = 0; i < this.contents.length; i++) {
-      const color = COMPOUNDS[this.contents[i]];
-      ctx.fillStyle = color;
-      ctx.fillRect(
-        -26,
-        -i * unit,
-        52,
-        unit
-      );
+      const compound = this.contents[i];
+      ctx.fillStyle = COMPOUNDS[compound] || "#fff";
+      const yTop = 0 - (i + 1) * unit;
+      ctx.fillRect(-30, yTop, 60, unit);
     }
 
+    // subtle glass highlight
+    ctx.globalAlpha *= 0.25;
+    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    ctx.fillRect(-14, -84, 4, 96);
     ctx.restore();
-  }
 
-  hit(px, py) {
-    return (
-      px > this.x - 30 &&
-      px < this.x + 30 &&
-      py > this.y - 90 &&
-      py < this.y + 20
-    );
+    ctx.restore();
   }
 }
 
 /* ===========================
-   Scene Setup
+   Board setup
 =========================== */
+function layoutVessels() {
+  const cols = 4;
+  const gap = 96;
+  const startX = Math.max(90, Math.floor((innerWidth - (cols-1)*gap) / 2));
+  const startY = Math.floor(innerHeight * 0.55);
+
+  const positions = [
+    [startX + 0*gap, startY],
+    [startX + 1*gap, startY],
+    [startX + 2*gap, startY],
+    [startX + 3*gap, startY]
+  ];
+
+  vessels.forEach((v, i) => {
+    v.ox = positions[i][0];
+    v.oy = positions[i][1];
+    if (!drag.state || drag.source !== v) {
+      v.x = v.ox; v.y = v.oy;
+    }
+  });
+}
+
 const vessels = [
-  new Vessel(120, 260, "tube", 4, ["clarity","clarity","pain","promise"]),
-  new Vessel(200, 260, "tube", 4, ["promise","pain"]),
+  new Vessel(120, 260, "tube", 4, ["promise","pain","clarity","clarity"]),
+  new Vessel(200, 260, "tube", 4, ["pain","promise"]),
   new Vessel(280, 260, "flask", 4, []),
   new Vessel(360, 260, "flask", 4, [])
 ];
 
-let selected = null;
+layoutVessels();
+window.addEventListener("resize", layoutVessels);
 
 /* ===========================
-   Input
+   Drag-to-pour controller
 =========================== */
-canvas.addEventListener("pointerdown", e => {
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+const drag = {
+  state: "idle", // idle | dragging | animating
+  source: null,
+  target: null,
+  startX: 0, startY: 0,
+  x: 0, y: 0,
+  offsetX: 0, offsetY: 0,
+  tilt: 0,
+  lift: 0,
+  anim: null
+};
 
-  for (const v of vessels) {
-    if (v.hit(x,y)) {
-      if (selected) selected.selected = false;
-      selected = v;
+function clearSelection() {
+  vessels.forEach(v => v.selected = false);
+}
+
+function getPointerPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+}
+
+canvas.addEventListener("pointerdown", (e) => {
+  if (drag.state === "animating") return;
+  const p = getPointerPos(e);
+
+  for (let i = vessels.length - 1; i >= 0; i--) {
+    const v = vessels[i];
+    if (v.hit(p.x, p.y)) {
+      drag.state = "dragging";
+      drag.source = v;
+      drag.target = null;
+      drag.startX = p.x; drag.startY = p.y;
+      drag.x = p.x; drag.y = p.y;
+      drag.offsetX = v.x - p.x;
+      drag.offsetY = v.y - p.y;
+      drag.tilt = 0;
+      drag.lift = 14;
+
+      clearSelection();
       v.selected = true;
+      canvas.setPointerCapture(e.pointerId);
       return;
     }
   }
 });
 
+canvas.addEventListener("pointermove", (e) => {
+  if (drag.state !== "dragging") return;
+  const p = getPointerPos(e);
+  drag.x = p.x; drag.y = p.y;
+
+  // move vessel with finger
+  drag.source.x = p.x + drag.offsetX;
+  drag.source.y = p.y + drag.offsetY;
+
+  // determine hover target
+  drag.target = null;
+  for (const v of vessels) {
+    if (v !== drag.source && v.hit(p.x, p.y)) {
+      drag.target = v;
+      break;
+    }
+  }
+
+  // tilt based on direction toward target
+  if (drag.target) {
+    const dx = drag.target.ox - drag.source.x;
+    drag.tilt = clamp(dx / 220, -0.35, 0.35);
+  } else {
+    const dx = p.x - drag.startX;
+    drag.tilt = clamp(dx / 280, -0.25, 0.25);
+  }
+});
+
+canvas.addEventListener("pointerup", (e) => {
+  if (drag.state !== "dragging") return;
+
+  const src = drag.source;
+  const tgt = drag.target;
+
+  // snap back unless a pour happens
+  drag.state = "animating";
+
+  const snapBack = () => {
+    // animate back to origin
+    const a = {
+      t: 0,
+      dur: 0.18,
+      fromX: src.x, fromY: src.y, fromTilt: drag.tilt,
+      toX: src.ox, toY: src.oy, toTilt: 0,
+      onDone: () => {
+        src.x = src.ox; src.y = src.oy;
+        drag.state = "idle";
+        drag.source = null;
+        drag.target = null;
+        clearSelection();
+      }
+    };
+    drag.anim = a;
+  };
+
+  if (!tgt) { snapBack(); return; }
+
+  // attempt pour
+  const result = tryPour(src, tgt);
+  if (!result.ok) {
+    src.nudgeShake();
+    say(result.msg, 1.5);
+    snapBack();
+    return;
+  }
+
+  // animate successful pour: lift->tilt->transfer->return
+  say(result.msg, 1.2);
+  animatePour(src, tgt, result.amount, snapBack);
+});
+
 /* ===========================
-   Loop
+   Chemistry rules (pour)
 =========================== */
-function loop() {
+function tryPour(src, tgt) {
+  const top = src.top();
+  if (!top) return { ok:false, msg:"Empty vessel. Bold move." };
+
+  if (tgt.space() <= 0) return { ok:false, msg:"No capacity. Physics wins." };
+
+  const tgtTop = tgt.top();
+  if (tgtTop && tgtTop !== top) return { ok:false, msg:"Chemistry says no." };
+
+  // amount to pour
+  const run = src.topRunCount();
+  const amount = Math.min(run, tgt.space());
+
+  if (amount <= 0) return { ok:false, msg:"Nothing to transfer. Obviously." };
+
+  return { ok:true, amount, msg: "Reaction in progress. Try not to contaminate it." };
+}
+
+/* ===========================
+   Pour animation + transfer
+=========================== */
+function animatePour(src, tgt, amount, onDone) {
+  // We “fake” the pour by delaying the actual array transfer until mid-animation.
+  const start = performance.now();
+  const dur = 520; // ms
+  const fromX = src.x, fromY = src.y;
+  const toX = src.ox, toY = src.oy;
+
+  const hoverX = lerp(fromX, tgt.ox, 0.65);
+  const hoverY = lerp(fromY, tgt.oy, 0.35);
+
+  let transferred = false;
+
+  drag.anim = {
+    kind: "pour",
+    update: (now) => {
+      const t = clamp((now - start) / dur, 0, 1);
+
+      // stage split
+      const t1 = clamp(t / 0.35, 0, 1);           // move toward target
+      const t2 = clamp((t - 0.35) / 0.35, 0, 1);  // tilt + pour window
+      const t3 = clamp((t - 0.70) / 0.30, 0, 1);  // return-ish (snapBack will handle final)
+
+      // move source nearer target
+      src.x = lerp(fromX, hoverX, t1);
+      src.y = lerp(fromY, hoverY, t1);
+
+      // tilt during pour
+      drag.tilt = lerp(drag.tilt, clamp((tgt.ox - src.x)/180, -0.55, 0.55), t2);
+      drag.lift = lerp(16, 26, t2);
+
+      // transfer mid pour window
+      if (!transferred && t >= 0.52) {
+        const compound = src.top();
+        for (let i=0; i<amount; i++) {
+          // remove from src
+          src.contents.pop();
+          // add to tgt
+          tgt.contents.push(compound);
+        }
+        transferred = true;
+
+        // tiny feedback if vessel stabilized
+        if (tgt.isStable()) {
+          say("Stabilized. Predictable outcome when you stop guessing.", 1.6);
+        }
+      }
+
+      // settle
+      drag.lift = lerp(drag.lift, 14, t3);
+      drag.tilt = lerp(drag.tilt, 0, t3);
+
+      if (t >= 1) {
+        drag.anim = null;
+        onDone();
+      }
+    }
+  };
+}
+
+/* ===========================
+   Render
+=========================== */
+function drawBench() {
+  // bench surface
+  ctx.fillStyle = "#05070c";
+  const benchY = Math.floor(innerHeight * 0.64);
+  ctx.fillRect(0, benchY, innerWidth, innerHeight - benchY);
+
+  // subtle bench highlight
+  ctx.globalAlpha = 0.08;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, benchY, innerWidth, 2);
+  ctx.globalAlpha = 1;
+}
+
+function drawTargetHint() {
+  if (drag.state !== "dragging" || !drag.source) return;
+  const tgt = drag.target;
+  if (!tgt) return;
+
+  // ring on target
+  ctx.save();
+  ctx.translate(tgt.ox, tgt.oy);
+  ctx.strokeStyle = "rgba(56,189,248,0.65)";
+  ctx.lineWidth = 2;
+  ctx.shadowBlur = 14;
+  ctx.shadowColor = "rgba(56,189,248,0.5)";
+  ctx.beginPath();
+  ctx.ellipse(0, -36, 34, 48, 0, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function loop(now) {
+  // background
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // lab bench
-  ctx.fillStyle = "#05070c";
-  ctx.fillRect(0, 300, innerWidth, innerHeight);
+  // faint ambient vignette
+  ctx.save();
+  ctx.globalAlpha = 0.12;
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0,0,innerWidth,innerHeight);
+  ctx.restore();
 
-  for (const v of vessels) v.draw();
+  drawBench();
+  drawTargetHint();
+
+  // update feedback timers
+  for (const v of vessels) {
+    if (v.shakeT > 0) v.shakeT = Math.max(0, v.shakeT - 1/60);
+  }
+  if (msgTimer > 0) msgTimer -= 1/60;
+
+  // update animation
+  if (drag.anim?.kind === "pour") drag.anim.update(now);
+  else if (drag.anim) {
+    // snap animation
+    drag.anim.t += 1/60;
+    const t = clamp(drag.anim.t / drag.anim.dur, 0, 1);
+    const ease = t * (2 - t); // easeOutQuad-ish
+    const a = drag.anim;
+    a.source = drag.source;
+    a.source.x = lerp(a.fromX, a.toX, ease);
+    a.source.y = lerp(a.fromY, a.toY, ease);
+    drag.tilt = lerp(a.fromTilt, a.toTilt, ease);
+    drag.lift = lerp(14, 0, ease);
+    if (t >= 1) {
+      const done = a.onDone;
+      drag.anim = null;
+      done();
+    }
+  }
+
+  // draw all vessels; draw dragged on top
+  const dragged = (drag.state === "dragging" || drag.state === "animating") ? drag.source : null;
+
+  for (const v of vessels) {
+    if (v === dragged) continue;
+    v.draw();
+  }
+
+  if (dragged) {
+    dragged.draw({
+      overrideX: dragged.x,
+      overrideY: dragged.y,
+      tilt: drag.tilt,
+      lift: drag.lift,
+      alpha: 1
+    });
+  }
 
   requestAnimationFrame(loop);
 }
-loop();
+requestAnimationFrame(loop);
 </script>
-
 </body>
 </html>
