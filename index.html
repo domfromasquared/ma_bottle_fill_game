@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>The Marketing Alchemist — Experimental Lab</title>
+  <title>The Marketing Alchemist — Campaign Lab</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
   <style>
     :root { color-scheme: dark; }
@@ -16,29 +16,92 @@
       color: #cbd5e1;
     }
     canvas { display:block; width:100vw; height:100vh; }
+
     .hud {
       position: fixed;
       left: 16px;
+      right: 16px;
       bottom: 16px;
-      max-width: 360px;
+      max-width: 720px;
       font-size: 13px;
-      line-height: 1.4;
-      opacity: 0.92;
+      line-height: 1.35;
+      opacity: 0.95;
       user-select: none;
       pointer-events: none;
     }
-    .title { font-weight: 650; margin-bottom: 6px; }
-    .msg { opacity: 0.9; }
+    .row {
+      display:flex;
+      gap: 10px;
+      align-items:flex-start;
+      flex-wrap: wrap;
+    }
+    .panel {
+      pointer-events: none;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(2, 6, 12, 0.55);
+      border: 1px solid rgba(148,163,184,0.18);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      max-width: 520px;
+    }
+    .title { font-weight: 700; margin-bottom: 6px; letter-spacing: 0.2px; }
+    .meta { opacity: 0.85; margin-bottom: 6px; }
+    .msg { opacity: 0.92; }
+
+    .controls {
+      pointer-events: auto;
+      display:flex;
+      gap: 8px;
+      align-items:center;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(2, 6, 12, 0.55);
+      border: 1px solid rgba(148,163,184,0.18);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+    button {
+      appearance: none;
+      border: 1px solid rgba(148,163,184,0.25);
+      background: rgba(15, 23, 42, 0.65);
+      color: #e2e8f0;
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:active { transform: translateY(1px); }
+    .hint {
+      opacity: 0.8;
+      font-weight: 600;
+      padding-left: 6px;
+    }
   </style>
 </head>
 <body>
   <canvas id="game"></canvas>
+
   <div class="hud">
-    <div class="title" id="hudTitle">Experiment 01: Contaminated Funnel</div>
-    <div class="msg" id="hudMsg">Drag a vessel onto another. The elements behave whether you respect them or not.</div>
+    <div class="row">
+      <div class="panel">
+        <div class="title" id="hudTitle">Experiment</div>
+        <div class="meta" id="hudMeta"></div>
+        <div class="msg" id="hudMsg"></div>
+      </div>
+
+      <div class="controls">
+        <button id="btnPrev" title="Previous experiment">Prev</button>
+        <button id="btnNext" title="Next experiment">Next</button>
+        <span class="hint">Drag-to-pour.</span>
+      </div>
+    </div>
   </div>
 
-<script>
+<script type="module">
+/* ===========================
+   Import Canon Schema
+=========================== */
+import { ELEMENTS, THESES, pickLoreLine } from "./element_schema.js";
+
 /* ===========================
    Canvas setup
 =========================== */
@@ -51,116 +114,321 @@ function resize() {
   canvas.height = Math.floor(innerHeight * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
-window.addEventListener("resize", resize);
+window.addEventListener("resize", () => { resize(); layoutVessels(); });
 resize();
 
 /* ===========================
-   HUD messaging (Alchemist tone)
+   HUD
 =========================== */
-const hudMsg = document.getElementById("hudMsg");
+const hudTitle = document.getElementById("hudTitle");
+const hudMeta  = document.getElementById("hudMeta");
+const hudMsg   = document.getElementById("hudMsg");
+
 let msgTimer = 0;
-function say(text, seconds = 1.6) {
+function say(text, seconds=1.6) {
   hudMsg.textContent = text;
   msgTimer = seconds;
 }
 
 /* ===========================
-   Canon compounds
+   Deterministic RNG (seeded)
 =========================== */
-const COMPOUNDS = {
-  clarity:   "#38bdf8",
-  pain:      "#ec4899",
-  promise:   "#facc15",
-  mechanism: "#22d3ee",
-  chaos:     "#ef4444"
+function makeRng(seedStr) {
+  function xmur3(str){
+    let h = 1779033703 ^ str.length;
+    for (let i=0; i<str.length; i++) {
+      h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+      h = (h << 13) | (h >>> 19);
+    }
+    return function() {
+      h = Math.imul(h ^ (h >>> 16), 2246822507);
+      h = Math.imul(h ^ (h >>> 13), 3266489909);
+      return (h ^= (h >>> 16)) >>> 0;
+    };
+  }
+  function mulberry32(a){
+    return function() {
+      let t = (a += 0x6D2B79F5);
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const seed = xmur3(seedStr)();
+  const rand = mulberry32(seed);
+  return {
+    f: () => rand(),
+    int: (min, max) => Math.floor(rand() * (max - min + 1)) + min,
+    pick: (arr) => arr[Math.floor(rand() * arr.length)],
+    shuffle: (arr) => {
+      const a = arr.slice();
+      for (let i=a.length-1; i>0; i--) {
+        const j = Math.floor(rand() * (i+1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+  };
+}
+
+/* ===========================
+   Campaign plan (v1)
+   - You can later move this to JSON.
+=========================== */
+const CAMPAIGN = {
+  acts: [
+    {
+      id: "ACT_I",
+      tier: 1,
+      name: "The Contaminated Lab",
+      difficulty_range: [1, 3],
+      quests: [
+        {
+          id: "Q1",
+          name: "Funnel Contamination",
+          theses: ["PA_without_PR", "UR_without_CL", "Traffic_without_ME"]
+        }
+      ]
+    }
+  ]
 };
 
 /* ===========================
-   Helpers
+   Level Reasoning Pipeline (v1)
+   - DM-like, deterministic, schema-driven
+=========================== */
+function difficultyScore(elements, constraints, thesisKey) {
+  const base = elements.reduce((s, sym) => s + (ELEMENTS[sym]?.difficulty_weight ?? 2), 0);
+  const volatility = elements.reduce((s, sym) => s + (ELEMENTS[sym]?.volatility ?? 0.35), 0) / Math.max(1, elements.length);
+  const illegalRisk = THESES[thesisKey]?.illegal_rule ? 1.1 : 0;
+  const safety = (constraints.empties * 0.9) - (constraints.locks * 0.25);
+  const score = base * 0.35 + volatility * 2.25 + illegalRisk - safety * 0.4;
+  return { score: Math.max(1, score), volatility };
+}
+
+function assembleElements({ act, thesisKey, rng }) {
+  const thesis = THESES[thesisKey];
+  const keys = Object.keys(ELEMENTS);
+
+  const byRole = (role) => keys.filter(k => ELEMENTS[k].role === role);
+
+  const foundational = byRole("foundational");
+  const structural   = byRole("structural");
+  const catalysts    = byRole("catalyst");
+  const stabilizers  = byRole("stabilizer");
+  const volatiles    = byRole("volatile");
+  const transmission = byRole("transmission");
+  const conversion   = byRole("conversion");
+
+  const set = new Set([...(thesis.must_include || [])]);
+
+  const addFrom = (pool, n) => {
+    let count = n;
+    for (const sym of rng.shuffle(pool)) {
+      if (count <= 0) break;
+      if (thesis.must_exclude?.includes(sym)) continue;
+      set.add(sym);
+      count--;
+    }
+  };
+
+  const tier = act.tier ?? 1;
+
+  // Base composition by tier (tight early)
+  addFrom(foundational, tier <= 2 ? 2 : 1);
+  addFrom(structural, 1);
+
+  // Optional: add one of transmission/conversion early for flavor (but not too much)
+  if (tier >= 1 && rng.f() < 0.45) addFrom(transmission, 1);
+  if (tier >= 2 && rng.f() < 0.35) addFrom(conversion, 1);
+
+  if (tier >= 2) addFrom(catalysts, 1);
+  if (tier >= 3) addFrom(stabilizers, 1);
+  if (tier >= 3) addFrom(volatiles, 1);
+
+  // Hard cap to keep puzzles readable early
+  return [...set].slice(0, 6);
+}
+
+function deriveConstraints({ act, teaching_goal, rng }) {
+  const tier = act.tier ?? 1;
+
+  let vessels = 4 + (tier >= 2 ? 1 : 0) + (tier >= 3 ? 1 : 0);
+  let capacity = tier >= 3 ? 5 : 4;
+
+  // teaching-goal tuning
+  let empties = 2;
+  if (teaching_goal === "restraint") empties = 1;
+  if (teaching_goal === "sequencing") empties = 2;
+  if (tier >= 3) empties = Math.max(1, empties - 1);
+
+  const locks = tier >= 4 ? rng.int(0, 1) : 0;
+  const contamination = tier >= 3;
+
+  return { vessels, capacity, empties, locks, contamination };
+}
+
+function generateBoard({ elements, constraints, thesisKey, rng }) {
+  // Constructive generation (v1)
+  // - choose 3–4 active elements
+  // - fill non-empty vessels to capacity with shuffled pool
+  // - sprinkle thesis “temptation” on top sometimes
+  const thesis = THESES[thesisKey];
+  const active = rng.shuffle(elements).slice(0, Math.min(4, elements.length));
+
+  const { vessels, capacity, empties } = constraints;
+  const board = Array.from({ length: vessels }, () => []);
+  const fillVessels = vessels - empties;
+  const totalSlots = fillVessels * capacity;
+
+  // Create pool with rough balance
+  const per = Math.max(1, Math.floor(totalSlots / active.length));
+  let pool = [];
+  for (const sym of active) for (let i=0; i<per; i++) pool.push(sym);
+  while (pool.length < totalSlots) pool.push(rng.pick(active));
+  pool = rng.shuffle(pool);
+
+  // Fill
+  let pi = 0;
+  for (let v=0; v<fillVessels; v++) {
+    for (let s=0; s<capacity; s++) board[v].push(pool[pi++]);
+  }
+
+  // Temptation: put thesis element on top sometimes (legal-looking moves)
+  const tempt = (thesis.must_include && thesis.must_include[0]) ? thesis.must_include[0] : null;
+  if (tempt && !thesis.must_exclude?.includes(tempt)) {
+    for (let v=0; v<fillVessels; v++) {
+      if (rng.f() < 0.35) board[v][board[v].length - 1] = tempt;
+    }
+  }
+
+  // Ensure we are actually missing the thesis excluded element (if any)
+  if (thesis.must_exclude?.length) {
+    for (let v=0; v<fillVessels; v++) {
+      for (let i=0; i<board[v].length; i++) {
+        if (thesis.must_exclude.includes(board[v][i])) {
+          board[v][i] = rng.pick(active.filter(s => !thesis.must_exclude.includes(s)));
+        }
+      }
+    }
+  }
+
+  // empty vessels already [] at end
+  return { capacity, vessels: board };
+}
+
+function generateBonuses(teaching_goal, diff) {
+  const bonuses = [];
+  if (teaching_goal === "restraint") {
+    bonuses.push({ id: "BONUS_MIN_TRANSFERS", label: "Minimal Transfers", threshold: diff.score > 3.5 ? 12 : 14 });
+    bonuses.push({ id: "BONUS_NO_INVALID", label: "No Invalid Pours", rule: "no_invalid_pours" });
+  } else if (teaching_goal === "sequencing") {
+    bonuses.push({ id: "BONUS_FIRST_STABILIZE", label: "Stabilize One Vessel First", rule: "stabilize_any_vessel_within_6_moves" });
+  } else {
+    bonuses.push({ id: "BONUS_NO_ILLEGAL", label: "No Illegal Reactions", rule: "no_illegal_compounds" });
+  }
+  if (diff.score > 4.2) bonuses.push({ id: "BONUS_NO_RESET", label: "No Resets", rule: "no_resets" });
+  return bonuses;
+}
+
+function generateLore({ thesisKey, rng, index }) {
+  const thesis = THESES[thesisKey];
+  const n = String(index).padStart(2, "0");
+  const title = `Experiment ${n}: ${thesis.name}`;
+
+  const intro = pickLoreLine("intro", rng);
+  const win   = pickLoreLine("win", rng);
+  const fail  = pickLoreLine("fail", rng);
+
+  return { title, intro_line: intro, win_line: win, fail_line: fail };
+}
+
+function generateExperiment({ act, quest, expIndex, seed }) {
+  const rng = makeRng(seed);
+  const thesisKey = rng.pick(quest.theses);
+  const thesis = THESES[thesisKey];
+
+  const teaching_goal = thesis.default_teaching;
+  const elements_in_play = assembleElements({ act, thesisKey, rng });
+  const constraints = deriveConstraints({ act, teaching_goal, rng });
+  const diff = difficultyScore(elements_in_play, constraints, thesisKey);
+  const board_init = generateBoard({ elements: elements_in_play, constraints, thesisKey, rng });
+  const bonuses = generateBonuses(teaching_goal, diff);
+  const lore = generateLore({ thesisKey, rng, index: expIndex });
+
+  return {
+    id: `${act.id}-${quest.id}-E${String(expIndex).padStart(2, "0")}`,
+    act: act.id,
+    quest: quest.id,
+    thesis: thesisKey,
+    teaching_goal,
+    elements_in_play,
+    constraints,
+    difficulty: {
+      score: Number(diff.score.toFixed(2)),
+      volatility: Number(diff.volatility.toFixed(2))
+    },
+    bonuses,
+    lore,
+    board_init
+  };
+}
+
+/* ===========================
+   Game Render / Interaction (drag-to-pour)
 =========================== */
 function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
 function lerp(a,b,t){ return a + (b-a)*t; }
-function dist(ax,ay,bx,by){ return Math.hypot(ax-bx, ay-by); }
 
-/* ===========================
-   Vessel
-=========================== */
 class Vessel {
   constructor(x, y, type, capacity, contents=[]) {
     this.x = x; this.y = y;
-    this.ox = x; this.oy = y; // origin
+    this.ox = x; this.oy = y;
     this.type = type;
     this.capacity = capacity;
-    this.contents = contents.slice(); // bottom -> top (we'll treat last as top)
+    this.contents = contents.slice(); // bottom->top (last is top)
     this.selected = false;
-
-    // feedback
     this.shakeT = 0;
     this.shakeDir = 1;
   }
-
-  top() {
-    return this.contents.length ? this.contents[this.contents.length - 1] : null;
-  }
-
-  space() {
-    return this.capacity - this.contents.length;
-  }
-
-  // how many same-color units at top
-  topRunCount() {
+  top(){ return this.contents.length ? this.contents[this.contents.length-1] : null; }
+  space(){ return this.capacity - this.contents.length; }
+  topRunCount(){
     const t = this.top();
     if (!t) return 0;
     let c = 0;
-    for (let i = this.contents.length - 1; i >= 0; i--) {
+    for (let i=this.contents.length-1; i>=0; i--) {
       if (this.contents[i] === t) c++;
       else break;
     }
     return c;
   }
-
-  isStable() {
-    // stable if full and all one compound OR empty
-    if (this.contents.length === 0) return false;
-    if (this.contents.length !== this.capacity) return false;
-    return this.contents.every(v => v === this.contents[0]);
-  }
-
   hit(px, py) {
     return (px > this.x - 34 && px < this.x + 34 && py > this.y - 100 && py < this.y + 28);
   }
-
-  nudgeShake() {
-    this.shakeT = 0.22;
-    this.shakeDir *= -1;
-  }
-
+  nudgeShake(){ this.shakeT = 0.22; this.shakeDir *= -1; }
   draw({overrideX=null, overrideY=null, tilt=0, lift=0, alpha=1} = {}) {
     const x = overrideX ?? this.x;
     const y = overrideY ?? this.y;
 
-    // shake offset
     let sx = 0;
-    if (this.shakeT > 0) {
-      sx = Math.sin((1 - this.shakeT) * Math.PI * 10) * 6 * this.shakeDir;
-    }
+    if (this.shakeT > 0) sx = Math.sin((1 - this.shakeT) * Math.PI * 10) * 6 * this.shakeDir;
 
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.translate(x + sx, y - lift);
     ctx.rotate(tilt);
 
-    // outline path (used for clipping)
+    // outline
     ctx.lineWidth = 2;
     ctx.strokeStyle = "rgba(255,255,255,0.85)";
     ctx.beginPath();
-
     if (this.type === "tube") {
       ctx.moveTo(-18, -86);
       ctx.lineTo(-18, 0);
       ctx.quadraticCurveTo(0, 18, 18, 0);
       ctx.lineTo(18, -86);
-    } else { // flask
+    } else {
       ctx.moveTo(-26, -86);
       ctx.lineTo(-12, -46);
       ctx.lineTo(-30, 0);
@@ -180,24 +448,24 @@ class Vessel {
       ctx.restore();
     }
 
-    // clip interior for liquid
+    // clip interior
     ctx.save();
     ctx.clip();
 
-    // liquid geometry
-    const innerH = 86;               // height for stacking
+    const innerH = 86;
     const unit = innerH / this.capacity;
 
-    // draw from bottom upward
-    for (let i = 0; i < this.contents.length; i++) {
-      const compound = this.contents[i];
-      ctx.fillStyle = COMPOUNDS[compound] || "#fff";
+    // liquid
+    for (let i=0; i<this.contents.length; i++) {
+      const sym = this.contents[i];
+      const col = ELEMENTS[sym]?.color ?? "#ffffff";
+      ctx.fillStyle = col;
       const yTop = 0 - (i + 1) * unit;
       ctx.fillRect(-30, yTop, 60, unit);
     }
 
-    // subtle glass highlight
-    ctx.globalAlpha *= 0.25;
+    // glass highlight
+    ctx.globalAlpha *= 0.22;
     ctx.fillStyle = "rgba(255,255,255,0.9)";
     ctx.fillRect(-14, -84, 4, 96);
     ctx.restore();
@@ -206,82 +474,58 @@ class Vessel {
   }
 }
 
-/* ===========================
-   Board setup
-=========================== */
+let vessels = [];
 function layoutVessels() {
-  const cols = 4;
-  const gap = 96;
-  const startX = Math.max(90, Math.floor((innerWidth - (cols-1)*gap) / 2));
-  const startY = Math.floor(innerHeight * 0.55);
+  if (!vessels.length) return;
 
-  const positions = [
-    [startX + 0*gap, startY],
-    [startX + 1*gap, startY],
-    [startX + 2*gap, startY],
-    [startX + 3*gap, startY]
-  ];
+  const cols = vessels.length;
+  const gap = clamp(Math.floor(innerWidth / (cols + 1)), 78, 120);
+  const startX = Math.floor((innerWidth - (cols - 1) * gap) / 2);
+  const startY = Math.floor(innerHeight * 0.56);
 
   vessels.forEach((v, i) => {
-    v.ox = positions[i][0];
-    v.oy = positions[i][1];
+    v.ox = startX + i * gap;
+    v.oy = startY;
     if (!drag.state || drag.source !== v) {
       v.x = v.ox; v.y = v.oy;
     }
   });
 }
 
-const vessels = [
-  new Vessel(120, 260, "tube", 4, ["promise","pain","clarity","clarity"]),
-  new Vessel(200, 260, "tube", 4, ["pain","promise"]),
-  new Vessel(280, 260, "flask", 4, []),
-  new Vessel(360, 260, "flask", 4, [])
-];
-
-layoutVessels();
-window.addEventListener("resize", layoutVessels);
-
 /* ===========================
-   Drag-to-pour controller
+   Drag Controller
 =========================== */
 const drag = {
   state: "idle", // idle | dragging | animating
   source: null,
   target: null,
-  startX: 0, startY: 0,
-  x: 0, y: 0,
-  offsetX: 0, offsetY: 0,
+  offsetX: 0,
+  offsetY: 0,
   tilt: 0,
   lift: 0,
   anim: null
 };
 
-function clearSelection() {
-  vessels.forEach(v => v.selected = false);
-}
-
+function clearSelection(){ vessels.forEach(v => v.selected = false); }
 function getPointerPos(e) {
-  const rect = canvas.getBoundingClientRect();
-  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  const r = canvas.getBoundingClientRect();
+  return { x: e.clientX - r.left, y: e.clientY - r.top };
 }
 
 canvas.addEventListener("pointerdown", (e) => {
   if (drag.state === "animating") return;
   const p = getPointerPos(e);
 
-  for (let i = vessels.length - 1; i >= 0; i--) {
+  for (let i=vessels.length-1; i>=0; i--) {
     const v = vessels[i];
     if (v.hit(p.x, p.y)) {
       drag.state = "dragging";
       drag.source = v;
       drag.target = null;
-      drag.startX = p.x; drag.startY = p.y;
-      drag.x = p.x; drag.y = p.y;
       drag.offsetX = v.x - p.x;
       drag.offsetY = v.y - p.y;
       drag.tilt = 0;
       drag.lift = 14;
-
       clearSelection();
       v.selected = true;
       canvas.setPointerCapture(e.pointerId);
@@ -293,45 +537,35 @@ canvas.addEventListener("pointerdown", (e) => {
 canvas.addEventListener("pointermove", (e) => {
   if (drag.state !== "dragging") return;
   const p = getPointerPos(e);
-  drag.x = p.x; drag.y = p.y;
 
-  // move vessel with finger
   drag.source.x = p.x + drag.offsetX;
   drag.source.y = p.y + drag.offsetY;
 
-  // determine hover target
+  // hover target
   drag.target = null;
   for (const v of vessels) {
-    if (v !== drag.source && v.hit(p.x, p.y)) {
-      drag.target = v;
-      break;
-    }
+    if (v !== drag.source && v.hit(p.x, p.y)) { drag.target = v; break; }
   }
 
-  // tilt based on direction toward target
+  // tilt toward target if present
   if (drag.target) {
     const dx = drag.target.ox - drag.source.x;
     drag.tilt = clamp(dx / 220, -0.35, 0.35);
   } else {
-    const dx = p.x - drag.startX;
-    drag.tilt = clamp(dx / 280, -0.25, 0.25);
+    drag.tilt = clamp((p.x - drag.source.ox)/280, -0.25, 0.25);
   }
 });
 
-canvas.addEventListener("pointerup", (e) => {
+canvas.addEventListener("pointerup", () => {
   if (drag.state !== "dragging") return;
 
+  drag.state = "animating";
   const src = drag.source;
   const tgt = drag.target;
 
-  // snap back unless a pour happens
-  drag.state = "animating";
-
   const snapBack = () => {
-    // animate back to origin
     const a = {
-      t: 0,
-      dur: 0.18,
+      t: 0, dur: 0.18,
       fromX: src.x, fromY: src.y, fromTilt: drag.tilt,
       toX: src.ox, toY: src.oy, toTilt: 0,
       onDone: () => {
@@ -347,7 +581,6 @@ canvas.addEventListener("pointerup", (e) => {
 
   if (!tgt) { snapBack(); return; }
 
-  // attempt pour
   const result = tryPour(src, tgt);
   if (!result.ok) {
     src.nudgeShake();
@@ -356,42 +589,36 @@ canvas.addEventListener("pointerup", (e) => {
     return;
   }
 
-  // animate successful pour: lift->tilt->transfer->return
   say(result.msg, 1.2);
   animatePour(src, tgt, result.amount, snapBack);
 });
 
 /* ===========================
-   Chemistry rules (pour)
+   Pour Rules (core puzzle)
 =========================== */
 function tryPour(src, tgt) {
   const top = src.top();
-  if (!top) return { ok:false, msg:"Empty vessel. Bold move." };
-
+  if (!top) return { ok:false, msg:"Empty vessel. Bold choice." };
   if (tgt.space() <= 0) return { ok:false, msg:"No capacity. Physics wins." };
 
   const tgtTop = tgt.top();
   if (tgtTop && tgtTop !== top) return { ok:false, msg:"Chemistry says no." };
 
-  // amount to pour
   const run = src.topRunCount();
   const amount = Math.min(run, tgt.space());
-
   if (amount <= 0) return { ok:false, msg:"Nothing to transfer. Obviously." };
 
-  return { ok:true, amount, msg: "Reaction in progress. Try not to contaminate it." };
+  return { ok:true, amount, msg:"Reaction in progress. Try not to panic." };
 }
 
 /* ===========================
-   Pour animation + transfer
+   Pour Animation
 =========================== */
 function animatePour(src, tgt, amount, onDone) {
-  // We “fake” the pour by delaying the actual array transfer until mid-animation.
   const start = performance.now();
-  const dur = 520; // ms
-  const fromX = src.x, fromY = src.y;
-  const toX = src.ox, toY = src.oy;
+  const dur = 520;
 
+  const fromX = src.x, fromY = src.y;
   const hoverX = lerp(fromX, tgt.ox, 0.65);
   const hoverY = lerp(fromY, tgt.oy, 0.35);
 
@@ -402,37 +629,25 @@ function animatePour(src, tgt, amount, onDone) {
     update: (now) => {
       const t = clamp((now - start) / dur, 0, 1);
 
-      // stage split
-      const t1 = clamp(t / 0.35, 0, 1);           // move toward target
-      const t2 = clamp((t - 0.35) / 0.35, 0, 1);  // tilt + pour window
-      const t3 = clamp((t - 0.70) / 0.30, 0, 1);  // return-ish (snapBack will handle final)
+      const t1 = clamp(t / 0.35, 0, 1);
+      const t2 = clamp((t - 0.35) / 0.35, 0, 1);
+      const t3 = clamp((t - 0.70) / 0.30, 0, 1);
 
-      // move source nearer target
       src.x = lerp(fromX, hoverX, t1);
       src.y = lerp(fromY, hoverY, t1);
 
-      // tilt during pour
       drag.tilt = lerp(drag.tilt, clamp((tgt.ox - src.x)/180, -0.55, 0.55), t2);
       drag.lift = lerp(16, 26, t2);
 
-      // transfer mid pour window
       if (!transferred && t >= 0.52) {
         const compound = src.top();
         for (let i=0; i<amount; i++) {
-          // remove from src
           src.contents.pop();
-          // add to tgt
           tgt.contents.push(compound);
         }
         transferred = true;
-
-        // tiny feedback if vessel stabilized
-        if (tgt.isStable()) {
-          say("Stabilized. Predictable outcome when you stop guessing.", 1.6);
-        }
       }
 
-      // settle
       drag.lift = lerp(drag.lift, 14, t3);
       drag.tilt = lerp(drag.tilt, 0, t3);
 
@@ -445,15 +660,13 @@ function animatePour(src, tgt, amount, onDone) {
 }
 
 /* ===========================
-   Render
+   Rendering
 =========================== */
 function drawBench() {
-  // bench surface
+  const benchY = Math.floor(innerHeight * 0.66);
   ctx.fillStyle = "#05070c";
-  const benchY = Math.floor(innerHeight * 0.64);
   ctx.fillRect(0, benchY, innerWidth, innerHeight - benchY);
 
-  // subtle bench highlight
   ctx.globalAlpha = 0.08;
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, benchY, innerWidth, 2);
@@ -461,11 +674,8 @@ function drawBench() {
 }
 
 function drawTargetHint() {
-  if (drag.state !== "dragging" || !drag.source) return;
+  if (drag.state !== "dragging" || !drag.source || !drag.target) return;
   const tgt = drag.target;
-  if (!tgt) return;
-
-  // ring on target
   ctx.save();
   ctx.translate(tgt.ox, tgt.oy);
   ctx.strokeStyle = "rgba(56,189,248,0.65)";
@@ -478,11 +688,66 @@ function drawTargetHint() {
   ctx.restore();
 }
 
+/* ===========================
+   Experiment loading
+=========================== */
+let actIndex = 0;
+let questIndex = 0;
+let expIndex = 1;
+let currentExperiment = null;
+
+function loadExperiment() {
+  const act = CAMPAIGN.acts[actIndex];
+  const quest = act.quests[questIndex];
+  const seed = `${act.id}:${quest.id}:E${expIndex}`;
+
+  currentExperiment = generateExperiment({ act, quest, expIndex, seed });
+
+  // HUD
+  hudTitle.textContent = currentExperiment.lore.title;
+  hudMeta.textContent =
+    `${act.name} • ${quest.name} • Thesis: ${THESES[currentExperiment.thesis].name} • Goal: ${currentExperiment.teaching_goal} • Difficulty: ${currentExperiment.difficulty.score}`;
+  say(currentExperiment.lore.intro_line, 2.2);
+
+  // Build vessels from board
+  const cap = currentExperiment.board_init.capacity;
+  const board = currentExperiment.board_init.vessels;
+
+  // decide labware types (flavor)
+  vessels = board.map((stack, i) => {
+    const type = (i % 3 === 0) ? "flask" : "tube";
+    return new Vessel(0, 0, type, cap, stack);
+  });
+
+  // clear drag state
+  drag.state = "idle";
+  drag.source = null;
+  drag.target = null;
+  drag.anim = null;
+  clearSelection();
+
+  layoutVessels();
+}
+
+// buttons
+document.getElementById("btnNext").addEventListener("click", () => {
+  expIndex++;
+  loadExperiment();
+});
+document.getElementById("btnPrev").addEventListener("click", () => {
+  expIndex = Math.max(1, expIndex - 1);
+  loadExperiment();
+});
+
+loadExperiment();
+
+/* ===========================
+   Loop
+=========================== */
 function loop(now) {
-  // background
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // faint ambient vignette
+  // ambient vignette
   ctx.save();
   ctx.globalAlpha = 0.12;
   ctx.fillStyle = "#000";
@@ -492,23 +757,20 @@ function loop(now) {
   drawBench();
   drawTargetHint();
 
-  // update feedback timers
-  for (const v of vessels) {
-    if (v.shakeT > 0) v.shakeT = Math.max(0, v.shakeT - 1/60);
-  }
+  // timers
+  for (const v of vessels) if (v.shakeT > 0) v.shakeT = Math.max(0, v.shakeT - 1/60);
   if (msgTimer > 0) msgTimer -= 1/60;
 
-  // update animation
+  // animations
   if (drag.anim?.kind === "pour") drag.anim.update(now);
   else if (drag.anim) {
-    // snap animation
     drag.anim.t += 1/60;
     const t = clamp(drag.anim.t / drag.anim.dur, 0, 1);
-    const ease = t * (2 - t); // easeOutQuad-ish
+    const ease = t * (2 - t);
     const a = drag.anim;
-    a.source = drag.source;
-    a.source.x = lerp(a.fromX, a.toX, ease);
-    a.source.y = lerp(a.fromY, a.toY, ease);
+    const src = drag.source;
+    src.x = lerp(a.fromX, a.toX, ease);
+    src.y = lerp(a.fromY, a.toY, ease);
     drag.tilt = lerp(a.fromTilt, a.toTilt, ease);
     drag.lift = lerp(14, 0, ease);
     if (t >= 1) {
@@ -518,14 +780,13 @@ function loop(now) {
     }
   }
 
-  // draw all vessels; draw dragged on top
+  // draw vessels (dragged on top)
   const dragged = (drag.state === "dragging" || drag.state === "animating") ? drag.source : null;
 
   for (const v of vessels) {
     if (v === dragged) continue;
     v.draw();
   }
-
   if (dragged) {
     dragged.draw({
       overrideX: dragged.x,
@@ -539,6 +800,7 @@ function loop(now) {
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
+
 </script>
 </body>
 </html>
