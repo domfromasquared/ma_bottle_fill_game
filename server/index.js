@@ -1,3 +1,4 @@
+import "dotenv/config";
 // server/index.js
 // Minimal Express API for quest-node LLM generation + validation.
 //
