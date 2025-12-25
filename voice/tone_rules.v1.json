@@ -1,0 +1,10 @@
+{
+  "quest_title": "...",
+  "dm_intro": "...",
+  "dm_midpoint": "...",
+  "dm_verdict": "...",
+  "used_voice_ids": ["QUEST_OPEN_UR_0001", "WIN_0007"],
+  "paraphrases": [
+    { "source_id": "EXP_INTRO_0001", "text": "Try precision. It's ugly. It works." }
+  ]
+}
