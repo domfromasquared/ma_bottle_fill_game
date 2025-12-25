@@ -1,1 +1,208 @@
-html
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>The Marketing Alchemist — Experimental Lab</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --glass: rgba(255,255,255,0.9);
+      --glow: rgba(56,189,248,0.35);
+      --text: #cbd5e1;
+    }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: radial-gradient(circle at top, #101826, #05070c);
+      overflow: hidden;
+      touch-action: none;
+      color: var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .hud {
+      position: fixed;
+      left: 16px;
+      bottom: 16px;
+      max-width: 280px;
+      font-size: 13px;
+      line-height: 1.4;
+      opacity: 0.9;
+    }
+
+    .title {
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="game"></canvas>
+
+  <div class="hud">
+    <div class="title">Experiment 01: Contaminated Funnel</div>
+    The elements behave whether you respect them or not.
+  </div>
+
+<script>
+/* ===========================
+   Canvas Setup
+=========================== */
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+function resize() {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = Math.floor(innerWidth * dpr);
+  canvas.height = Math.floor(innerHeight * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener("resize", resize);
+resize();
+
+/* ===========================
+   Compounds (Canon)
+=========================== */
+const COMPOUNDS = {
+  clarity:   "#38bdf8",
+  pain:      "#ec4899",
+  promise:   "#facc15",
+  mechanism: "#22d3ee",
+  chaos:     "#ef4444"
+};
+
+/* ===========================
+   Labware Renderer
+=========================== */
+class Vessel {
+  constructor(x, y, type, capacity, contents=[]) {
+    this.x = x;
+    this.y = y;
+    this.type = type;
+    this.capacity = capacity;
+    this.contents = contents;
+    this.selected = false;
+  }
+
+  draw() {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+
+    // outline
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(255,255,255,0.85)";
+    ctx.beginPath();
+
+    if (this.type === "tube") {
+      ctx.moveTo(-18, -80);
+      ctx.lineTo(-18, 0);
+      ctx.quadraticCurveTo(0, 18, 18, 0);
+      ctx.lineTo(18, -80);
+    } else { // flask
+      ctx.moveTo(-26, -80);
+      ctx.lineTo(-12, -40);
+      ctx.lineTo(-28, 0);
+      ctx.quadraticCurveTo(0, 26, 28, 0);
+      ctx.lineTo(12, -40);
+      ctx.lineTo(26, -80);
+    }
+    ctx.closePath();
+    ctx.stroke();
+
+    // glow if selected
+    if (this.selected) {
+      ctx.shadowBlur = 18;
+      ctx.shadowColor = "rgba(56,189,248,0.6)";
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
+    // clip liquid
+    ctx.clip();
+
+    const h = 80;
+    const unit = h / this.capacity;
+
+    for (let i = 0; i < this.contents.length; i++) {
+      const color = COMPOUNDS[this.contents[i]];
+      ctx.fillStyle = color;
+      ctx.fillRect(
+        -26,
+        -i * unit,
+        52,
+        unit
+      );
+    }
+
+    ctx.restore();
+  }
+
+  hit(px, py) {
+    return (
+      px > this.x - 30 &&
+      px < this.x + 30 &&
+      py > this.y - 90 &&
+      py < this.y + 20
+    );
+  }
+}
+
+/* ===========================
+   Scene Setup
+=========================== */
+const vessels = [
+  new Vessel(120, 260, "tube", 4, ["clarity","clarity","pain","promise"]),
+  new Vessel(200, 260, "tube", 4, ["promise","pain"]),
+  new Vessel(280, 260, "flask", 4, []),
+  new Vessel(360, 260, "flask", 4, [])
+];
+
+let selected = null;
+
+/* ===========================
+   Input
+=========================== */
+canvas.addEventListener("pointerdown", e => {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  for (const v of vessels) {
+    if (v.hit(x,y)) {
+      if (selected) selected.selected = false;
+      selected = v;
+      v.selected = true;
+      return;
+    }
+  }
+});
+
+/* ===========================
+   Loop
+=========================== */
+function loop() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // lab bench
+  ctx.fillStyle = "#05070c";
+  ctx.fillRect(0, 300, innerWidth, innerHeight);
+
+  for (const v of vessels) v.draw();
+
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+
+</body>
+</html>
