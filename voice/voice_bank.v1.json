@@ -1,0 +1,134 @@
+{
+  "version": "v1",
+  "character": {
+    "id": "marketing_alchemist",
+    "style": {
+      "max_chars_per_line": 140,
+      "max_sentences": 2,
+      "preferred_sentence_length": "short",
+      "forbidden": [
+        "explicit profanity",
+        "slurs",
+        "identity insults",
+        "mechanics hints",
+        "cheerleading"
+      ]
+    }
+  },
+  "moments": [
+    "quest_open",
+    "quest_mid",
+    "quest_end",
+    "experiment_intro",
+    "experiment_fail",
+    "experiment_win",
+    "invalid_action",
+    "illegal_reaction",
+    "bonus_award",
+    "bonus_missed",
+    "reset",
+    "streak",
+    "hint_denial"
+  ],
+  "banks": ["B", "A", "N", "K", "ANY"],
+  "intensities": ["soft", "standard", "hard"],
+  "acts": ["ACT_I", "ACT_II", "ACT_III", "ACT_IV", "ANY"],
+  "theses": [
+    "UR_without_CL",
+    "PA_without_PR",
+    "HO_without_TR",
+    "VI_without_ST",
+    "Traffic_without_ME",
+    "ANY"
+  ],
+  "lines": [
+    {
+      "id": "EXP_INTRO_0001",
+      "moment": "experiment_intro",
+      "bank": "ANY",
+      "intensity": "standard",
+      "act": "ANY",
+      "thesis": "ANY",
+      "text": "Try precision. It’s unfashionable, but effective.",
+      "tags": ["diagnostic", "cold_open"],
+      "placeholders": []
+    },
+    {
+      "id": "INVALID_0004",
+      "moment": "invalid_action",
+      "bank": "A",
+      "intensity": "standard",
+      "act": "ANY",
+      "thesis": "ANY",
+      "text": "Chemistry says no. Moving faster won’t change it.",
+      "tags": ["boundary", "action_pressure"],
+      "placeholders": []
+    },
+    {
+      "id": "ILLEGAL_UR_NO_CL_0002",
+      "moment": "illegal_reaction",
+      "bank": "ANY",
+      "intensity": "hard",
+      "act": "ANY",
+      "thesis": "UR_without_CL",
+      "text": "Urgency without clarity produces panic. You just proved it.",
+      "tags": ["thesis_callout", "lesson"],
+      "placeholders": []
+    },
+    {
+      "id": "WIN_0007",
+      "moment": "experiment_win",
+      "bank": "K",
+      "intensity": "standard",
+      "act": "ANY",
+      "thesis": "ANY",
+      "text": "Stabilized. Now tell me why it worked.",
+      "tags": ["knowledge_pressure"],
+      "placeholders": []
+    },
+    {
+      "id": "QUEST_END_0011",
+      "moment": "quest_end",
+      "bank": "B",
+      "intensity": "soft",
+      "act": "ANY",
+      "thesis": "ANY",
+      "text": "Good. You built structure instead of chasing motion.",
+      "tags": ["blueprint_reward"],
+      "placeholders": []
+    },
+    {
+      "id": "RESET_0003",
+      "moment": "reset",
+      "bank": "N",
+      "intensity": "soft",
+      "act": "ANY",
+      "thesis": "ANY",
+      "text": "Reset if you must. But don’t confuse comfort with progress.",
+      "tags": ["nurture_boundary"],
+      "placeholders": []
+    },
+    {
+      "id": "BONUS_AWARD_0005",
+      "moment": "bonus_award",
+      "bank": "ANY",
+      "intensity": "standard",
+      "act": "ANY",
+      "thesis": "ANY",
+      "text": "Minimal transfers. Restraint is rare. Keep it.",
+      "tags": ["mastery_reward"],
+      "placeholders": []
+    },
+    {
+      "id": "QUEST_OPEN_UR_0001",
+      "moment": "quest_open",
+      "bank": "ANY",
+      "intensity": "standard",
+      "act": "ACT_I",
+      "thesis": "UR_without_CL",
+      "text": "Today we distill panic out of urgency. You’ll try to reintroduce it.",
+      "tags": ["quest_hook", "prediction"],
+      "placeholders": []
+    }
+  ]
+}
