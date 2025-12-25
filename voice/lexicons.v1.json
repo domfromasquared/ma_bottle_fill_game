@@ -1,20 +1,116 @@
+// voice/lexicons.v1.json
 {
+  "version": "v1",
   "signature_tokens": [
-    "chemistry", "reaction", "stabilize", "distill", "contaminate",
-    "precision", "reality", "predictable", "structure", "panic", "truth"
+    "chemistry",
+    "reaction",
+    "stabilize",
+    "stabilized",
+    "distill",
+    "contaminate",
+    "contamination",
+    "precision",
+    "reality",
+    "predictable",
+    "structure",
+    "panic",
+    "truth",
+    "mechanism",
+    "evidence",
+    "pressure",
+    "laws"
   ],
+
   "forbidden_cheerleading": [
-    "you've got this", "great job", "awesome", "proud of you",
-    "keep going", "don't give up", "you're doing amazing"
+    "you've got this",
+    "you got this",
+    "great job",
+    "awesome",
+    "amazing",
+    "proud of you",
+    "keep going",
+    "don't give up",
+    "you can do it",
+    "you are doing great",
+    "nice work",
+    "well done",
+    "congratulations"
   ],
+
   "forbidden_hinting": [
-    "try pouring", "pour the", "move the", "start with", "put it in",
-    "left bottle", "right bottle", "top layer", "empty bottle", "swap"
+    "try pouring",
+    "pour the",
+    "pour into",
+    "move the",
+    "start with",
+    "put it in",
+    "place the",
+    "swap the",
+    "drag the",
+    "use the empty",
+    "top layer",
+    "top color",
+    "left bottle",
+    "right bottle",
+    "middle bottle",
+    "first bottle",
+    "second bottle",
+    "third bottle",
+    "fourth bottle",
+    "tap the",
+    "click the"
   ],
+
   "forbidden_identity_insults": [
-    "idiot", "stupid", "dumb", "moron"
+    "idiot",
+    "stupid",
+    "dumb",
+    "moron",
+    "loser",
+    "worthless",
+    "pathetic",
+    "trash"
   ],
+
   "forbidden_profanity": [
-    "fuck", "shit", "bitch"
+    "fuck",
+    "shit",
+    "bitch",
+    "asshole",
+    "bastard",
+    "motherfucker",
+    "cunt",
+    "dick",
+    "pussy"
+  ],
+
+  "allowed_sarcasm_markers": [
+    "shocking",
+    "fascinating",
+    "classic",
+    "predictable",
+    "as usual",
+    "of course"
+  ],
+
+  "forbidden_softeners": [
+    "maybe",
+    "perhaps",
+    "it might help",
+    "you could try",
+    "i suggest",
+    "i recommend",
+    "just",
+    "no worries",
+    "it's okay"
+  ],
+
+  "forbidden_meta_ai": [
+    "as an ai",
+    "as a language model",
+    "i can't",
+    "i am unable",
+    "openai",
+    "chatgpt"
   ]
 }
