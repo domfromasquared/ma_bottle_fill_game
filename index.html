@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-  <title>Marketing Alchemist — Bottle Fill (C3 + Satisfying Pour)</title>
+  <title>Marketing Alchemist — Bottle Fill (Path 1 Difficulty-Calibrated)</title>
 
   <style>
     :root { color-scheme: dark; }
@@ -63,7 +63,6 @@
       font-size:12px;
     }
 
-    /* DM */
     .dm-title{ font-weight:900; font-size:18px; letter-spacing:.2px; }
     .dm-line{ margin:8px 0; line-height:1.4; white-space:pre-wrap; }
     .dm-quest{ font-weight:900; font-size:18px; margin:6px 0 10px; }
@@ -80,10 +79,7 @@
     button:active{ transform:translateY(1px); }
     button:disabled{ opacity:.6; cursor:not-allowed; }
 
-    /* Board wrapper for stream overlay */
-    #pourOverlay{
-      position:relative;
-    }
+    #pourOverlay{ position:relative; }
 
     .board{
       display:grid;
@@ -171,7 +167,6 @@
       align-items:center;
     }
 
-    /* Stream */
     #stream{
       position:absolute;
       inset:0;
@@ -251,20 +246,11 @@
 const API_RECIPE = "http://localhost:8787/api/level-recipe";
 const API_QUEST  = "http://localhost:8787/api/quest-node";
 
-/* High-contrast liquids (less “too similar”) */
+/* High-contrast liquids */
 const COLORS = [
-  "#00A3FF", // vivid blue
-  "#FF3B30", // vivid red
-  "#34C759", // vivid green
-  "#FFCC00", // vivid yellow
-  "#AF52DE", // purple
-  "#FF9500", // orange
-  "#00C7BE", // teal
-  "#FF2D55", // magenta
-  "#8E8E93", // neutral gray
-  "#5AC8FA", // sky
-  "#32D74B", // neon green alt
-  "#BF5AF2"  // violet alt
+  "#00A3FF", "#FF3B30", "#34C759", "#FFCC00",
+  "#AF52DE", "#FF9500", "#00C7BE", "#FF2D55",
+  "#8E8E93", "#5AC8FA", "#32D74B", "#BF5AF2"
 ];
 
 const clamp01 = (x) => Math.max(0, Math.min(1, Number(x) || 0));
@@ -305,7 +291,7 @@ const game = {
   currentLevelConfig: null
 };
 
-let bottles = [];           // [{cells:[...bottom->top], locked:boolean}]
+let bottles = [];
 let selected = null;
 let isAnimating = false;
 
@@ -453,7 +439,7 @@ function updateReadouts(){
 }
 
 /* =========================================================
-   C3 — Fetch Level Recipe
+   Server Calls
 ========================================================= */
 async function fetchLevelRecipe(){
   const bank = inferBANK(playerModel);
@@ -496,9 +482,6 @@ async function fetchLevelRecipe(){
   return json.recipe;
 }
 
-/* =========================================================
-   Fallback Recipe (UI never disappears)
-========================================================= */
 function fallbackRecipe(level){
   const colors = Math.min(6, 4 + Math.floor(level / 3));
   return {
@@ -522,7 +505,7 @@ function fallbackRecipe(level){
 }
 
 /* =========================================================
-   C3 — Deterministic solvable compiler (scramble from solved)
+   Seeded RNG Utils
 ========================================================= */
 function mulberry32(seed){
   let a = seed >>> 0;
@@ -539,11 +522,13 @@ function hashSeed(str){
   return h >>> 0;
 }
 
+/* =========================================================
+   PATH 1 — Difficulty-Calibrated Compiler
+========================================================= */
 function compileRecipeToLevel(recipe, seedStr){
   const slots = 4;
-  const baseRng = mulberry32(hashSeed(seedStr));
 
-  // ---------- 1) Choose colors (distinct palette already) ----------
+  // Choose element ids → map to distinct COLORS
   const chosen = (recipe.elements || []).slice(0, recipe.colors || 6);
   const elementToColor = {};
   for (let i=0;i<chosen.length;i++){
@@ -551,7 +536,6 @@ function compileRecipeToLevel(recipe, seedStr){
   }
   const colorList = chosen.map(e => elementToColor[e]);
 
-  // ---------- helpers ----------
   const topColor = (b) => b.cells.length ? b.cells[b.cells.length-1] : null;
   const topRun = (b) => {
     const t = topColor(b);
@@ -584,73 +568,53 @@ function compileRecipeToLevel(recipe, seedStr){
     return n;
   }
 
-  // Board quality score: higher = harder.
-  // Tuned to prefer: lots of mixed bottles, not too many empties, decent move availability.
+  // Higher score = harder (with "bad feel" penalties baked in)
   function scoreBoard(board){
     let mixed = 0;
     let empties = 0;
     let solved = 0;
     let legalMoves = 0;
-    let blockedMoves = 0;
 
-    // entropy-ish: count color changes inside each bottle
     let segmentation = 0;
 
     for (const b of board){
       if (!b.cells.length) { empties++; continue; }
       if (isSolvedBottle(b)) solved++;
 
-      // Mixed if more than one unique color present
       const uniq = new Set(b.cells);
       if (uniq.size > 1) mixed++;
 
-      // segmentation: count transitions bottom->top
       for (let i=1;i<b.cells.length;i++){
         if (b.cells[i] !== b.cells[i-1]) segmentation++;
       }
     }
 
-    // count legal pours
     for (let i=0;i<board.length;i++){
       for (let j=0;j<board.length;j++){
         if (i===j) continue;
-        const ok = canPour(board[i], board[j]);
-        if (ok) legalMoves++;
-        else blockedMoves++;
+        if (canPour(board[i], board[j])) legalMoves++;
       }
     }
 
-    // Heuristics:
-    // - mixed + segmentation increase difficulty
-    // - too many empties reduce difficulty
-    // - too many solved bottles reduce difficulty
-    // - too few legal moves feels stuck (bad), too many feels trivial (also bad)
     const moveBalance = (() => {
-      // target legal move count band relative to size:
       const n = board.length;
       const ideal = Math.max(10, Math.floor(n * 6));
       const diff = Math.abs(legalMoves - ideal);
-      return Math.max(0, 30 - diff); // higher is better
+      return Math.max(0, 30 - diff); // higher = better
     })();
 
-    // Final score: higher = harder, but also penalize “bad feel”
     const score =
       (mixed * 10) +
       (segmentation * 3) +
       (Math.max(0, (board.length - empties - solved) - 2) * 2) +
-      (Math.max(0, 20 - moveBalance) * 1.5) +   // if moveBalance is low → harder/uglier
-      (Math.max(0, empties - 2) * -6) +          // too many empties → easier
-      (solved * -8);                             // solved bottles → easier
+      (Math.max(0, 20 - moveBalance) * 1.5) +
+      (Math.max(0, empties - 2) * -6) +
+      (solved * -8);
 
-    return {
-      score,
-      mixed, segmentation, empties, solved, legalMoves,
-      moveBalance
-    };
+    return { score, mixed, segmentation, empties, solved, legalMoves, moveBalance };
   }
 
-  // Quick “playout” estimator: random valid moves, count how long to reach solved-ish.
-  // We don't need perfect solving—just a stable difficulty proxy.
+  // Random-planning estimator (higher avg steps = harder)
   function estimateDifficultyByPlayout(board, rng, trials=10, maxSteps=140){
     function pickMove(bd){
       const moves = [];
@@ -679,23 +643,15 @@ function compileRecipeToLevel(recipe, seedStr){
         const mv = pickMove(bd);
         if (!mv) break;
         doPour(bd, mv[0], mv[1]);
-        // if we improve solved bottles, it trends easier
-        if (solvedCount(bd) >= startSolved + Math.max(1, Math.floor((chosen.length)/2))) break;
+        if (solvedCount(bd) >= startSolved + Math.max(1, Math.floor(chosen.length/2))) break;
       }
       totalSteps += steps;
     }
-
-    // Higher avg steps = harder
     return totalSteps / trials;
   }
 
-  // Determine target score band from recipe difficulty / level
   function targetBand(){
-    // recipe.difficulty is 1..10-ish; fallback to level curve
     const d = clampInt(recipe.difficulty ?? Math.min(10, 1 + Math.floor((game?.level ?? 1)/2)), 1, 10);
-
-    // These were tuned to "feel" right given the score function above.
-    // You can adjust later.
     const bands = {
       1: [ 5,  18],
       2: [12,  28],
@@ -711,7 +667,6 @@ function compileRecipeToLevel(recipe, seedStr){
     return bands[d] || [40, 80];
   }
 
-  // ---------- 2) Build a solved board ----------
   function makeSolvedBoard(){
     const out = [];
     for (const c of colorList) out.push({ cells:[c,c,c,c], locked:false });
@@ -721,19 +676,10 @@ function compileRecipeToLevel(recipe, seedStr){
 
     const bottleCount = clampInt(recipe.bottleCount ?? out.length, 6, 12);
     while (out.length < bottleCount) out.push({ cells:[], locked:false });
-
     return out;
   }
 
-  // ---------- 3) Scramble function (legal moves only) ----------
   function scramble(board, rng){
-    // shuffle indices
-    const idxs = [...Array(board.length)].map((_,i)=>i);
-    for (let i=idxs.length-1;i>0;i--){
-      const j = Math.floor(rng()*(i+1));
-      [idxs[i], idxs[j]] = [idxs[j], idxs[i]];
-    }
-
     const targetMoves = clampInt(recipe.scrambleMoves ?? 110, 30, 260);
     const maxAttempts = targetMoves * 10;
     let made = 0;
@@ -742,10 +688,8 @@ function compileRecipeToLevel(recipe, seedStr){
       const a = Math.floor(rng()*board.length);
       const b = Math.floor(rng()*board.length);
       if (a===b) continue;
-
       if (!canPour(board[a], board[b])) continue;
 
-      // Avoid dumping an entire solved bottle into empty too often
       if (isSolvedBottle(board[a]) && board[b].cells.length === 0 && rng() < 0.65) continue;
 
       doPour(board, a, b);
@@ -754,7 +698,6 @@ function compileRecipeToLevel(recipe, seedStr){
     }
   }
 
-  // ---------- 4) Apply locks AFTER the scramble ----------
   function applyLocks(board, rng){
     const lockCount = Math.min(clampInt(recipe.lockedBottles ?? 0, 0, 3), board.length);
     if (lockCount <= 0) return;
@@ -769,35 +712,26 @@ function compileRecipeToLevel(recipe, seedStr){
     }
   }
 
-  // ---------- 5) Quality loop: keep scrambling until score in band ----------
   const [minScore, maxScore] = targetBand();
   const maxTries = 18;
 
   let best = null;
   for (let t=0;t<maxTries;t++){
-    // new RNG stream per try (deterministic from seedStr)
     const rng = mulberry32(hashSeed(seedStr + `:try${t}`));
-
     const candidate = makeSolvedBoard();
     scramble(candidate, rng);
 
-    // Score before locks (locks can reduce moves too much)
     const s = scoreBoard(candidate);
 
-    // Basic reject rules: avoid boring or stuck
     if (s.mixed < Math.max(2, Math.floor(colorList.length * 0.55))) continue;
     if (s.legalMoves < 8) continue;
 
-    // Add a small playout estimator for stability
     const playout = estimateDifficultyByPlayout(candidate, rng, 8, 120);
-
-    // Combine (playout increases hardness)
     const combined = s.score + (playout * 0.35);
 
     const within = combined >= minScore && combined <= maxScore;
-
-    // Keep “best” even if not within band
     const dist = within ? 0 : Math.min(Math.abs(combined - minScore), Math.abs(combined - maxScore));
+
     if (!best || dist < best.dist){
       best = { board: candidate, dist, combined, metrics: s, playout };
     }
@@ -811,7 +745,7 @@ function compileRecipeToLevel(recipe, seedStr){
 
   const finalBoard = (best && best.board) ? best.board : makeSolvedBoard();
 
-  // ---------- 6) Wildcard visual slot (optional) ----------
+  // wildcard visual (optional)
   wildBottleIndex = null;
   wildBottleSlot = null;
   const rngFinal = mulberry32(hashSeed(seedStr + ":wild"));
@@ -820,107 +754,14 @@ function compileRecipeToLevel(recipe, seedStr){
     if (candidates.length){
       const pick = candidates[Math.floor(rngFinal()*candidates.length)];
       wildBottleIndex = pick.i;
-      wildBottleSlot = Math.floor(rngFinal()*slots); // 0..3
+      wildBottleSlot = Math.floor(rngFinal()*slots);
     }
   }
 
-  // Optional: debug in console so you can tune the bands
-  // console.log("DIFF:", {target:[minScore,maxScore], got:best?.combined, playout:best?.playout, metrics:best?.metrics});
+  // Debug (uncomment to tune bands)
+  // console.log("DIFF", { target:[minScore,maxScore], got:best?.combined, playout:best?.playout, metrics:best?.metrics });
 
   return finalBoard;
-}
-
-
-  // Choose element ids → map to distinct COLORS
-  const chosen = (recipe.elements || []).slice(0, recipe.colors || 6);
-  const elementToColor = {};
-  for (let i=0;i<chosen.length;i++){
-    elementToColor[chosen[i]] = COLORS[i % COLORS.length];
-  }
-  const colorList = chosen.map(e => elementToColor[e]);
-
-  // Start solved: one bottle per color
-  const out = [];
-  for (const c of colorList) out.push({ cells:[c,c,c,c], locked:false });
-
-  // Add empty bottles
-  const emptyCount = clampInt(recipe.emptyBottles ?? 2, 1, 5);
-  for (let i=0;i<emptyCount;i++) out.push({ cells:[], locked:false });
-  while (out.length < clampInt(recipe.bottleCount ?? out.length, 6, 12)) out.push({ cells:[], locked:false });
-
-  const topColor = (b) => b.cells.length ? b.cells[b.cells.length-1] : null;
-  const topRun = (b) => {
-    const t = topColor(b);
-    if (!t) return 0;
-    let n=0;
-    for (let i=b.cells.length-1;i>=0;i--){
-      if (b.cells[i] === t) n++;
-      else break;
-    }
-    return n;
-  };
-  const allSame = (arr) => arr.length === 4 && arr.every(x => x === arr[0]);
-
-  function canPour(from, to){
-    if (!from.cells.length) return false;
-    if (to.cells.length >= slots) return false;
-    const c = topColor(from);
-    const t = topColor(to);
-    return (!t || t === c);
-  }
-  function doPour(from, to){
-    const run = topRun(from);
-    const free = slots - to.cells.length;
-    const n = Math.min(run, free);
-    for (let k=0;k<n;k++) to.cells.push(from.cells.pop());
-  }
-
-  // Scramble with legal moves
-  let made = 0;
-  const chaos = clamp01(recipe.chaosFactor ?? 0.35);
-  const targetMoves = clampInt(recipe.scrambleMoves ?? 110, 30, 250);
-  const maxAttempts = targetMoves * 8;
-
-  for (let step=0; step<maxAttempts; step++){
-    const a = Math.floor(rng() * out.length);
-    const b = Math.floor(rng() * out.length);
-    if (a === b) continue;
-
-    const from = out[a], to = out[b];
-    if (!canPour(from, to)) continue;
-
-    // Avoid too many boring solved->empty dumps
-    if (allSame(from.cells) && to.cells.length === 0 && topRun(from) === 4 && rng() < (0.55 + (1-chaos)*0.25)) continue;
-
-    doPour(from, to);
-    made++;
-    if (made >= targetMoves) break;
-  }
-
-  // Apply locks AFTER scramble
-  const lockCount = Math.min(clampInt(recipe.lockedBottles ?? 0, 0, 3), out.length);
-  const idxs = [...Array(out.length)].map((_,i)=>i);
-  for (let i=idxs.length-1;i>0;i--){
-    const j = Math.floor(rng()*(i+1));
-    [idxs[i], idxs[j]] = [idxs[j], idxs[i]];
-  }
-  for (let i=0;i<lockCount;i++){
-    out[idxs[i]].locked = true;
-  }
-
-  // Wildcard visual slot (optional)
-  wildBottleIndex = null;
-  wildBottleSlot = null;
-  if (clampInt(recipe.wildcardSlots ?? 0, 0, 2) > 0){
-    const candidates = out.map((b,i)=>({b,i})).filter(x => !x.b.locked);
-    if (candidates.length){
-      const pick = candidates[Math.floor(rng()*candidates.length)];
-      wildBottleIndex = pick.i;
-      wildBottleSlot = Math.floor(rng()*slots); // 0..3 (bottom->top)
-    }
-  }
-
-  return out;
 }
 
 /* =========================================================
@@ -989,13 +830,13 @@ function drawStream(fromIdx, toIdx, color){
   line.style.left = `${x1}px`;
   line.style.top = `${y1}px`;
   line.style.width = `${len}px`;
-  line.style.height = `10px`;                 // thicker = satisfying
+  line.style.height = `10px`;
   line.style.transformOrigin = "0 50%";
   line.style.transform = `rotate(${angle}deg)`;
   line.style.borderRadius = "999px";
   line.style.background = `linear-gradient(90deg, transparent, ${color}, ${color}, transparent)`;
   line.style.backgroundSize = "28px 10px";
-  line.style.animation = "flow 180ms linear infinite"; // slower = flowy
+  line.style.animation = "flow 180ms linear infinite";
   line.style.opacity = "0";
   line.style.transition = "opacity 120ms ease";
   line.style.filter = "blur(0.25px) drop-shadow(0 0 6px rgba(255,255,255,0.08))";
@@ -1003,19 +844,14 @@ function drawStream(fromIdx, toIdx, color){
   streamLayer.appendChild(line);
   requestAnimationFrame(() => { line.style.opacity = "0.95"; });
 }
-
-function clearStream(){
-  streamLayer.innerHTML = "";
-}
+function clearStream(){ streamLayer.innerHTML = ""; }
 
 /* =========================================================
-   Core mechanics (tap-to-pour), with satisfying animation
+   Core mechanics (tap-to-pour), satisfying animation
 ========================================================= */
-function topColor(cells){
-  return cells.length ? cells[cells.length - 1] : null;
-}
-function countTopRun(cells){
-  const t = topColor(cells);
+function topColorCells(cells){ return cells.length ? cells[cells.length - 1] : null; }
+function countTopRunCells(cells){
+  const t = topColorCells(cells);
   if (!t) return 0;
   let n = 0;
   for (let i=cells.length-1;i>=0;i--){
@@ -1024,9 +860,7 @@ function countTopRun(cells){
   }
   return n;
 }
-function allSame(arr){
-  return arr.length === 4 && arr.every(x => x === arr[0]);
-}
+function allSame4(arr){ return arr.length === 4 && arr.every(x => x === arr[0]); }
 
 async function pourAnimated(fromIdx, toIdx){
   if (isAnimating) return false;
@@ -1040,16 +874,15 @@ async function pourAnimated(fromIdx, toIdx){
   if (!from.cells.length) return false;
   if (to.cells.length >= slots) return false;
 
-  const color = topColor(from.cells);
-  const toTop = topColor(to.cells);
+  const color = topColorCells(from.cells);
+  const toTop = topColorCells(to.cells);
   if (toTop && toTop !== color) return false;
 
-  const run = countTopRun(from.cells);
+  const run = countTopRunCells(from.cells);
   const free = slots - to.cells.length;
   const moveCount = Math.min(run, free);
   if (moveCount <= 0) return false;
 
-  // --- animation phase ---
   isAnimating = true;
   selected = null;
   renderBoard();
@@ -1057,35 +890,26 @@ async function pourAnimated(fromIdx, toIdx){
   const targetWasEmpty = (to.cells.length === 0);
   drawStream(fromIdx, toIdx, color);
 
-  // tiny “tilt pause”
   await sleep(120);
-
-  // move one unit at a time
   for (let k=0;k<moveCount;k++){
     const stepDelay = (k === 0 ? 170 : 135);
     await sleep(stepDelay);
     to.cells.push(from.cells.pop());
     renderBoard();
   }
-
-  // “drip” finish
   await sleep(140);
+
   clearStream();
   isAnimating = false;
 
-  // bookkeeping + telemetry
   game.moves++;
-  const completedBottle = (to.cells.length === slots && allSame(to.cells));
+  const completedBottle = (to.cells.length === slots && allSame4(to.cells));
   playerModel.onMoveAttempt({
-    ok: true,
-    intoEmpty: targetWasEmpty,
-    completedBottle,
-    dtMs: performance.now() - t0
+    ok: true, intoEmpty: targetWasEmpty, completedBottle, dtMs: performance.now() - t0
   });
 
   updateHud();
   updateReadouts();
-
   return true;
 }
 
@@ -1098,7 +922,6 @@ async function onBottleTap(i){
     renderBoard();
     return;
   }
-
   if (selected === i){
     selected = null;
     renderBoard();
@@ -1112,24 +935,11 @@ async function onBottleTap(i){
   const ok = await pourAnimated(from, to);
   if (!ok){
     game.invalid++;
-    playerModel.onMoveAttempt({
-      ok: false,
-      intoEmpty: false,
-      completedBottle: false,
-      dtMs: 0
-    });
+    playerModel.onMoveAttempt({ ok:false, intoEmpty:false, completedBottle:false, dtMs:0 });
     updateHud();
     updateReadouts();
     renderBoard();
     return;
-  }
-
-  // Optional auto-advance: when all non-empty bottles are solved
-  const slots = game.currentLevelConfig?.maxSlots || 4;
-  const nonEmptyGoal = Math.max(1, (game.currentLevelConfig?.bottleCount || bottles.length) - (game.currentLevelConfig?.emptyBottles || 2));
-  const solved = bottles.filter(b => b.cells.length === slots && allSame(b.cells)).length;
-  if (solved >= nonEmptyGoal){
-    await nextLevel();
   }
 }
 
@@ -1200,7 +1010,7 @@ async function fetchQuestNode(){
 }
 
 /* =========================================================
-   Level Flow (SAFE: UI never disappears)
+   Level Flow (safe fallback)
 ========================================================= */
 async function startLevel(level, isReset=false){
   if (isReset){
@@ -1225,7 +1035,6 @@ async function startLevel(level, isReset=false){
 
   bottles = compileRecipeToLevel(recipe, `compile:${game.sessionSeed}:L${level}:${recipe.title}`);
 
-  // Always set config so LevelCfg never shows "—"
   game.currentLevelConfig = {
     bottleCount: clampInt(recipe.bottleCount ?? bottles.length, 6, 12),
     colors: clampInt(recipe.colors ?? 6, 4, 10),
@@ -1240,7 +1049,6 @@ async function startLevel(level, isReset=false){
 
   selected = null;
 
-  // DM panel shows recipe title/lore (fallback still works)
   dmQuestEl.textContent = recipe.title || "—";
   dmIntroEl.textContent = recipe.lore || "";
   dmMidEl.textContent = "";
@@ -1259,9 +1067,10 @@ async function nextLevel(){
 }
 
 /* =========================================================
-   Buttons
+   Buttons + Init
 ========================================================= */
 document.getElementById("apiReadout").textContent = "localhost:8787";
+document.getElementById("btnQuest").addEventListener("click", fetchQuestNode);
 
 document.getElementById("btnNext").addEventListener("click", async () => {
   if (isAnimating) return;
@@ -1295,11 +1104,6 @@ document.getElementById("btnReset").addEventListener("click", async () => {
   await startLevel(game.level, true);
 });
 
-document.getElementById("btnQuest").addEventListener("click", fetchQuestNode);
-
-/* =========================================================
-   Init
-========================================================= */
 (async () => {
   await startLevel(game.level, false);
 })();
