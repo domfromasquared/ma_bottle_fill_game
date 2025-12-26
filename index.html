@@ -1,1055 +1,324 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-  <title>Marketing Alchemist — Bottle Fill (Quest DM + BANK C2 Adaptive Levels)</title>
-  <style>
-    :root { color-scheme: dark; }
-    body {
-      margin: 0;
-      background: #0b0f14;
-      color: #e6edf3;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-    }
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>Marketing Alchemist — Bottle Fill (C3)</title>
 
-    #wrap{
-      display:flex;
-      gap:16px;
-      padding:16px;
-      align-items:flex-start;
-      justify-content:center;
-      flex-wrap:wrap;
-    }
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0;
+    background: #0b0f14;
+    color: #e6edf3;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  }
 
-    /* DM Panel */
-    .dm-panel{
-      width: min(820px, calc(100vw - 32px));
-      padding: 14px 14px 10px;
-      border: 1px solid #243244;
-      border-radius: 14px;
-      background: #0f1621;
-      box-shadow: 0 10px 30px rgba(0,0,0,.25);
-    }
-    .dm-header{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      margin-bottom:8px;
-      flex-wrap:wrap;
-    }
-    .dm-title{
-      font-weight: 900;
-      letter-spacing: .3px;
-      display:flex;
-      align-items:center;
-      gap:10px;
-      flex-wrap:wrap;
-    }
-    .dm-badge{
-      font-size: 12px;
-      padding: 3px 8px;
-      border: 1px solid #243244;
-      border-radius: 999px;
-      opacity: .9;
-    }
-    .dm-btn{
-      padding: 8px 10px;
-      border-radius: 10px;
-      border: 1px solid #243244;
-      background: #101b2b;
-      color: #e6edf3;
-      cursor: pointer;
-      font-weight: 700;
-    }
-    .dm-btn:disabled{ opacity:.55; cursor:not-allowed; }
-    .dm-btn:active{ transform: translateY(1px); }
+  #wrap {
+    display: flex;
+    gap: 16px;
+    padding: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
 
-    .dm-quest{
-      font-size: 18px;
-      font-weight: 900;
-      margin: 6px 0 10px;
-    }
-    .dm-line{
-      min-height: 22px;
-      margin: 8px 0;
-      line-height: 1.35;
-      opacity: .95;
-      white-space: pre-wrap;
-    }
-    .dm-meta{
-      margin-top: 10px;
-      font-size: 12px;
-      opacity: .8;
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      align-items:center;
-    }
-    .dm-meta code{
-      border: 1px solid #243244;
-      border-radius: 8px;
-      padding: 2px 6px;
-      background:#0b0f14;
-    }
-    .pill{
-      border:1px solid #243244;
-      border-radius:999px;
-      padding:4px 10px;
-      font-size:12px;
-      opacity:.95;
-      background:#0b0f14;
-      display:inline-flex;
-      gap:6px;
-      align-items:center;
-      white-space:nowrap;
-    }
+  .panel {
+    width: min(820px, calc(100vw - 32px));
+    border: 1px solid #243244;
+    border-radius: 14px;
+    background: #0f1621;
+    box-shadow: 0 10px 30px rgba(0,0,0,.25);
+  }
 
-    /* Game Panel */
-    .game-shell{
-      width: min(820px, calc(100vw - 32px));
-      border: 1px solid #243244;
-      border-radius: 14px;
-      background: #0f1621;
-      box-shadow: 0 10px 30px rgba(0,0,0,.25);
-      overflow:hidden;
-    }
-    .game-topbar{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      padding: 12px 14px;
-      border-bottom: 1px solid #243244;
-      background: #0e1726;
-      gap: 12px;
-      flex-wrap:wrap;
-    }
-    .game-topbar .hint{
-      opacity:.75;
-      font-size: 12px;
-    }
+  .panel-header {
+    padding: 12px 14px;
+    border-bottom: 1px solid #243244;
+    background: #0e1726;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
 
-    .board{
-      padding: 14px;
-      display:grid;
-      gap: 12px;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-    @media (max-width: 860px){
-      .board{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
+  .panel-body { padding: 14px; }
 
-    .bottle{
-      user-select:none;
-      border: 1px solid #243244;
-      border-radius: 14px;
-      background: #0b0f14;
-      padding: 10px;
-      min-height: 160px;
-      display:flex;
-      flex-direction:column;
-      justify-content:flex-end;
-      gap:6px;
-      touch-action: none;
-      transition: transform .08s ease, outline-color .08s ease;
-      position: relative;
-      overflow:hidden;
-    }
-    .bottle.locked::after{
-      content:"LOCKED";
-      position:absolute;
-      top:10px;
-      right:10px;
-      font-size:10px;
-      letter-spacing:.6px;
-      padding:2px 6px;
-      border:1px solid #243244;
-      border-radius:999px;
-      opacity:.85;
-      background:#0f1621;
-    }
-    .bottle-header{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      margin-bottom:6px;
-      font-size:12px;
-      opacity:.85;
-    }
-    .slot{
-      height: 18px;
-      border-radius: 8px;
-      border: 1px solid #1b2a3c;
-      background: rgba(255,255,255,0.03);
-      overflow:hidden;
-      position: relative;
-    }
-    .fill{
-      position:absolute;
-      inset:0;
-      opacity:.95;
-    }
-    .wild{
-      border-style:dashed;
-      opacity:.9;
-    }
-    .bottle.selected{
-      outline: 2px solid rgba(230, 237, 243, 0.35);
-      transform: translateY(-1px);
-    }
+  .pill {
+    border: 1px solid #243244;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 12px;
+    background: #0b0f14;
+    opacity: .9;
+  }
 
-    .footer{
-      padding: 12px 14px;
-      border-top: 1px solid #243244;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:10px;
-      flex-wrap:wrap;
-      background:#0e1726;
-    }
-    .footer button{
-      padding: 8px 10px;
-      border-radius: 10px;
-      border: 1px solid #243244;
-      background: #101b2b;
-      color: #e6edf3;
-      cursor:pointer;
-      font-weight:800;
-    }
-    .footer button:active{ transform: translateY(1px); }
+  /* DM */
+  .dm-line { margin: 8px 0; line-height: 1.4; }
+  .dm-title { font-weight: 900; font-size: 18px; }
 
-    .mini{
-      font-size:11px;
-      opacity:.8;
-    }
-  </style>
+  /* Board */
+  .board {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  @media (max-width: 820px) {
+    .board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  .bottle {
+    border: 1px solid #243244;
+    border-radius: 14px;
+    background: #0b0f14;
+    padding: 8px;
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .bottle.selected { outline: 2px solid rgba(255,255,255,.35); }
+  .bottle.locked { opacity: .6; }
+
+  .slot {
+    height: 18px;
+    border-radius: 8px;
+    border: 1px solid #1b2a3c;
+    position: relative;
+    overflow: hidden;
+  }
+  .fill {
+    position: absolute;
+    inset: 0;
+  }
+
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  button {
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid #243244;
+    background: #101b2b;
+    color: #e6edf3;
+    font-weight: 700;
+    cursor: pointer;
+  }
+</style>
 </head>
 
 <body>
-  <div id="wrap">
+<div id="wrap">
 
-    <!-- DM PANEL -->
-    <div id="dmPanel" class="dm-panel">
-      <div class="dm-header">
-        <div class="dm-title">
-          The Marketing Alchemist
-          <span class="dm-badge">Quest DM</span>
-          <span class="pill">API: <code id="dmApi">localhost:8787</code></span>
-        </div>
-
-        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-          <button id="dmNext" class="dm-btn">Quest Node</button>
-        </div>
-      </div>
-
-      <div class="dm-quest" id="dmQuest">—</div>
-      <div class="dm-line" id="dmIntro"></div>
-      <div class="dm-line" id="dmMid"></div>
+  <!-- DM PANEL -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="dm-title">🧪 The Marketing Alchemist</div>
+      <button id="btnQuest">Quest Node</button>
+    </div>
+    <div class="panel-body">
+      <div class="dm-line" id="dmTitle"></div>
+      <div class="dm-line" id="dmLore"></div>
       <div class="dm-line" id="dmVerdict"></div>
-
-      <div class="dm-meta">
-        <span id="dmStatus">Ready.</span>
-        <span class="pill">BANK: <code id="bankReadout">—</code></span>
-        <span class="pill">SinTags: <code id="sinReadout">—</code></span>
-        <span class="pill">LevelCfg: <code id="cfgReadout">—</code></span>
+      <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+        <span class="pill" id="bankReadout">BANK: —</span>
+        <span class="pill" id="levelCfg">CFG: —</span>
       </div>
     </div>
-
-    <!-- GAME -->
-    <div class="game-shell">
-      <div class="game-topbar">
-        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-          <strong>Bottle Fill Prototype</strong>
-          <span class="pill">Tap 2 bottles to pour</span>
-          <span class="pill">C2: BANK tunes levels</span>
-        </div>
-        <div class="hint">This is still tap-to-pour (drag next). The generator is now adaptive.</div>
-      </div>
-
-      <div class="board" id="board"></div>
-
-      <div class="footer">
-        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-          <span class="pill">Level: <span id="lvl">1</span></span>
-          <span class="pill">Moves: <span id="moves">0</span></span>
-          <span class="pill">Invalid: <span id="invalid">0</span></span>
-          <span class="pill">Resets: <span id="resets">0</span></span>
-        </div>
-        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-          <button id="btnNew">New Run</button>
-          <button id="btnNextLevel">Next Level</button>
-        </div>
-        <div class="mini">Tip: play 20–40 moves and watch BANK settle; levels will shift accordingly.</div>
-      </div>
-    </div>
-
   </div>
 
-  <script>
-    // ============================================================
-    // CONFIG
-    // ============================================================
-    const DM_API = "http://localhost:8787/api/quest-node";
+  <!-- GAME PANEL -->
+  <div class="panel">
+    <div class="panel-header">
+      <strong>Bottle Fill</strong>
+      <div class="pill">Level <span id="lvl">1</span></div>
+    </div>
+    <div class="panel-body">
+      <div class="board" id="board"></div>
+      <div class="footer" style="margin-top:14px;">
+        <button id="btnNext">Next Level</button>
+        <button id="btnReset">Reset Run</button>
+      </div>
+    </div>
+  </div>
 
-    // ============================================================
-    // DOM
-    // ============================================================
-    const dmEls = {
-      btn: document.getElementById("dmNext"),
-      status: document.getElementById("dmStatus"),
-      quest: document.getElementById("dmQuest"),
-      intro: document.getElementById("dmIntro"),
-      mid: document.getElementById("dmMid"),
-      verdict: document.getElementById("dmVerdict"),
-      api: document.getElementById("dmApi"),
-      bank: document.getElementById("bankReadout"),
-      sin: document.getElementById("sinReadout"),
-      cfg: document.getElementById("cfgReadout")
-    };
-    dmEls.api.textContent = "localhost:8787";
+</div>
 
-    const boardEl = document.getElementById("board");
-    const lvlEl = document.getElementById("lvl");
-    const movesEl = document.getElementById("moves");
-    const invalidEl = document.getElementById("invalid");
-    const resetsEl = document.getElementById("resets");
-    const btnNew = document.getElementById("btnNew");
-    const btnNextLevel = document.getElementById("btnNextLevel");
+<script>
+/* =========================================================
+   CONSTANTS & HELPERS
+========================================================= */
+const API = "http://localhost:8787/api/level-recipe";
+const COLORS = ["#63b3ff","#ff6b6b","#ffd166","#b6ff6b","#c792ff","#7ef0d5","#ff9ff3","#feca57"];
 
-    // ============================================================
-    // Helpers
-    // ============================================================
-    function setStatus(msg) { dmEls.status.textContent = msg; }
-    function clamp01(x){ x = Number(x); return Number.isFinite(x) ? Math.max(0, Math.min(1, x)) : 0; }
-    function clampInt(x, a, b){ x = Math.round(Number(x)); return Number.isFinite(x) ? Math.max(a, Math.min(b, x)) : a; }
+const clamp01 = x => Math.max(0, Math.min(1, x));
+const shuffle = a => { for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; };
 
-    async function typeInto(el, text, speed = 14) {
-      el.textContent = "";
-      const s = String(text || "");
-      for (let i = 0; i < s.length; i++) {
-        el.textContent += s[i];
-        await new Promise(r => setTimeout(r, speed));
-      }
-    }
+/* =========================================================
+   GAME STATE
+========================================================= */
+const game = {
+  level: 1,
+  sessionSeed: Math.random().toString(36).slice(2),
+  moves: 0
+};
 
-    function shuffle(a){
-      for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
-      }
-      return a;
-    }
+let bottles = [];
+let selected = null;
 
-    async function fetchLevelRecipe() {
-  const bank = inferBANK(playerModel);
-  const sins = inferSinTagsFromModel(playerModel);
+/* =========================================================
+   BANK (simplified inference)
+========================================================= */
+const playerModel = { moves:0, invalid:0 };
 
-  const nodeIndex = Math.floor((game.level - 1) / 4) + 1;
-  const seed = `local:${game.sessionSeed}:L${game.level}:recipe${nodeIndex}`;
+function inferBANK() {
+  if (playerModel.invalid / Math.max(1, playerModel.moves) > 0.2) return { bankPrimary:"N", bankConfidence:0.6 };
+  if (playerModel.moves < 10) return { bankPrimary:"B", bankConfidence:0.4 };
+  return { bankPrimary:"A", bankConfidence:0.6 };
+}
 
+/* =========================================================
+   C3 — FETCH RECIPE
+========================================================= */
+async function fetchRecipe() {
+  const bank = inferBANK();
   const body = {
-    act: game.level < 10 ? "ACT_I" : (game.level < 25 ? "ACT_II" : "ACT_III"),
+    act: "ACT_I",
     questId: "Q1",
     thesis: "UR_without_CL",
     bankPrimary: bank.bankPrimary,
     bankConfidence: bank.bankConfidence,
-    intensity: game.level < 8 ? "standard" : "hard",
-    historyIds: game.lastUsedVoiceIds.slice(-20),
-    sinTags: sins,
-    performanceSummary: {
-      levels_completed: game.level - 1,
-      avg_time_to_first_move_ms: Math.round(playerModel.firstMoveMs ?? 650),
-      avg_move_time_ms: Math.round(playerModel.avgMoveMs()),
-      invalid_pour_rate: clamp01(playerModel.invalidRate()),
-      illegal_reaction_rate: 0.0,
-      resets_per_level: clamp01(playerModel.resets / Math.max(1, game.level - 1)),
-      bonus_chase_rate: clamp01(playerModel.bonusChase / Math.max(1, playerModel.moves)),
-      buffer_move_ratio: clamp01(playerModel.bufferRatio()),
-      commitment_ratio: clamp01(playerModel.commitmentRatio())
-    },
-    seed
+    sinTags: [],
+    performanceSummary: {},
+    seed: `${game.sessionSeed}:L${game.level}`
   };
 
-  const res = await fetch("http://localhost:8787/api/level-recipe", {
+  const res = await fetch(API, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
   });
 
   const json = await res.json();
-  if (!json.ok) throw new Error(json.error || "Recipe failed");
+  if (!json.ok) throw new Error(json.error);
   return json.recipe;
 }
 
-    function mulberry32(seed) {
-  let a = seed >>> 0;
-  return function() {
-    a |= 0; a = (a + 0x6D2B79F5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-function hashSeed(str) {
-  let h = 2166136261;
-  for (let i=0;i<str.length;i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619);
-  return h >>> 0;
-}
-
-    function compileRecipeToLevel(recipe, seedStr) {
+/* =========================================================
+   C3 — SOLVABLE COMPILER
+========================================================= */
+function compileRecipe(recipe) {
   const slots = 4;
-  const rng = mulberry32(hashSeed(seedStr));
-
   const chosen = recipe.elements.slice(0, recipe.colors);
+  const colors = chosen.map((_,i)=>COLORS[i%COLORS.length]);
 
-  const elementToColor = {};
-  for (let i=0;i<chosen.length;i++){
-    elementToColor[chosen[i]] = COLORS[i % COLORS.length];
-  }
-  const colorList = chosen.map(e => elementToColor[e]);
-
-  // Start solved
   const out = [];
-  for (const c of colorList) out.push({ cells: [c,c,c,c], locked: false });
+  colors.forEach(c => out.push({ cells:[c,c,c,c], locked:false }));
+  for (let i=0;i<recipe.emptyBottles;i++) out.push({ cells:[], locked:false });
 
-  // Add empty bottles
-  for (let i=0;i<recipe.emptyBottles;i++) out.push({ cells: [], locked: false });
-  while (out.length < recipe.bottleCount) out.push({ cells: [], locked: false });
-
-  const topColor = (b) => b.cells.length ? b.cells[b.cells.length - 1] : null;
-  const topRun = (b) => {
-    const t = topColor(b);
-    if (!t) return 0;
-    let n = 0;
-    for (let i=b.cells.length-1;i>=0;i--){
-      if (b.cells[i] === t) n++;
-      else break;
-    }
-    return n;
-  };
-  const allSame = (arr) => arr.length === 4 && arr.every(x => x === arr[0]);
-
-  function canPour(from, to){
-    if (!from.cells.length) return false;
-    if (to.cells.length >= slots) return false;
-    const c = topColor(from);
-    const t = topColor(to);
-    return (!t || t === c);
-  }
-
-  function doPour(from, to){
-    const run = topRun(from);
-    const free = slots - to.cells.length;
-    const n = Math.min(run, free);
-    for (let k=0;k<n;k++) to.cells.push(from.cells.pop());
-  }
-
-  // Scramble
-  let made = 0;
-  const maxAttempts = recipe.scrambleMoves * 6;
-  for (let step=0; step<maxAttempts; step++){
-    const a = Math.floor(rng() * out.length);
-    const b = Math.floor(rng() * out.length);
-    if (a === b) continue;
-
-    const from = out[a], to = out[b];
-    if (!canPour(from, to)) continue;
-
-    // Avoid too many boring solved->empty dumps
-    if (allSame(from.cells) && to.cells.length === 0 && topRun(from) === 4 && rng() < 0.65) continue;
-
-    doPour(from, to);
-    made++;
-    if (made >= recipe.scrambleMoves) break;
-  }
-
-  // Apply locks AFTER scramble
-  const lockCount = Math.min(recipe.lockedBottles, out.length);
-  const idxs = [...Array(out.length)].map((_,i)=>i);
-  for (let i=idxs.length-1;i>0;i--){
-    const j = Math.floor(rng()*(i+1));
-    [idxs[i], idxs[j]] = [idxs[j], idxs[i]];
-  }
-  for (let i=0;i<lockCount;i++){
-    out[idxs[i]].locked = true;
-  }
-
-  // Optional wildcard visual slot
-  let wild = null;
-  if (recipe.wildcardSlots > 0) {
-    const candidates = out.map((b,i)=>({b,i})).filter(x => !x.b.locked);
-    if (candidates.length) {
-      const pick = candidates[Math.floor(rng()*candidates.length)];
-      wild = { bottleIndex: pick.i, slotIndex: Math.floor(rng()*slots) };
-    }
-  }
-
-  return { bottles: out, wild, recipe };
+  shuffle(out);
+  return out;
 }
 
-    // ============================================================
-    // Game + Board State
-    // ============================================================
-    const COLORS = [
-      "#63b3ff", "#ff6b6b", "#ffd166", "#b6ff6b",
-      "#c792ff", "#7ef0d5", "#ff9ff3", "#feca57",
-      "#7aa7ff", "#ff8c6b", "#c8ff6b", "#6bffd8"
-    ];
+/* =========================================================
+   RENDER
+========================================================= */
+function render() {
+  document.getElementById("lvl").textContent = game.level;
+  document.getElementById("board").innerHTML = "";
 
-    const game = {
-      sessionSeed: Math.floor(Math.random() * 1e9).toString(36),
-      level: 1,
-      moves: 0,
-      invalid: 0,
-      resets: 0,
-      lastUsedVoiceIds: [],
-      currentLevelConfig: null
-    };
-
-    // Each bottle is { cells: [...bottom->top colors], locked: bool }
-    let bottles = [];
-    let selected = null;
-    let wildBottleIndex = null;   // one bottle may have wildcard slot styling (visual only)
-    let wildBottleSlot = null;
-
-    // ============================================================
-    // BANK Telemetry + Inference
-    // ============================================================
-    const playerModel = {
-      moves: 0,
-      invalidMoves: 0,
-      resets: 0,
-
-      firstMoveMs: null,
-      startAt: performance.now(),
-      moveTimes: [],
-
-      emptyPourMoves: 0,
-      nonEmptyPourMoves: 0,
-
-      quickMoves: 0,
-      slowMoves: 0,
-
-      streakyMoves: 0,
-      lastMoveAt: null,
-
-      bonusChase: 0,
-
-      onLevelStart() {
-        this.startAt = performance.now();
-        this.firstMoveMs = null;
-        this.lastMoveAt = null;
-      },
-
-      onReset() { this.resets += 1; },
-
-      onMoveAttempt({ ok, intoEmpty, completedBottle, dtMs }) {
-        const now = performance.now();
-        this.moves += 1;
-        if (!ok) this.invalidMoves += 1;
-
-        if (this.firstMoveMs === null) this.firstMoveMs = now - this.startAt;
-
-        if (intoEmpty) this.emptyPourMoves += 1;
-        else this.nonEmptyPourMoves += 1;
-
-        if (completedBottle) this.bonusChase += 1;
-
-        if (Number.isFinite(dtMs)) this.moveTimes.push(dtMs);
-
-        const gap = this.lastMoveAt ? (now - this.lastMoveAt) : null;
-        if (gap != null && gap < 650) this.streakyMoves += 1;
-
-        const avg = this.avgMoveMs();
-        if (dtMs < Math.max(220, avg * 0.7)) this.quickMoves += 1;
-        if (dtMs > Math.min(1800, avg * 1.4)) this.slowMoves += 1;
-
-        this.lastMoveAt = now;
-      },
-
-      avgMoveMs() {
-        if (!this.moveTimes.length) return 420;
-        return this.moveTimes.reduce((a, b) => a + b, 0) / this.moveTimes.length;
-      },
-
-      invalidRate() { return this.moves ? this.invalidMoves / this.moves : 0; },
-
-      bufferRatio() {
-        const denom = Math.max(1, this.emptyPourMoves + this.nonEmptyPourMoves);
-        return this.emptyPourMoves / denom;
-      },
-
-      commitmentRatio() {
-        const denom = Math.max(1, this.emptyPourMoves + this.nonEmptyPourMoves);
-        return this.nonEmptyPourMoves / denom;
+  bottles.forEach((b,i)=>{
+    const el = document.createElement("div");
+    el.className = "bottle" + (selected===i?" selected":"") + (b.locked?" locked":"");
+    for (let s=3;s>=0;s--){
+      const slot = document.createElement("div");
+      slot.className = "slot";
+      if (b.cells[s]) {
+        const f = document.createElement("div");
+        f.className = "fill";
+        f.style.background = b.cells[s];
+        slot.appendChild(f);
       }
-    };
-
-    function inferBANK(model) {
-      const speed = clamp01((model.quickMoves - model.slowMoves) / Math.max(1, model.moves) + 0.5);
-      const accuracy = clamp01(1 - model.invalidRate());
-      const buffer = clamp01(model.bufferRatio());
-      const commit = clamp01(model.commitmentRatio());
-      const resets = clamp01(model.resets / Math.max(1, (game.level - 1)));
-      const firstMove = model.firstMoveMs == null ? 0.5 : clamp01(1 - (model.firstMoveMs / 2000));
-      const steadiness = clamp01(1 - (model.streakyMoves / Math.max(1, model.moves)));
-
-      // Tunable weights (v1)
-      const scoreA = 0.40 * speed + 0.25 * firstMove + 0.20 * commit + 0.15 * accuracy;
-      const scoreK = 0.45 * accuracy + 0.25 * commit + 0.15 * (1 - buffer) + 0.15 * (1 - resets);
-      const scoreB = 0.40 * steadiness + 0.25 * accuracy + 0.20 * (1 - speed) + 0.15 * (1 - resets);
-      const scoreN = 0.40 * buffer + 0.25 * clamp01(model.slowMoves / Math.max(1, model.moves)) + 0.20 * accuracy + 0.15 * (1 - commit);
-
-      const scores = [
-        ["A", scoreA],
-        ["K", scoreK],
-        ["B", scoreB],
-        ["N", scoreN]
-      ].sort((a, b) => b[1] - a[1]);
-
-      const top = scores[0];
-      const second = scores[1];
-
-      const separation = clamp01((top[1] - second[1]) * 2);
-      const volume = clamp01(model.moves / 40);
-      const confidence = clamp01(0.35 + 0.45 * separation + 0.20 * volume);
-
-      return { bankPrimary: top[0], bankConfidence: confidence, debug: { scores } };
+      el.appendChild(slot);
     }
-
-    function inferSinTagsFromModel(model) {
-      const tags = [];
-      if (model.invalidRate() > 0.12) tags.push("panic");
-      if (model.resets / Math.max(1, game.level - 1) > 0.6) tags.push("over_reset");
-      if (model.firstMoveMs != null && model.firstMoveMs > 1200) tags.push("hesitation");
-      if (model.commitmentRatio() < 0.45) tags.push("indecision");
-      if (model.commitmentRatio() > 0.75 && model.invalidRate() > 0.08) tags.push("overcommitment");
-      if (!tags.length) tags.push("restraint");
-      return tags.slice(0, 3);
-    }
-
-    // ============================================================
-    // C2: BANK -> Level Config
-    // ============================================================
-    function getLevelConfigFromBANK(bankPrimary, bankConfidence, level) {
-      // Baseline (per level scaling is added after blending)
-      const BASE = {
-        bottleCount: 8,
-        colors: 6,
-        emptyBottles: 2,
-        lockedBottles: 0,
-        wildcardSlots: 0,     // "special" slots (visual only in this prototype)
-        maxSlots: 4,
-        reactionRules: "standard",
-        forgiveness: "medium",
-        bonusBias: "neutral",
-        chaosFactor: 0.30     // 0..1 how messy/random the shuffle is
-      };
-
-      const TUNING = {
-        A: { bottleCount:8, colors:7, emptyBottles:1, lockedBottles:1, wildcardSlots:0, maxSlots:4, reactionRules:"strict", forgiveness:"low",       bonusBias:"speed",      chaosFactor:0.60 },
-        K: { bottleCount:9, colors:8, emptyBottles:2, lockedBottles:0, wildcardSlots:1, maxSlots:4, reactionRules:"complex", forgiveness:"medium",  bonusBias:"efficiency", chaosFactor:0.20 },
-        B: { bottleCount:8, colors:7, emptyBottles:3, lockedBottles:0, wildcardSlots:0, maxSlots:4, reactionRules:"predictable", forgiveness:"high", bonusBias:"completion", chaosFactor:0.10 },
-        N: { bottleCount:7, colors:6, emptyBottles:4, lockedBottles:0, wildcardSlots:1, maxSlots:4, reactionRules:"lenient", forgiveness:"very_high", bonusBias:"recovery",  chaosFactor:0.00 }
-      };
-
-      const tuned = TUNING[bankPrimary] || BASE;
-      const c = clamp01(bankConfidence);
-
-      // Blend numeric fields; choose strings based on confidence > 0.5
-      const cfg = {};
-      for (const k in BASE) {
-        if (typeof BASE[k] === "number") {
-          cfg[k] = BASE[k] + (tuned[k] - BASE[k]) * c;
-        } else {
-          cfg[k] = (c > 0.5 ? tuned[k] : BASE[k]);
-        }
-      }
-
-      // Level scaling (gentle)
-      // Every ~6 levels, add one color OR one bottle (depending on BANK target)
-      const tier = Math.floor((level - 1) / 6); // 0,1,2...
-      cfg.colors += Math.min(3, tier * 0.6);     // up to +1.8 (rounded later)
-      cfg.bottleCount += Math.min(2, tier * 0.4);
-
-      // Cap + round
-      cfg.maxSlots = 4;
-      cfg.colors = clampInt(cfg.colors, 4, Math.min(10, COLORS.length));
-      cfg.bottleCount = clampInt(cfg.bottleCount, 6, 12);
-      cfg.emptyBottles = clampInt(cfg.emptyBottles, 1, 5);
-      cfg.lockedBottles = clampInt(cfg.lockedBottles, 0, 3);
-      cfg.wildcardSlots = clampInt(cfg.wildcardSlots, 0, 2);
-      cfg.chaosFactor = clamp01(cfg.chaosFactor);
-
-      // Safety: ensure at least 2 playable bottles besides empties
-      if (cfg.bottleCount - cfg.emptyBottles < 2) cfg.bottleCount = cfg.emptyBottles + 2;
-
-      return cfg;
-    }
-
-    function updateReadouts() {
-      const bank = inferBANK(playerModel);
-      const sins = inferSinTagsFromModel(playerModel);
-      dmEls.bank.textContent = `${bank.bankPrimary} (${bank.bankConfidence.toFixed(2)})`;
-      dmEls.sin.textContent = sins.join(", ");
-
-      const cfg = game.currentLevelConfig;
-      dmEls.cfg.textContent = cfg
-        ? `b${cfg.bottleCount}/c${cfg.colors}/e${cfg.emptyBottles}/lock${cfg.lockedBottles}/wild${cfg.wildcardSlots}`
-        : "—";
-    }
-
-    // ============================================================
-    // Quest Node integration (uses BANK + telemetry + historyIds)
-    // ============================================================
-    function buildQuestNodeRequest() {
-      const bank = inferBANK(playerModel);
-      const sins = inferSinTagsFromModel(playerModel);
-
-      // deterministic-ish per quest node chunk (every 4 levels)
-      const nodeIndex = Math.floor((game.level - 1) / 4) + 1;
-      const seed = `local:${game.sessionSeed}:L${game.level}:node${nodeIndex}`;
-
-      return {
-        act: game.level < 10 ? "ACT_I" : (game.level < 25 ? "ACT_II" : "ACT_III"),
-        questId: "Q1",
-        thesis: "UR_without_CL",
-
-        bankPrimary: bank.bankPrimary,
-        bankConfidence: bank.bankConfidence,
-        intensity: game.level < 8 ? "standard" : "hard",
-
-        historyIds: game.lastUsedVoiceIds.slice(-20),
-        sinTags: sins,
-
-        performanceSummary: {
-          levels_completed: game.level - 1,
-          avg_time_to_first_move_ms: Math.round(playerModel.firstMoveMs ?? 650),
-          avg_move_time_ms: Math.round(playerModel.avgMoveMs()),
-          invalid_pour_rate: clamp01(playerModel.invalidRate()),
-          illegal_reaction_rate: 0.0,
-          resets_per_level: clamp01(playerModel.resets / Math.max(1, game.level - 1)),
-          bonus_chase_rate: clamp01(playerModel.bonusChase / Math.max(1, playerModel.moves)),
-          buffer_move_ratio: clamp01(playerModel.bufferRatio()),
-          commitment_ratio: clamp01(playerModel.commitmentRatio())
-        },
-
-        seed
-      };
-    }
-
-    async function fetchQuestNode() {
-      dmEls.btn.disabled = true;
-      setStatus("Distilling…");
-
-      try {
-        const body = buildQuestNodeRequest();
-        const res = await fetch(DM_API, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body)
-        });
-        const json = await res.json();
-        if (!json.ok) throw new Error(json.error || "Quest node failed");
-
-        const p = json.payload;
-        dmEls.quest.textContent = p.quest_title || "—";
-
-        await typeInto(dmEls.intro, p.dm_intro || "");
-        await typeInto(dmEls.mid, p.dm_midpoint || "");
-        await typeInto(dmEls.verdict, p.dm_verdict || "");
-
-        if (Array.isArray(p.used_voice_ids)) {
-          game.lastUsedVoiceIds.push(...p.used_voice_ids);
-        }
-
-        updateReadouts();
-        setStatus("Stabilized.");
-      } catch (e) {
-        console.error(e);
-        setStatus("Error. (Check console + ensure server is running.)");
-        dmEls.quest.textContent = "—";
-        dmEls.intro.textContent = "";
-        dmEls.mid.textContent = "";
-        dmEls.verdict.textContent = "";
-      } finally {
-        dmEls.btn.disabled = false;
-      }
-    }
-
-    dmEls.btn.addEventListener("click", fetchQuestNode);
-
-    // ============================================================
-    // Level Generator (C2 adaptive)
-    // ============================================================
-    function generateLevel(cfg) {
-      // Build pool of colors: each color appears maxSlots times (like classic water sort)
-      const slots = cfg.maxSlots;
-
-      // Pick distinct colors
-      const colorSet = COLORS.slice(0);
-      shuffle(colorSet);
-
-      const chosen = colorSet.slice(0, cfg.colors);
-
-      // Each color appears exactly slots times
-      const pool = [];
-      for (const col of chosen) for (let i = 0; i < slots; i++) pool.push(col);
-
-      // We'll distribute into (bottleCount - emptyBottles) bottles.
-      const filledCount = cfg.bottleCount - cfg.emptyBottles;
-
-      // Safety: pool size = colors*slots; must match filledCount*slots
-      // If mismatch, adjust by trimming colors.
-      // (This keeps it stable while we iterate to a “solvable generator” later.)
-      let targetCells = filledCount * slots;
-      while (pool.length > targetCells) pool.pop();
-      while (pool.length < targetCells) pool.push(chosen[Math.floor(Math.random()*chosen.length)]);
-
-      // chaosFactor controls how hard we shuffle the pool
-      const shuffles = Math.round(1 + cfg.chaosFactor * 6);
-      for (let i=0;i<shuffles;i++) shuffle(pool);
-
-      // Create bottles
-      const out = [];
-
-      // Filled bottles
-      for (let i = 0; i < filledCount; i++) {
-        const cells = [];
-        for (let s = 0; s < slots; s++) cells.push(pool.pop());
-        out.push({ cells, locked: false });
-      }
-
-      // Empty bottles
-      for (let i = 0; i < cfg.emptyBottles; i++) {
-        out.push({ cells: [], locked: false });
-      }
-
-      // Add locked bottles (random bottles become locked)
-      const lockN = Math.min(cfg.lockedBottles, out.length);
-      const indices = Array.from({length: out.length}, (_, i) => i);
-      shuffle(indices);
-      for (let i=0;i<lockN;i++){
-        const idx = indices[i];
-        out[idx].locked = true;
-      }
-
-      // Wildcard slot (visual-only in this prototype)
-      wildBottleIndex = null;
-      wildBottleSlot = null;
-      if (cfg.wildcardSlots > 0) {
-        // Choose one non-empty bottle if possible
-        const candidates = out.map((b, i) => ({b, i}))
-          .filter(x => !x.b.locked && x.b.cells.length > 0);
-        if (candidates.length) {
-          const pick = candidates[Math.floor(Math.random()*candidates.length)];
-          wildBottleIndex = pick.i;
-          wildBottleSlot = Math.floor(Math.random()*slots); // 0..3 (bottom->top)
-        }
-      }
-
-      return out;
-    }
-
-    // ============================================================
-    // Rendering + Mechanics (tap-to-pour)
-    // ============================================================
-    function updateHud(){
-      lvlEl.textContent = String(game.level);
-      movesEl.textContent = String(game.moves);
-      invalidEl.textContent = String(game.invalid);
-      resetsEl.textContent = String(game.resets);
-    }
-
-    function renderBoard(){
-      boardEl.innerHTML = "";
-      const slots = game.currentLevelConfig?.maxSlots || 4;
-
-      bottles.forEach((b, i) => {
-        const el = document.createElement("div");
-        el.className = "bottle" + (selected === i ? " selected" : "") + (b.locked ? " locked" : "");
-        el.dataset.idx = i;
-
-        const head = document.createElement("div");
-        head.className = "bottle-header";
-        head.innerHTML = `<span>Bottle ${i+1}</span><span>${b.cells.length}/${slots}</span>`;
-        el.appendChild(head);
-
-        // Render slots top->bottom visually, while stored bottom->top
-        for (let s = slots - 1; s >= 0; s--) {
-          const slot = document.createElement("div");
-          slot.className = "slot" + ((i === wildBottleIndex && s === wildBottleSlot) ? " wild" : "");
-          const color = b.cells[s] || null;
-          if (color) {
-            const fill = document.createElement("div");
-            fill.className = "fill";
-            fill.style.background = color;
-            slot.appendChild(fill);
-          }
-          el.appendChild(slot);
-        }
-
-        el.addEventListener("click", () => onBottleTap(i));
-        boardEl.appendChild(el);
-      });
-    }
-
-    function onBottleTap(i){
-      // locked bottles can't be selected or targeted
-      if (bottles[i].locked) return;
-
-      if (selected === null) {
-        selected = i;
-        renderBoard();
-        return;
-      }
-      if (selected === i) {
-        selected = null;
-        renderBoard();
-        return;
-      }
-
-      const from = selected;
-      const to = i;
-      selected = null;
-
-      const ok = pour(from, to);
-      if (!ok) game.invalid++;
-
-      renderBoard();
-      updateHud();
-      updateReadouts();
-    }
-
-    function topColor(cells){
-      return cells.length ? cells[cells.length - 1] : null;
-    }
-
-    function countTopRun(cells){
-      const t = topColor(cells);
-      if (!t) return 0;
-      let n = 0;
-      for (let i = cells.length - 1; i >= 0; i--) {
-        if (cells[i] === t) n++;
-        else break;
-      }
-      return n;
-    }
-
-    function allSame(arr){
-      if (!arr.length) return false;
-      return arr.every(x => x === arr[0]);
-    }
-
-    function pour(fromIdx, toIdx){
-      const t0 = performance.now();
-      const from = bottles[fromIdx];
-      const to = bottles[toIdx];
-      const slots = game.currentLevelConfig?.maxSlots || 4;
-
-      // hard invalid rules
-      if (from.locked || to.locked) {
-        playerModel.onMoveAttempt({ ok:false, intoEmpty:false, completedBottle:false, dtMs: performance.now() - t0 });
-        return false;
-      }
-
-      if (!from.cells.length) {
-        playerModel.onMoveAttempt({ ok:false, intoEmpty:false, completedBottle:false, dtMs: performance.now() - t0 });
-        return false;
-      }
-      if (to.cells.length >= slots) {
-        playerModel.onMoveAttempt({ ok:false, intoEmpty:false, completedBottle:false, dtMs: performance.now() - t0 });
-        return false;
-      }
-
-      const color = topColor(from.cells);
-      const toTop = topColor(to.cells);
-
-      // Basic rule: can pour into empty or same color top
-      // "reactionRules" could later add more constraints; for now it's classic.
-      if (toTop && toTop !== color) {
-        playerModel.onMoveAttempt({ ok:false, intoEmpty:false, completedBottle:false, dtMs: performance.now() - t0 });
-        return false;
-      }
-
-      const run = countTopRun(from.cells);
-      const free = slots - to.cells.length;
-      const moveCount = Math.min(run, free);
-      const targetWasEmpty = (to.cells.length === 0);
-
-      for (let k = 0; k < moveCount; k++) to.cells.push(from.cells.pop());
-
-      game.moves++;
-
-      const completedBottle = (to.cells.length === slots && allSame(to.cells));
-      playerModel.onMoveAttempt({
-        ok: true,
-        intoEmpty: targetWasEmpty,
-        completedBottle,
-        dtMs: performance.now() - t0
-      });
-
-      // Level progression rule (placeholder): if >= half bottles are solved, next level
-      const solved = bottles.filter(b => b.cells.length === slots && allSame(b.cells)).length;
-      if (solved >= Math.max(2, Math.floor((bottles.length - (game.currentLevelConfig?.emptyBottles || 2)) / 2))) {
-        nextLevel();
-      }
-
-      return true;
-    }
-
-    // ============================================================
-    // Level Flow
-    // ============================================================
-    function startLevel(level, isReset = false) {
-      if (isReset) {
-        game.resets++;
-        playerModel.onReset();
-      }
-
-      game.moves = 0;
-      game.invalid = 0;
-      playerModel.onLevelStart();
-
-      const bank = inferBANK(playerModel);
-      game.currentLevelConfig = getLevelConfigFromBANK(bank.bankPrimary, bank.bankConfidence, level);
-
-      bottles = generateLevel(game.currentLevelConfig);
-      selected = null;
-
-      // Update UI
-      updateHud();
-      updateReadouts();
-      renderBoard();
-
-      // Optional: auto quest-node every 4 levels
-      // if ((level - 1) % 4 === 0) fetchQuestNode();
-    }
-
-    function nextLevel() {
-      game.level++;
-      startLevel(game.level, false);
-    }
-
-    // ============================================================
-    // Buttons
-    // ============================================================
-    btnNew.addEventListener("click", () => {
-      // fresh run
-      game.sessionSeed = Math.floor(Math.random() * 1e9).toString(36);
-      game.level = 1;
-      game.lastUsedVoiceIds = [];
-      startLevel(game.level, true);
-    });
-
-    btnNextLevel.addEventListener("click", () => nextLevel());
-
-    // ============================================================
-    // Init
-    // ============================================================
-    startLevel(game.level, false);
-  </script>
+    el.onclick = ()=>onBottle(i);
+    document.getElementById("board").appendChild(el);
+  });
+
+  const bank = inferBANK();
+  document.getElementById("bankReadout").textContent =
+    `BANK: ${bank.bankPrimary} (${bank.bankConfidence.toFixed(2)})`;
+}
+
+/* =========================================================
+   GAMEPLAY
+========================================================= */
+function onBottle(i){
+  if (selected===null){ selected=i; render(); return; }
+  if (selected===i){ selected=null; render(); return; }
+
+  const from = bottles[selected];
+  const to = bottles[i];
+  selected = null;
+
+  if (!from.cells.length || to.cells.length>=4) {
+    playerModel.invalid++;
+    render();
+    return;
+  }
+
+  const c = from.cells[from.cells.length-1];
+  if (to.cells.length && to.cells[to.cells.length-1]!==c) {
+    playerModel.invalid++;
+    render();
+    return;
+  }
+
+  to.cells.push(from.cells.pop());
+  playerModel.moves++;
+  render();
+}
+
+/* =========================================================
+   LEVEL FLOW
+========================================================= */
+async function startLevel() {
+  const recipe = await fetchRecipe();
+  bottles = compileRecipe(recipe);
+
+  document.getElementById("dmTitle").textContent = recipe.title;
+  document.getElementById("dmLore").textContent = recipe.lore;
+  document.getElementById("levelCfg").textContent =
+    `b${recipe.bottleCount} c${recipe.colors} e${recipe.emptyBottles}`;
+
+  render();
+}
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+document.getElementById("btnNext").onclick = async ()=>{
+  game.level++;
+  await startLevel();
+};
+document.getElementById("btnReset").onclick = async ()=>{
+  game.level=1;
+  playerModel.moves=0;
+  playerModel.invalid=0;
+  await startLevel();
+};
+document.getElementById("btnQuest").onclick = ()=>startLevel();
+
+/* =========================================================
+   INIT
+========================================================= */
+startLevel();
+</script>
 </body>
 </html>
