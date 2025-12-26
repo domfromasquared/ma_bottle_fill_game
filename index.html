@@ -271,14 +271,6 @@ const clamp01 = (x) => Math.max(0, Math.min(1, Number(x) || 0));
 const clampInt = (x, a, b) => Math.max(a, Math.min(b, Math.round(Number(x) || a)));
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-function shuffle(a){
-  for (let i=a.length-1;i>0;i--){
-    const j=Math.floor(Math.random()*(i+1));
-    [a[i],a[j]]=[a[j],a[i]];
-  }
-  return a;
-}
-
 /* =========================================================
    DOM
 ========================================================= */
@@ -321,7 +313,7 @@ let wildBottleIndex = null;
 let wildBottleSlot  = null;
 
 /* =========================================================
-   BANK TELEMETRY (same model you had, compact but effective)
+   BANK TELEMETRY
 ========================================================= */
 const playerModel = {
   moves: 0,
@@ -378,14 +370,14 @@ const playerModel = {
 
     if (completedBottle) this.bonusChase += 1;
 
-    if (Number.isFinite(dtMs)) this.moveTimes.push(dtMs);
+    if (Number.isFinite(dtMs) && dtMs > 0) this.moveTimes.push(dtMs);
 
     const gap = this.lastMoveAt ? (now - this.lastMoveAt) : null;
     if (gap != null && gap < 650) this.streakyMoves += 1;
 
     const avg = this.avgMoveMs();
-    if (dtMs < Math.max(260, avg * 0.70)) this.quickMoves += 1;
-    if (dtMs > Math.min(1900, avg * 1.45)) this.slowMoves += 1;
+    if (dtMs && dtMs < Math.max(260, avg * 0.70)) this.quickMoves += 1;
+    if (dtMs && dtMs > Math.min(1900, avg * 1.45)) this.slowMoves += 1;
 
     this.lastMoveAt = now;
   }
@@ -505,6 +497,31 @@ async function fetchLevelRecipe(){
 }
 
 /* =========================================================
+   Fallback Recipe (UI never disappears)
+========================================================= */
+function fallbackRecipe(level){
+  const colors = Math.min(6, 4 + Math.floor(level / 3));
+  return {
+    version: "recipe.v1",
+    title: "Fallback Brew (Server Offline)",
+    lore: "The lab lights flicker. Your API gremlins demand tribute. Brew anyway.",
+    difficulty: Math.min(10, 1 + Math.floor(level / 2)),
+    bank_target: "B",
+    elements: ["Na","Cl","Au","Pb","Fe","Cu","Zn","Ag","C","O","H","S"],
+    colors,
+    bottleCount: Math.min(12, colors + 2),
+    emptyBottles: 2,
+    lockedBottles: Math.min(2, Math.floor(level/6)),
+    wildcardSlots: 0,
+    chaosFactor: 0.35,
+    scrambleMoves: 110,
+    rules: { reactionRules:"standard", forgiveness:"medium" },
+    bonuses: [],
+    constraints: []
+  };
+}
+
+/* =========================================================
    C3 — Deterministic solvable compiler (scramble from solved)
 ========================================================= */
 function mulberry32(seed){
@@ -527,7 +544,7 @@ function compileRecipeToLevel(recipe, seedStr){
   const rng = mulberry32(hashSeed(seedStr));
 
   // Choose element ids → map to distinct COLORS
-  const chosen = recipe.elements.slice(0, recipe.colors);
+  const chosen = (recipe.elements || []).slice(0, recipe.colors || 6);
   const elementToColor = {};
   for (let i=0;i<chosen.length;i++){
     elementToColor[chosen[i]] = COLORS[i % COLORS.length];
@@ -539,8 +556,9 @@ function compileRecipeToLevel(recipe, seedStr){
   for (const c of colorList) out.push({ cells:[c,c,c,c], locked:false });
 
   // Add empty bottles
-  for (let i=0;i<recipe.emptyBottles;i++) out.push({ cells:[], locked:false });
-  while (out.length < recipe.bottleCount) out.push({ cells:[], locked:false });
+  const emptyCount = clampInt(recipe.emptyBottles ?? 2, 1, 5);
+  for (let i=0;i<emptyCount;i++) out.push({ cells:[], locked:false });
+  while (out.length < clampInt(recipe.bottleCount ?? out.length, 6, 12)) out.push({ cells:[], locked:false });
 
   const topColor = (b) => b.cells.length ? b.cells[b.cells.length-1] : null;
   const topRun = (b) => {
@@ -689,7 +707,7 @@ function drawStream(fromIdx, toIdx, color){
   line.style.borderRadius = "999px";
   line.style.background = `linear-gradient(90deg, transparent, ${color}, ${color}, transparent)`;
   line.style.backgroundSize = "28px 10px";
-  line.style.animation = "flow 180ms linear infinite"; // slower = “flowy”
+  line.style.animation = "flow 180ms linear infinite"; // slower = flowy
   line.style.opacity = "0";
   line.style.transition = "opacity 120ms ease";
   line.style.filter = "blur(0.25px) drop-shadow(0 0 6px rgba(255,255,255,0.08))";
@@ -719,8 +737,7 @@ function countTopRun(cells){
   return n;
 }
 function allSame(arr){
-  if (!arr.length) return false;
-  return arr.every(x => x === arr[0]);
+  return arr.length === 4 && arr.every(x => x === arr[0]);
 }
 
 async function pourAnimated(fromIdx, toIdx){
@@ -752,13 +769,11 @@ async function pourAnimated(fromIdx, toIdx){
   const targetWasEmpty = (to.cells.length === 0);
   drawStream(fromIdx, toIdx, color);
 
-  // Satisfying pacing:
-  // - tiny “tilt pause”
+  // tiny “tilt pause”
   await sleep(120);
 
   // move one unit at a time
   for (let k=0;k<moveCount;k++){
-    // slower first unit, then slightly quicker
     const stepDelay = (k === 0 ? 170 : 135);
     await sleep(stepDelay);
     to.cells.push(from.cells.pop());
@@ -821,17 +836,17 @@ async function onBottleTap(i){
     return;
   }
 
-  // Progression (simple): if >= half “filled” bottles are solved, next level
+  // Optional auto-advance: when all non-empty bottles are solved
   const slots = game.currentLevelConfig?.maxSlots || 4;
+  const nonEmptyGoal = Math.max(1, (game.currentLevelConfig?.bottleCount || bottles.length) - (game.currentLevelConfig?.emptyBottles || 2));
   const solved = bottles.filter(b => b.cells.length === slots && allSame(b.cells)).length;
-  const filledCount = Math.max(2, (game.currentLevelConfig?.bottleCount || bottles.length) - (game.currentLevelConfig?.emptyBottles || 2));
-  if (solved >= Math.max(2, Math.floor(filledCount / 2))){
+  if (solved >= nonEmptyGoal){
     await nextLevel();
   }
 }
 
 /* =========================================================
-   Quest Node (optional UI button — uses your server)
+   Quest Node (optional)
 ========================================================= */
 function buildQuestNodeRequest(){
   const bank = inferBANK(playerModel);
@@ -897,7 +912,7 @@ async function fetchQuestNode(){
 }
 
 /* =========================================================
-   Level Flow
+   Level Flow (SAFE: UI never disappears)
 ========================================================= */
 async function startLevel(level, isReset=false){
   if (isReset){
@@ -911,12 +926,18 @@ async function startLevel(level, isReset=false){
 
   setStatus("Brewing recipe…");
 
-  const recipe = await fetchLevelRecipe();
-  const compiled = compileRecipeToLevel(recipe, `compile:${game.sessionSeed}:L${level}:${recipe.title}`);
+  let recipe;
+  try{
+    recipe = await fetchLevelRecipe();
+  }catch(err){
+    console.error("fetchLevelRecipe failed:", err);
+    setStatus("Recipe API failed — using fallback.");
+    recipe = fallbackRecipe(level);
+  }
 
-  bottles = compiled;
+  bottles = compileRecipeToLevel(recipe, `compile:${game.sessionSeed}:L${level}:${recipe.title}`);
 
-  // set config readouts + mechanics knobs
+  // Always set config so LevelCfg never shows "—"
   game.currentLevelConfig = {
     bottleCount: clampInt(recipe.bottleCount ?? bottles.length, 6, 12),
     colors: clampInt(recipe.colors ?? 6, 4, 10),
@@ -931,7 +952,7 @@ async function startLevel(level, isReset=false){
 
   selected = null;
 
-  // DM panel shows the recipe’s lore (short, no spoilers)
+  // DM panel shows recipe title/lore (fallback still works)
   dmQuestEl.textContent = recipe.title || "—";
   dmIntroEl.textContent = recipe.lore || "";
   dmMidEl.textContent = "";
@@ -961,18 +982,26 @@ document.getElementById("btnNext").addEventListener("click", async () => {
 
 document.getElementById("btnReset").addEventListener("click", async () => {
   if (isAnimating) return;
+
   game.sessionSeed = Math.random().toString(36).slice(2);
   game.level = 1;
   game.lastUsedVoiceIds = [];
+
+  game.moves = 0;
+  game.invalid = 0;
+  game.resets = 0;
+
   playerModel.moves = 0;
   playerModel.invalidMoves = 0;
   playerModel.resets = 0;
+  playerModel.firstMoveMs = null;
   playerModel.moveTimes = [];
   playerModel.emptyPourMoves = 0;
   playerModel.nonEmptyPourMoves = 0;
   playerModel.quickMoves = 0;
   playerModel.slowMoves = 0;
   playerModel.streakyMoves = 0;
+  playerModel.lastMoveAt = null;
   playerModel.bonusChase = 0;
 
   await startLevel(game.level, true);
