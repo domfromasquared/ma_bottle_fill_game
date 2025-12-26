@@ -342,6 +342,153 @@
       return a;
     }
 
+    async function fetchLevelRecipe() {
+  const bank = inferBANK(playerModel);
+  const sins = inferSinTagsFromModel(playerModel);
+
+  const nodeIndex = Math.floor((game.level - 1) / 4) + 1;
+  const seed = `local:${game.sessionSeed}:L${game.level}:recipe${nodeIndex}`;
+
+  const body = {
+    act: game.level < 10 ? "ACT_I" : (game.level < 25 ? "ACT_II" : "ACT_III"),
+    questId: "Q1",
+    thesis: "UR_without_CL",
+    bankPrimary: bank.bankPrimary,
+    bankConfidence: bank.bankConfidence,
+    intensity: game.level < 8 ? "standard" : "hard",
+    historyIds: game.lastUsedVoiceIds.slice(-20),
+    sinTags: sins,
+    performanceSummary: {
+      levels_completed: game.level - 1,
+      avg_time_to_first_move_ms: Math.round(playerModel.firstMoveMs ?? 650),
+      avg_move_time_ms: Math.round(playerModel.avgMoveMs()),
+      invalid_pour_rate: clamp01(playerModel.invalidRate()),
+      illegal_reaction_rate: 0.0,
+      resets_per_level: clamp01(playerModel.resets / Math.max(1, game.level - 1)),
+      bonus_chase_rate: clamp01(playerModel.bonusChase / Math.max(1, playerModel.moves)),
+      buffer_move_ratio: clamp01(playerModel.bufferRatio()),
+      commitment_ratio: clamp01(playerModel.commitmentRatio())
+    },
+    seed
+  };
+
+  const res = await fetch("http://localhost:8787/api/level-recipe", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error || "Recipe failed");
+  return json.recipe;
+}
+
+    function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function() {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function hashSeed(str) {
+  let h = 2166136261;
+  for (let i=0;i<str.length;i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+
+    function compileRecipeToLevel(recipe, seedStr) {
+  const slots = 4;
+  const rng = mulberry32(hashSeed(seedStr));
+
+  const chosen = recipe.elements.slice(0, recipe.colors);
+
+  const elementToColor = {};
+  for (let i=0;i<chosen.length;i++){
+    elementToColor[chosen[i]] = COLORS[i % COLORS.length];
+  }
+  const colorList = chosen.map(e => elementToColor[e]);
+
+  // Start solved
+  const out = [];
+  for (const c of colorList) out.push({ cells: [c,c,c,c], locked: false });
+
+  // Add empty bottles
+  for (let i=0;i<recipe.emptyBottles;i++) out.push({ cells: [], locked: false });
+  while (out.length < recipe.bottleCount) out.push({ cells: [], locked: false });
+
+  const topColor = (b) => b.cells.length ? b.cells[b.cells.length - 1] : null;
+  const topRun = (b) => {
+    const t = topColor(b);
+    if (!t) return 0;
+    let n = 0;
+    for (let i=b.cells.length-1;i>=0;i--){
+      if (b.cells[i] === t) n++;
+      else break;
+    }
+    return n;
+  };
+  const allSame = (arr) => arr.length === 4 && arr.every(x => x === arr[0]);
+
+  function canPour(from, to){
+    if (!from.cells.length) return false;
+    if (to.cells.length >= slots) return false;
+    const c = topColor(from);
+    const t = topColor(to);
+    return (!t || t === c);
+  }
+
+  function doPour(from, to){
+    const run = topRun(from);
+    const free = slots - to.cells.length;
+    const n = Math.min(run, free);
+    for (let k=0;k<n;k++) to.cells.push(from.cells.pop());
+  }
+
+  // Scramble
+  let made = 0;
+  const maxAttempts = recipe.scrambleMoves * 6;
+  for (let step=0; step<maxAttempts; step++){
+    const a = Math.floor(rng() * out.length);
+    const b = Math.floor(rng() * out.length);
+    if (a === b) continue;
+
+    const from = out[a], to = out[b];
+    if (!canPour(from, to)) continue;
+
+    // Avoid too many boring solved->empty dumps
+    if (allSame(from.cells) && to.cells.length === 0 && topRun(from) === 4 && rng() < 0.65) continue;
+
+    doPour(from, to);
+    made++;
+    if (made >= recipe.scrambleMoves) break;
+  }
+
+  // Apply locks AFTER scramble
+  const lockCount = Math.min(recipe.lockedBottles, out.length);
+  const idxs = [...Array(out.length)].map((_,i)=>i);
+  for (let i=idxs.length-1;i>0;i--){
+    const j = Math.floor(rng()*(i+1));
+    [idxs[i], idxs[j]] = [idxs[j], idxs[i]];
+  }
+  for (let i=0;i<lockCount;i++){
+    out[idxs[i]].locked = true;
+  }
+
+  // Optional wildcard visual slot
+  let wild = null;
+  if (recipe.wildcardSlots > 0) {
+    const candidates = out.map((b,i)=>({b,i})).filter(x => !x.b.locked);
+    if (candidates.length) {
+      const pick = candidates[Math.floor(rng()*candidates.length)];
+      wild = { bottleIndex: pick.i, slotIndex: Math.floor(rng()*slots) };
+    }
+  }
+
+  return { bottles: out, wild, recipe };
+}
+
     // ============================================================
     // Game + Board State
     // ============================================================
