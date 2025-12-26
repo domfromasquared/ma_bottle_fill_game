@@ -1,4 +1,3 @@
-// voice/lexicons.v1.json
 {
   "version": "v1",
   "signature_tokens": [
@@ -20,7 +19,6 @@
     "pressure",
     "laws"
   ],
-
   "forbidden_cheerleading": [
     "you've got this",
     "you got this",
@@ -36,7 +34,6 @@
     "well done",
     "congratulations"
   ],
-
   "forbidden_hinting": [
     "try pouring",
     "pour the",
@@ -60,7 +57,6 @@
     "tap the",
     "click the"
   ],
-
   "forbidden_identity_insults": [
     "idiot",
     "stupid",
@@ -71,7 +67,6 @@
     "pathetic",
     "trash"
   ],
-
   "forbidden_profanity": [
     "fuck",
     "shit",
@@ -83,7 +78,6 @@
     "dick",
     "pussy"
   ],
-
   "allowed_sarcasm_markers": [
     "shocking",
     "fascinating",
@@ -92,7 +86,6 @@
     "as usual",
     "of course"
   ],
-
   "forbidden_softeners": [
     "maybe",
     "perhaps",
@@ -104,7 +97,6 @@
     "no worries",
     "it's okay"
   ],
-
   "forbidden_meta_ai": [
     "as an ai",
     "as a language model",

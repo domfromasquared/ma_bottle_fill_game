@@ -2,805 +2,907 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>The Marketing Alchemist — Campaign Lab</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Marketing Alchemist — Bottle Fill (Quest DM + BANK C2 Adaptive Levels)</title>
   <style>
     :root { color-scheme: dark; }
-    html, body {
+    body {
       margin: 0;
-      height: 100%;
-      overflow: hidden;
-      background: radial-gradient(circle at top, #101826, #05070c);
-      touch-action: none;
+      background: #0b0f14;
+      color: #e6edf3;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      color: #cbd5e1;
     }
-    canvas { display:block; width:100vw; height:100vh; }
 
-    .hud {
-      position: fixed;
-      left: 16px;
-      right: 16px;
-      bottom: 16px;
-      max-width: 720px;
-      font-size: 13px;
-      line-height: 1.35;
-      opacity: 0.95;
-      user-select: none;
-      pointer-events: none;
-    }
-    .row {
+    #wrap{
       display:flex;
-      gap: 10px;
+      gap:16px;
+      padding:16px;
       align-items:flex-start;
-      flex-wrap: wrap;
+      justify-content:center;
+      flex-wrap:wrap;
     }
-    .panel {
-      pointer-events: none;
-      padding: 10px 12px;
-      border-radius: 12px;
-      background: rgba(2, 6, 12, 0.55);
-      border: 1px solid rgba(148,163,184,0.18);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-      max-width: 520px;
-    }
-    .title { font-weight: 700; margin-bottom: 6px; letter-spacing: 0.2px; }
-    .meta { opacity: 0.85; margin-bottom: 6px; }
-    .msg { opacity: 0.92; }
 
-    .controls {
-      pointer-events: auto;
+    /* DM Panel */
+    .dm-panel{
+      width: min(820px, calc(100vw - 32px));
+      padding: 14px 14px 10px;
+      border: 1px solid #243244;
+      border-radius: 14px;
+      background: #0f1621;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+    .dm-header{
       display:flex;
-      gap: 8px;
       align-items:center;
-      padding: 10px 12px;
-      border-radius: 12px;
-      background: rgba(2, 6, 12, 0.55);
-      border: 1px solid rgba(148,163,184,0.18);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:8px;
+      flex-wrap:wrap;
     }
-    button {
-      appearance: none;
-      border: 1px solid rgba(148,163,184,0.25);
-      background: rgba(15, 23, 42, 0.65);
-      color: #e2e8f0;
-      border-radius: 10px;
+    .dm-title{
+      font-weight: 900;
+      letter-spacing: .3px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .dm-badge{
+      font-size: 12px;
+      padding: 3px 8px;
+      border: 1px solid #243244;
+      border-radius: 999px;
+      opacity: .9;
+    }
+    .dm-btn{
       padding: 8px 10px;
-      font-weight: 600;
+      border-radius: 10px;
+      border: 1px solid #243244;
+      background: #101b2b;
+      color: #e6edf3;
       cursor: pointer;
+      font-weight: 700;
     }
-    button:active { transform: translateY(1px); }
-    .hint {
-      opacity: 0.8;
-      font-weight: 600;
-      padding-left: 6px;
+    .dm-btn:disabled{ opacity:.55; cursor:not-allowed; }
+    .dm-btn:active{ transform: translateY(1px); }
+
+    .dm-quest{
+      font-size: 18px;
+      font-weight: 900;
+      margin: 6px 0 10px;
+    }
+    .dm-line{
+      min-height: 22px;
+      margin: 8px 0;
+      line-height: 1.35;
+      opacity: .95;
+      white-space: pre-wrap;
+    }
+    .dm-meta{
+      margin-top: 10px;
+      font-size: 12px;
+      opacity: .8;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .dm-meta code{
+      border: 1px solid #243244;
+      border-radius: 8px;
+      padding: 2px 6px;
+      background:#0b0f14;
+    }
+    .pill{
+      border:1px solid #243244;
+      border-radius:999px;
+      padding:4px 10px;
+      font-size:12px;
+      opacity:.95;
+      background:#0b0f14;
+      display:inline-flex;
+      gap:6px;
+      align-items:center;
+      white-space:nowrap;
+    }
+
+    /* Game Panel */
+    .game-shell{
+      width: min(820px, calc(100vw - 32px));
+      border: 1px solid #243244;
+      border-radius: 14px;
+      background: #0f1621;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+      overflow:hidden;
+    }
+    .game-topbar{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding: 12px 14px;
+      border-bottom: 1px solid #243244;
+      background: #0e1726;
+      gap: 12px;
+      flex-wrap:wrap;
+    }
+    .game-topbar .hint{
+      opacity:.75;
+      font-size: 12px;
+    }
+
+    .board{
+      padding: 14px;
+      display:grid;
+      gap: 12px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    @media (max-width: 860px){
+      .board{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    .bottle{
+      user-select:none;
+      border: 1px solid #243244;
+      border-radius: 14px;
+      background: #0b0f14;
+      padding: 10px;
+      min-height: 160px;
+      display:flex;
+      flex-direction:column;
+      justify-content:flex-end;
+      gap:6px;
+      touch-action: none;
+      transition: transform .08s ease, outline-color .08s ease;
+      position: relative;
+      overflow:hidden;
+    }
+    .bottle.locked::after{
+      content:"LOCKED";
+      position:absolute;
+      top:10px;
+      right:10px;
+      font-size:10px;
+      letter-spacing:.6px;
+      padding:2px 6px;
+      border:1px solid #243244;
+      border-radius:999px;
+      opacity:.85;
+      background:#0f1621;
+    }
+    .bottle-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:6px;
+      font-size:12px;
+      opacity:.85;
+    }
+    .slot{
+      height: 18px;
+      border-radius: 8px;
+      border: 1px solid #1b2a3c;
+      background: rgba(255,255,255,0.03);
+      overflow:hidden;
+      position: relative;
+    }
+    .fill{
+      position:absolute;
+      inset:0;
+      opacity:.95;
+    }
+    .wild{
+      border-style:dashed;
+      opacity:.9;
+    }
+    .bottle.selected{
+      outline: 2px solid rgba(230, 237, 243, 0.35);
+      transform: translateY(-1px);
+    }
+
+    .footer{
+      padding: 12px 14px;
+      border-top: 1px solid #243244;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      background:#0e1726;
+    }
+    .footer button{
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid #243244;
+      background: #101b2b;
+      color: #e6edf3;
+      cursor:pointer;
+      font-weight:800;
+    }
+    .footer button:active{ transform: translateY(1px); }
+
+    .mini{
+      font-size:11px;
+      opacity:.8;
     }
   </style>
 </head>
-<body>
-  <canvas id="game"></canvas>
 
-  <div class="hud">
-    <div class="row">
-      <div class="panel">
-        <div class="title" id="hudTitle">Experiment</div>
-        <div class="meta" id="hudMeta"></div>
-        <div class="msg" id="hudMsg"></div>
+<body>
+  <div id="wrap">
+
+    <!-- DM PANEL -->
+    <div id="dmPanel" class="dm-panel">
+      <div class="dm-header">
+        <div class="dm-title">
+          The Marketing Alchemist
+          <span class="dm-badge">Quest DM</span>
+          <span class="pill">API: <code id="dmApi">localhost:8787</code></span>
+        </div>
+
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <button id="dmNext" class="dm-btn">Quest Node</button>
+        </div>
       </div>
 
-      <div class="controls">
-        <button id="btnPrev" title="Previous experiment">Prev</button>
-        <button id="btnNext" title="Next experiment">Next</button>
-        <span class="hint">Drag-to-pour.</span>
+      <div class="dm-quest" id="dmQuest">—</div>
+      <div class="dm-line" id="dmIntro"></div>
+      <div class="dm-line" id="dmMid"></div>
+      <div class="dm-line" id="dmVerdict"></div>
+
+      <div class="dm-meta">
+        <span id="dmStatus">Ready.</span>
+        <span class="pill">BANK: <code id="bankReadout">—</code></span>
+        <span class="pill">SinTags: <code id="sinReadout">—</code></span>
+        <span class="pill">LevelCfg: <code id="cfgReadout">—</code></span>
       </div>
     </div>
+
+    <!-- GAME -->
+    <div class="game-shell">
+      <div class="game-topbar">
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <strong>Bottle Fill Prototype</strong>
+          <span class="pill">Tap 2 bottles to pour</span>
+          <span class="pill">C2: BANK tunes levels</span>
+        </div>
+        <div class="hint">This is still tap-to-pour (drag next). The generator is now adaptive.</div>
+      </div>
+
+      <div class="board" id="board"></div>
+
+      <div class="footer">
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <span class="pill">Level: <span id="lvl">1</span></span>
+          <span class="pill">Moves: <span id="moves">0</span></span>
+          <span class="pill">Invalid: <span id="invalid">0</span></span>
+          <span class="pill">Resets: <span id="resets">0</span></span>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <button id="btnNew">New Run</button>
+          <button id="btnNextLevel">Next Level</button>
+        </div>
+        <div class="mini">Tip: play 20–40 moves and watch BANK settle; levels will shift accordingly.</div>
+      </div>
+    </div>
+
   </div>
 
-<script type="module">
-/* ===========================
-   Import Canon Schema
-=========================== */
-import { ELEMENTS, THESES, pickLoreLine } from "./element_schema.js";
+  <script>
+    // ============================================================
+    // CONFIG
+    // ============================================================
+    const DM_API = "http://localhost:8787/api/quest-node";
 
-/* ===========================
-   Canvas setup
-=========================== */
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+    // ============================================================
+    // DOM
+    // ============================================================
+    const dmEls = {
+      btn: document.getElementById("dmNext"),
+      status: document.getElementById("dmStatus"),
+      quest: document.getElementById("dmQuest"),
+      intro: document.getElementById("dmIntro"),
+      mid: document.getElementById("dmMid"),
+      verdict: document.getElementById("dmVerdict"),
+      api: document.getElementById("dmApi"),
+      bank: document.getElementById("bankReadout"),
+      sin: document.getElementById("sinReadout"),
+      cfg: document.getElementById("cfgReadout")
+    };
+    dmEls.api.textContent = "localhost:8787";
 
-function resize() {
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  canvas.width = Math.floor(innerWidth * dpr);
-  canvas.height = Math.floor(innerHeight * dpr);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-}
-window.addEventListener("resize", () => { resize(); layoutVessels(); });
-resize();
+    const boardEl = document.getElementById("board");
+    const lvlEl = document.getElementById("lvl");
+    const movesEl = document.getElementById("moves");
+    const invalidEl = document.getElementById("invalid");
+    const resetsEl = document.getElementById("resets");
+    const btnNew = document.getElementById("btnNew");
+    const btnNextLevel = document.getElementById("btnNextLevel");
 
-/* ===========================
-   HUD
-=========================== */
-const hudTitle = document.getElementById("hudTitle");
-const hudMeta  = document.getElementById("hudMeta");
-const hudMsg   = document.getElementById("hudMsg");
+    // ============================================================
+    // Helpers
+    // ============================================================
+    function setStatus(msg) { dmEls.status.textContent = msg; }
+    function clamp01(x){ x = Number(x); return Number.isFinite(x) ? Math.max(0, Math.min(1, x)) : 0; }
+    function clampInt(x, a, b){ x = Math.round(Number(x)); return Number.isFinite(x) ? Math.max(a, Math.min(b, x)) : a; }
 
-let msgTimer = 0;
-function say(text, seconds=1.6) {
-  hudMsg.textContent = text;
-  msgTimer = seconds;
-}
-
-/* ===========================
-   Deterministic RNG (seeded)
-=========================== */
-function makeRng(seedStr) {
-  function xmur3(str){
-    let h = 1779033703 ^ str.length;
-    for (let i=0; i<str.length; i++) {
-      h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
-      h = (h << 13) | (h >>> 19);
+    async function typeInto(el, text, speed = 14) {
+      el.textContent = "";
+      const s = String(text || "");
+      for (let i = 0; i < s.length; i++) {
+        el.textContent += s[i];
+        await new Promise(r => setTimeout(r, speed));
+      }
     }
-    return function() {
-      h = Math.imul(h ^ (h >>> 16), 2246822507);
-      h = Math.imul(h ^ (h >>> 13), 3266489909);
-      return (h ^= (h >>> 16)) >>> 0;
-    };
-  }
-  function mulberry32(a){
-    return function() {
-      let t = (a += 0x6D2B79F5);
-      t = Math.imul(t ^ (t >>> 15), t | 1);
-      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-  }
-  const seed = xmur3(seedStr)();
-  const rand = mulberry32(seed);
-  return {
-    f: () => rand(),
-    int: (min, max) => Math.floor(rand() * (max - min + 1)) + min,
-    pick: (arr) => arr[Math.floor(rand() * arr.length)],
-    shuffle: (arr) => {
-      const a = arr.slice();
-      for (let i=a.length-1; i>0; i--) {
-        const j = Math.floor(rand() * (i+1));
+
+    function shuffle(a){
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
         [a[i], a[j]] = [a[j], a[i]];
       }
       return a;
     }
-  };
-}
 
-/* ===========================
-   Campaign plan (v1)
-   - You can later move this to JSON.
-=========================== */
-const CAMPAIGN = {
-  acts: [
-    {
-      id: "ACT_I",
-      tier: 1,
-      name: "The Contaminated Lab",
-      difficulty_range: [1, 3],
-      quests: [
-        {
-          id: "Q1",
-          name: "Funnel Contamination",
-          theses: ["PA_without_PR", "UR_without_CL", "Traffic_without_ME"]
-        }
-      ]
-    }
-  ]
-};
+    // ============================================================
+    // Game + Board State
+    // ============================================================
+    const COLORS = [
+      "#63b3ff", "#ff6b6b", "#ffd166", "#b6ff6b",
+      "#c792ff", "#7ef0d5", "#ff9ff3", "#feca57",
+      "#7aa7ff", "#ff8c6b", "#c8ff6b", "#6bffd8"
+    ];
 
-/* ===========================
-   Level Reasoning Pipeline (v1)
-   - DM-like, deterministic, schema-driven
-=========================== */
-function difficultyScore(elements, constraints, thesisKey) {
-  const base = elements.reduce((s, sym) => s + (ELEMENTS[sym]?.difficulty_weight ?? 2), 0);
-  const volatility = elements.reduce((s, sym) => s + (ELEMENTS[sym]?.volatility ?? 0.35), 0) / Math.max(1, elements.length);
-  const illegalRisk = THESES[thesisKey]?.illegal_rule ? 1.1 : 0;
-  const safety = (constraints.empties * 0.9) - (constraints.locks * 0.25);
-  const score = base * 0.35 + volatility * 2.25 + illegalRisk - safety * 0.4;
-  return { score: Math.max(1, score), volatility };
-}
+    const game = {
+      sessionSeed: Math.floor(Math.random() * 1e9).toString(36),
+      level: 1,
+      moves: 0,
+      invalid: 0,
+      resets: 0,
+      lastUsedVoiceIds: [],
+      currentLevelConfig: null
+    };
 
-function assembleElements({ act, thesisKey, rng }) {
-  const thesis = THESES[thesisKey];
-  const keys = Object.keys(ELEMENTS);
+    // Each bottle is { cells: [...bottom->top colors], locked: bool }
+    let bottles = [];
+    let selected = null;
+    let wildBottleIndex = null;   // one bottle may have wildcard slot styling (visual only)
+    let wildBottleSlot = null;
 
-  const byRole = (role) => keys.filter(k => ELEMENTS[k].role === role);
+    // ============================================================
+    // BANK Telemetry + Inference
+    // ============================================================
+    const playerModel = {
+      moves: 0,
+      invalidMoves: 0,
+      resets: 0,
 
-  const foundational = byRole("foundational");
-  const structural   = byRole("structural");
-  const catalysts    = byRole("catalyst");
-  const stabilizers  = byRole("stabilizer");
-  const volatiles    = byRole("volatile");
-  const transmission = byRole("transmission");
-  const conversion   = byRole("conversion");
+      firstMoveMs: null,
+      startAt: performance.now(),
+      moveTimes: [],
 
-  const set = new Set([...(thesis.must_include || [])]);
+      emptyPourMoves: 0,
+      nonEmptyPourMoves: 0,
 
-  const addFrom = (pool, n) => {
-    let count = n;
-    for (const sym of rng.shuffle(pool)) {
-      if (count <= 0) break;
-      if (thesis.must_exclude?.includes(sym)) continue;
-      set.add(sym);
-      count--;
-    }
-  };
+      quickMoves: 0,
+      slowMoves: 0,
 
-  const tier = act.tier ?? 1;
+      streakyMoves: 0,
+      lastMoveAt: null,
 
-  // Base composition by tier (tight early)
-  addFrom(foundational, tier <= 2 ? 2 : 1);
-  addFrom(structural, 1);
+      bonusChase: 0,
 
-  // Optional: add one of transmission/conversion early for flavor (but not too much)
-  if (tier >= 1 && rng.f() < 0.45) addFrom(transmission, 1);
-  if (tier >= 2 && rng.f() < 0.35) addFrom(conversion, 1);
+      onLevelStart() {
+        this.startAt = performance.now();
+        this.firstMoveMs = null;
+        this.lastMoveAt = null;
+      },
 
-  if (tier >= 2) addFrom(catalysts, 1);
-  if (tier >= 3) addFrom(stabilizers, 1);
-  if (tier >= 3) addFrom(volatiles, 1);
+      onReset() { this.resets += 1; },
 
-  // Hard cap to keep puzzles readable early
-  return [...set].slice(0, 6);
-}
+      onMoveAttempt({ ok, intoEmpty, completedBottle, dtMs }) {
+        const now = performance.now();
+        this.moves += 1;
+        if (!ok) this.invalidMoves += 1;
 
-function deriveConstraints({ act, teaching_goal, rng }) {
-  const tier = act.tier ?? 1;
+        if (this.firstMoveMs === null) this.firstMoveMs = now - this.startAt;
 
-  let vessels = 4 + (tier >= 2 ? 1 : 0) + (tier >= 3 ? 1 : 0);
-  let capacity = tier >= 3 ? 5 : 4;
+        if (intoEmpty) this.emptyPourMoves += 1;
+        else this.nonEmptyPourMoves += 1;
 
-  // teaching-goal tuning
-  let empties = 2;
-  if (teaching_goal === "restraint") empties = 1;
-  if (teaching_goal === "sequencing") empties = 2;
-  if (tier >= 3) empties = Math.max(1, empties - 1);
+        if (completedBottle) this.bonusChase += 1;
 
-  const locks = tier >= 4 ? rng.int(0, 1) : 0;
-  const contamination = tier >= 3;
+        if (Number.isFinite(dtMs)) this.moveTimes.push(dtMs);
 
-  return { vessels, capacity, empties, locks, contamination };
-}
+        const gap = this.lastMoveAt ? (now - this.lastMoveAt) : null;
+        if (gap != null && gap < 650) this.streakyMoves += 1;
 
-function generateBoard({ elements, constraints, thesisKey, rng }) {
-  // Constructive generation (v1)
-  // - choose 3–4 active elements
-  // - fill non-empty vessels to capacity with shuffled pool
-  // - sprinkle thesis “temptation” on top sometimes
-  const thesis = THESES[thesisKey];
-  const active = rng.shuffle(elements).slice(0, Math.min(4, elements.length));
+        const avg = this.avgMoveMs();
+        if (dtMs < Math.max(220, avg * 0.7)) this.quickMoves += 1;
+        if (dtMs > Math.min(1800, avg * 1.4)) this.slowMoves += 1;
 
-  const { vessels, capacity, empties } = constraints;
-  const board = Array.from({ length: vessels }, () => []);
-  const fillVessels = vessels - empties;
-  const totalSlots = fillVessels * capacity;
+        this.lastMoveAt = now;
+      },
 
-  // Create pool with rough balance
-  const per = Math.max(1, Math.floor(totalSlots / active.length));
-  let pool = [];
-  for (const sym of active) for (let i=0; i<per; i++) pool.push(sym);
-  while (pool.length < totalSlots) pool.push(rng.pick(active));
-  pool = rng.shuffle(pool);
+      avgMoveMs() {
+        if (!this.moveTimes.length) return 420;
+        return this.moveTimes.reduce((a, b) => a + b, 0) / this.moveTimes.length;
+      },
 
-  // Fill
-  let pi = 0;
-  for (let v=0; v<fillVessels; v++) {
-    for (let s=0; s<capacity; s++) board[v].push(pool[pi++]);
-  }
+      invalidRate() { return this.moves ? this.invalidMoves / this.moves : 0; },
 
-  // Temptation: put thesis element on top sometimes (legal-looking moves)
-  const tempt = (thesis.must_include && thesis.must_include[0]) ? thesis.must_include[0] : null;
-  if (tempt && !thesis.must_exclude?.includes(tempt)) {
-    for (let v=0; v<fillVessels; v++) {
-      if (rng.f() < 0.35) board[v][board[v].length - 1] = tempt;
-    }
-  }
+      bufferRatio() {
+        const denom = Math.max(1, this.emptyPourMoves + this.nonEmptyPourMoves);
+        return this.emptyPourMoves / denom;
+      },
 
-  // Ensure we are actually missing the thesis excluded element (if any)
-  if (thesis.must_exclude?.length) {
-    for (let v=0; v<fillVessels; v++) {
-      for (let i=0; i<board[v].length; i++) {
-        if (thesis.must_exclude.includes(board[v][i])) {
-          board[v][i] = rng.pick(active.filter(s => !thesis.must_exclude.includes(s)));
-        }
-      }
-    }
-  }
-
-  // empty vessels already [] at end
-  return { capacity, vessels: board };
-}
-
-function generateBonuses(teaching_goal, diff) {
-  const bonuses = [];
-  if (teaching_goal === "restraint") {
-    bonuses.push({ id: "BONUS_MIN_TRANSFERS", label: "Minimal Transfers", threshold: diff.score > 3.5 ? 12 : 14 });
-    bonuses.push({ id: "BONUS_NO_INVALID", label: "No Invalid Pours", rule: "no_invalid_pours" });
-  } else if (teaching_goal === "sequencing") {
-    bonuses.push({ id: "BONUS_FIRST_STABILIZE", label: "Stabilize One Vessel First", rule: "stabilize_any_vessel_within_6_moves" });
-  } else {
-    bonuses.push({ id: "BONUS_NO_ILLEGAL", label: "No Illegal Reactions", rule: "no_illegal_compounds" });
-  }
-  if (diff.score > 4.2) bonuses.push({ id: "BONUS_NO_RESET", label: "No Resets", rule: "no_resets" });
-  return bonuses;
-}
-
-function generateLore({ thesisKey, rng, index }) {
-  const thesis = THESES[thesisKey];
-  const n = String(index).padStart(2, "0");
-  const title = `Experiment ${n}: ${thesis.name}`;
-
-  const intro = pickLoreLine("intro", rng);
-  const win   = pickLoreLine("win", rng);
-  const fail  = pickLoreLine("fail", rng);
-
-  return { title, intro_line: intro, win_line: win, fail_line: fail };
-}
-
-function generateExperiment({ act, quest, expIndex, seed }) {
-  const rng = makeRng(seed);
-  const thesisKey = rng.pick(quest.theses);
-  const thesis = THESES[thesisKey];
-
-  const teaching_goal = thesis.default_teaching;
-  const elements_in_play = assembleElements({ act, thesisKey, rng });
-  const constraints = deriveConstraints({ act, teaching_goal, rng });
-  const diff = difficultyScore(elements_in_play, constraints, thesisKey);
-  const board_init = generateBoard({ elements: elements_in_play, constraints, thesisKey, rng });
-  const bonuses = generateBonuses(teaching_goal, diff);
-  const lore = generateLore({ thesisKey, rng, index: expIndex });
-
-  return {
-    id: `${act.id}-${quest.id}-E${String(expIndex).padStart(2, "0")}`,
-    act: act.id,
-    quest: quest.id,
-    thesis: thesisKey,
-    teaching_goal,
-    elements_in_play,
-    constraints,
-    difficulty: {
-      score: Number(diff.score.toFixed(2)),
-      volatility: Number(diff.volatility.toFixed(2))
-    },
-    bonuses,
-    lore,
-    board_init
-  };
-}
-
-/* ===========================
-   Game Render / Interaction (drag-to-pour)
-=========================== */
-function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
-function lerp(a,b,t){ return a + (b-a)*t; }
-
-class Vessel {
-  constructor(x, y, type, capacity, contents=[]) {
-    this.x = x; this.y = y;
-    this.ox = x; this.oy = y;
-    this.type = type;
-    this.capacity = capacity;
-    this.contents = contents.slice(); // bottom->top (last is top)
-    this.selected = false;
-    this.shakeT = 0;
-    this.shakeDir = 1;
-  }
-  top(){ return this.contents.length ? this.contents[this.contents.length-1] : null; }
-  space(){ return this.capacity - this.contents.length; }
-  topRunCount(){
-    const t = this.top();
-    if (!t) return 0;
-    let c = 0;
-    for (let i=this.contents.length-1; i>=0; i--) {
-      if (this.contents[i] === t) c++;
-      else break;
-    }
-    return c;
-  }
-  hit(px, py) {
-    return (px > this.x - 34 && px < this.x + 34 && py > this.y - 100 && py < this.y + 28);
-  }
-  nudgeShake(){ this.shakeT = 0.22; this.shakeDir *= -1; }
-  draw({overrideX=null, overrideY=null, tilt=0, lift=0, alpha=1} = {}) {
-    const x = overrideX ?? this.x;
-    const y = overrideY ?? this.y;
-
-    let sx = 0;
-    if (this.shakeT > 0) sx = Math.sin((1 - this.shakeT) * Math.PI * 10) * 6 * this.shakeDir;
-
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.translate(x + sx, y - lift);
-    ctx.rotate(tilt);
-
-    // outline
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = "rgba(255,255,255,0.85)";
-    ctx.beginPath();
-    if (this.type === "tube") {
-      ctx.moveTo(-18, -86);
-      ctx.lineTo(-18, 0);
-      ctx.quadraticCurveTo(0, 18, 18, 0);
-      ctx.lineTo(18, -86);
-    } else {
-      ctx.moveTo(-26, -86);
-      ctx.lineTo(-12, -46);
-      ctx.lineTo(-30, 0);
-      ctx.quadraticCurveTo(0, 26, 30, 0);
-      ctx.lineTo(12, -46);
-      ctx.lineTo(26, -86);
-    }
-    ctx.closePath();
-    ctx.stroke();
-
-    // selection glow
-    if (this.selected) {
-      ctx.save();
-      ctx.shadowBlur = 18;
-      ctx.shadowColor = "rgba(56,189,248,0.65)";
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    // clip interior
-    ctx.save();
-    ctx.clip();
-
-    const innerH = 86;
-    const unit = innerH / this.capacity;
-
-    // liquid
-    for (let i=0; i<this.contents.length; i++) {
-      const sym = this.contents[i];
-      const col = ELEMENTS[sym]?.color ?? "#ffffff";
-      ctx.fillStyle = col;
-      const yTop = 0 - (i + 1) * unit;
-      ctx.fillRect(-30, yTop, 60, unit);
-    }
-
-    // glass highlight
-    ctx.globalAlpha *= 0.22;
-    ctx.fillStyle = "rgba(255,255,255,0.9)";
-    ctx.fillRect(-14, -84, 4, 96);
-    ctx.restore();
-
-    ctx.restore();
-  }
-}
-
-let vessels = [];
-function layoutVessels() {
-  if (!vessels.length) return;
-
-  const cols = vessels.length;
-  const gap = clamp(Math.floor(innerWidth / (cols + 1)), 78, 120);
-  const startX = Math.floor((innerWidth - (cols - 1) * gap) / 2);
-  const startY = Math.floor(innerHeight * 0.56);
-
-  vessels.forEach((v, i) => {
-    v.ox = startX + i * gap;
-    v.oy = startY;
-    if (!drag.state || drag.source !== v) {
-      v.x = v.ox; v.y = v.oy;
-    }
-  });
-}
-
-/* ===========================
-   Drag Controller
-=========================== */
-const drag = {
-  state: "idle", // idle | dragging | animating
-  source: null,
-  target: null,
-  offsetX: 0,
-  offsetY: 0,
-  tilt: 0,
-  lift: 0,
-  anim: null
-};
-
-function clearSelection(){ vessels.forEach(v => v.selected = false); }
-function getPointerPos(e) {
-  const r = canvas.getBoundingClientRect();
-  return { x: e.clientX - r.left, y: e.clientY - r.top };
-}
-
-canvas.addEventListener("pointerdown", (e) => {
-  if (drag.state === "animating") return;
-  const p = getPointerPos(e);
-
-  for (let i=vessels.length-1; i>=0; i--) {
-    const v = vessels[i];
-    if (v.hit(p.x, p.y)) {
-      drag.state = "dragging";
-      drag.source = v;
-      drag.target = null;
-      drag.offsetX = v.x - p.x;
-      drag.offsetY = v.y - p.y;
-      drag.tilt = 0;
-      drag.lift = 14;
-      clearSelection();
-      v.selected = true;
-      canvas.setPointerCapture(e.pointerId);
-      return;
-    }
-  }
-});
-
-canvas.addEventListener("pointermove", (e) => {
-  if (drag.state !== "dragging") return;
-  const p = getPointerPos(e);
-
-  drag.source.x = p.x + drag.offsetX;
-  drag.source.y = p.y + drag.offsetY;
-
-  // hover target
-  drag.target = null;
-  for (const v of vessels) {
-    if (v !== drag.source && v.hit(p.x, p.y)) { drag.target = v; break; }
-  }
-
-  // tilt toward target if present
-  if (drag.target) {
-    const dx = drag.target.ox - drag.source.x;
-    drag.tilt = clamp(dx / 220, -0.35, 0.35);
-  } else {
-    drag.tilt = clamp((p.x - drag.source.ox)/280, -0.25, 0.25);
-  }
-});
-
-canvas.addEventListener("pointerup", () => {
-  if (drag.state !== "dragging") return;
-
-  drag.state = "animating";
-  const src = drag.source;
-  const tgt = drag.target;
-
-  const snapBack = () => {
-    const a = {
-      t: 0, dur: 0.18,
-      fromX: src.x, fromY: src.y, fromTilt: drag.tilt,
-      toX: src.ox, toY: src.oy, toTilt: 0,
-      onDone: () => {
-        src.x = src.ox; src.y = src.oy;
-        drag.state = "idle";
-        drag.source = null;
-        drag.target = null;
-        clearSelection();
+      commitmentRatio() {
+        const denom = Math.max(1, this.emptyPourMoves + this.nonEmptyPourMoves);
+        return this.nonEmptyPourMoves / denom;
       }
     };
-    drag.anim = a;
-  };
 
-  if (!tgt) { snapBack(); return; }
+    function inferBANK(model) {
+      const speed = clamp01((model.quickMoves - model.slowMoves) / Math.max(1, model.moves) + 0.5);
+      const accuracy = clamp01(1 - model.invalidRate());
+      const buffer = clamp01(model.bufferRatio());
+      const commit = clamp01(model.commitmentRatio());
+      const resets = clamp01(model.resets / Math.max(1, (game.level - 1)));
+      const firstMove = model.firstMoveMs == null ? 0.5 : clamp01(1 - (model.firstMoveMs / 2000));
+      const steadiness = clamp01(1 - (model.streakyMoves / Math.max(1, model.moves)));
 
-  const result = tryPour(src, tgt);
-  if (!result.ok) {
-    src.nudgeShake();
-    say(result.msg, 1.5);
-    snapBack();
-    return;
-  }
+      // Tunable weights (v1)
+      const scoreA = 0.40 * speed + 0.25 * firstMove + 0.20 * commit + 0.15 * accuracy;
+      const scoreK = 0.45 * accuracy + 0.25 * commit + 0.15 * (1 - buffer) + 0.15 * (1 - resets);
+      const scoreB = 0.40 * steadiness + 0.25 * accuracy + 0.20 * (1 - speed) + 0.15 * (1 - resets);
+      const scoreN = 0.40 * buffer + 0.25 * clamp01(model.slowMoves / Math.max(1, model.moves)) + 0.20 * accuracy + 0.15 * (1 - commit);
 
-  say(result.msg, 1.2);
-  animatePour(src, tgt, result.amount, snapBack);
-});
+      const scores = [
+        ["A", scoreA],
+        ["K", scoreK],
+        ["B", scoreB],
+        ["N", scoreN]
+      ].sort((a, b) => b[1] - a[1]);
 
-/* ===========================
-   Pour Rules (core puzzle)
-=========================== */
-function tryPour(src, tgt) {
-  const top = src.top();
-  if (!top) return { ok:false, msg:"Empty vessel. Bold choice." };
-  if (tgt.space() <= 0) return { ok:false, msg:"No capacity. Physics wins." };
+      const top = scores[0];
+      const second = scores[1];
 
-  const tgtTop = tgt.top();
-  if (tgtTop && tgtTop !== top) return { ok:false, msg:"Chemistry says no." };
+      const separation = clamp01((top[1] - second[1]) * 2);
+      const volume = clamp01(model.moves / 40);
+      const confidence = clamp01(0.35 + 0.45 * separation + 0.20 * volume);
 
-  const run = src.topRunCount();
-  const amount = Math.min(run, tgt.space());
-  if (amount <= 0) return { ok:false, msg:"Nothing to transfer. Obviously." };
+      return { bankPrimary: top[0], bankConfidence: confidence, debug: { scores } };
+    }
 
-  return { ok:true, amount, msg:"Reaction in progress. Try not to panic." };
-}
+    function inferSinTagsFromModel(model) {
+      const tags = [];
+      if (model.invalidRate() > 0.12) tags.push("panic");
+      if (model.resets / Math.max(1, game.level - 1) > 0.6) tags.push("over_reset");
+      if (model.firstMoveMs != null && model.firstMoveMs > 1200) tags.push("hesitation");
+      if (model.commitmentRatio() < 0.45) tags.push("indecision");
+      if (model.commitmentRatio() > 0.75 && model.invalidRate() > 0.08) tags.push("overcommitment");
+      if (!tags.length) tags.push("restraint");
+      return tags.slice(0, 3);
+    }
 
-/* ===========================
-   Pour Animation
-=========================== */
-function animatePour(src, tgt, amount, onDone) {
-  const start = performance.now();
-  const dur = 520;
+    // ============================================================
+    // C2: BANK -> Level Config
+    // ============================================================
+    function getLevelConfigFromBANK(bankPrimary, bankConfidence, level) {
+      // Baseline (per level scaling is added after blending)
+      const BASE = {
+        bottleCount: 8,
+        colors: 6,
+        emptyBottles: 2,
+        lockedBottles: 0,
+        wildcardSlots: 0,     // "special" slots (visual only in this prototype)
+        maxSlots: 4,
+        reactionRules: "standard",
+        forgiveness: "medium",
+        bonusBias: "neutral",
+        chaosFactor: 0.30     // 0..1 how messy/random the shuffle is
+      };
 
-  const fromX = src.x, fromY = src.y;
-  const hoverX = lerp(fromX, tgt.ox, 0.65);
-  const hoverY = lerp(fromY, tgt.oy, 0.35);
+      const TUNING = {
+        A: { bottleCount:8, colors:7, emptyBottles:1, lockedBottles:1, wildcardSlots:0, maxSlots:4, reactionRules:"strict", forgiveness:"low",       bonusBias:"speed",      chaosFactor:0.60 },
+        K: { bottleCount:9, colors:8, emptyBottles:2, lockedBottles:0, wildcardSlots:1, maxSlots:4, reactionRules:"complex", forgiveness:"medium",  bonusBias:"efficiency", chaosFactor:0.20 },
+        B: { bottleCount:8, colors:7, emptyBottles:3, lockedBottles:0, wildcardSlots:0, maxSlots:4, reactionRules:"predictable", forgiveness:"high", bonusBias:"completion", chaosFactor:0.10 },
+        N: { bottleCount:7, colors:6, emptyBottles:4, lockedBottles:0, wildcardSlots:1, maxSlots:4, reactionRules:"lenient", forgiveness:"very_high", bonusBias:"recovery",  chaosFactor:0.00 }
+      };
 
-  let transferred = false;
+      const tuned = TUNING[bankPrimary] || BASE;
+      const c = clamp01(bankConfidence);
 
-  drag.anim = {
-    kind: "pour",
-    update: (now) => {
-      const t = clamp((now - start) / dur, 0, 1);
-
-      const t1 = clamp(t / 0.35, 0, 1);
-      const t2 = clamp((t - 0.35) / 0.35, 0, 1);
-      const t3 = clamp((t - 0.70) / 0.30, 0, 1);
-
-      src.x = lerp(fromX, hoverX, t1);
-      src.y = lerp(fromY, hoverY, t1);
-
-      drag.tilt = lerp(drag.tilt, clamp((tgt.ox - src.x)/180, -0.55, 0.55), t2);
-      drag.lift = lerp(16, 26, t2);
-
-      if (!transferred && t >= 0.52) {
-        const compound = src.top();
-        for (let i=0; i<amount; i++) {
-          src.contents.pop();
-          tgt.contents.push(compound);
+      // Blend numeric fields; choose strings based on confidence > 0.5
+      const cfg = {};
+      for (const k in BASE) {
+        if (typeof BASE[k] === "number") {
+          cfg[k] = BASE[k] + (tuned[k] - BASE[k]) * c;
+        } else {
+          cfg[k] = (c > 0.5 ? tuned[k] : BASE[k]);
         }
-        transferred = true;
       }
 
-      drag.lift = lerp(drag.lift, 14, t3);
-      drag.tilt = lerp(drag.tilt, 0, t3);
+      // Level scaling (gentle)
+      // Every ~6 levels, add one color OR one bottle (depending on BANK target)
+      const tier = Math.floor((level - 1) / 6); // 0,1,2...
+      cfg.colors += Math.min(3, tier * 0.6);     // up to +1.8 (rounded later)
+      cfg.bottleCount += Math.min(2, tier * 0.4);
 
-      if (t >= 1) {
-        drag.anim = null;
-        onDone();
+      // Cap + round
+      cfg.maxSlots = 4;
+      cfg.colors = clampInt(cfg.colors, 4, Math.min(10, COLORS.length));
+      cfg.bottleCount = clampInt(cfg.bottleCount, 6, 12);
+      cfg.emptyBottles = clampInt(cfg.emptyBottles, 1, 5);
+      cfg.lockedBottles = clampInt(cfg.lockedBottles, 0, 3);
+      cfg.wildcardSlots = clampInt(cfg.wildcardSlots, 0, 2);
+      cfg.chaosFactor = clamp01(cfg.chaosFactor);
+
+      // Safety: ensure at least 2 playable bottles besides empties
+      if (cfg.bottleCount - cfg.emptyBottles < 2) cfg.bottleCount = cfg.emptyBottles + 2;
+
+      return cfg;
+    }
+
+    function updateReadouts() {
+      const bank = inferBANK(playerModel);
+      const sins = inferSinTagsFromModel(playerModel);
+      dmEls.bank.textContent = `${bank.bankPrimary} (${bank.bankConfidence.toFixed(2)})`;
+      dmEls.sin.textContent = sins.join(", ");
+
+      const cfg = game.currentLevelConfig;
+      dmEls.cfg.textContent = cfg
+        ? `b${cfg.bottleCount}/c${cfg.colors}/e${cfg.emptyBottles}/lock${cfg.lockedBottles}/wild${cfg.wildcardSlots}`
+        : "—";
+    }
+
+    // ============================================================
+    // Quest Node integration (uses BANK + telemetry + historyIds)
+    // ============================================================
+    function buildQuestNodeRequest() {
+      const bank = inferBANK(playerModel);
+      const sins = inferSinTagsFromModel(playerModel);
+
+      // deterministic-ish per quest node chunk (every 4 levels)
+      const nodeIndex = Math.floor((game.level - 1) / 4) + 1;
+      const seed = `local:${game.sessionSeed}:L${game.level}:node${nodeIndex}`;
+
+      return {
+        act: game.level < 10 ? "ACT_I" : (game.level < 25 ? "ACT_II" : "ACT_III"),
+        questId: "Q1",
+        thesis: "UR_without_CL",
+
+        bankPrimary: bank.bankPrimary,
+        bankConfidence: bank.bankConfidence,
+        intensity: game.level < 8 ? "standard" : "hard",
+
+        historyIds: game.lastUsedVoiceIds.slice(-20),
+        sinTags: sins,
+
+        performanceSummary: {
+          levels_completed: game.level - 1,
+          avg_time_to_first_move_ms: Math.round(playerModel.firstMoveMs ?? 650),
+          avg_move_time_ms: Math.round(playerModel.avgMoveMs()),
+          invalid_pour_rate: clamp01(playerModel.invalidRate()),
+          illegal_reaction_rate: 0.0,
+          resets_per_level: clamp01(playerModel.resets / Math.max(1, game.level - 1)),
+          bonus_chase_rate: clamp01(playerModel.bonusChase / Math.max(1, playerModel.moves)),
+          buffer_move_ratio: clamp01(playerModel.bufferRatio()),
+          commitment_ratio: clamp01(playerModel.commitmentRatio())
+        },
+
+        seed
+      };
+    }
+
+    async function fetchQuestNode() {
+      dmEls.btn.disabled = true;
+      setStatus("Distilling…");
+
+      try {
+        const body = buildQuestNodeRequest();
+        const res = await fetch(DM_API, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+        const json = await res.json();
+        if (!json.ok) throw new Error(json.error || "Quest node failed");
+
+        const p = json.payload;
+        dmEls.quest.textContent = p.quest_title || "—";
+
+        await typeInto(dmEls.intro, p.dm_intro || "");
+        await typeInto(dmEls.mid, p.dm_midpoint || "");
+        await typeInto(dmEls.verdict, p.dm_verdict || "");
+
+        if (Array.isArray(p.used_voice_ids)) {
+          game.lastUsedVoiceIds.push(...p.used_voice_ids);
+        }
+
+        updateReadouts();
+        setStatus("Stabilized.");
+      } catch (e) {
+        console.error(e);
+        setStatus("Error. (Check console + ensure server is running.)");
+        dmEls.quest.textContent = "—";
+        dmEls.intro.textContent = "";
+        dmEls.mid.textContent = "";
+        dmEls.verdict.textContent = "";
+      } finally {
+        dmEls.btn.disabled = false;
       }
     }
-  };
-}
 
-/* ===========================
-   Rendering
-=========================== */
-function drawBench() {
-  const benchY = Math.floor(innerHeight * 0.66);
-  ctx.fillStyle = "#05070c";
-  ctx.fillRect(0, benchY, innerWidth, innerHeight - benchY);
+    dmEls.btn.addEventListener("click", fetchQuestNode);
 
-  ctx.globalAlpha = 0.08;
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, benchY, innerWidth, 2);
-  ctx.globalAlpha = 1;
-}
+    // ============================================================
+    // Level Generator (C2 adaptive)
+    // ============================================================
+    function generateLevel(cfg) {
+      // Build pool of colors: each color appears maxSlots times (like classic water sort)
+      const slots = cfg.maxSlots;
 
-function drawTargetHint() {
-  if (drag.state !== "dragging" || !drag.source || !drag.target) return;
-  const tgt = drag.target;
-  ctx.save();
-  ctx.translate(tgt.ox, tgt.oy);
-  ctx.strokeStyle = "rgba(56,189,248,0.65)";
-  ctx.lineWidth = 2;
-  ctx.shadowBlur = 14;
-  ctx.shadowColor = "rgba(56,189,248,0.5)";
-  ctx.beginPath();
-  ctx.ellipse(0, -36, 34, 48, 0, 0, Math.PI*2);
-  ctx.stroke();
-  ctx.restore();
-}
+      // Pick distinct colors
+      const colorSet = COLORS.slice(0);
+      shuffle(colorSet);
 
-/* ===========================
-   Experiment loading
-=========================== */
-let actIndex = 0;
-let questIndex = 0;
-let expIndex = 1;
-let currentExperiment = null;
+      const chosen = colorSet.slice(0, cfg.colors);
 
-function loadExperiment() {
-  const act = CAMPAIGN.acts[actIndex];
-  const quest = act.quests[questIndex];
-  const seed = `${act.id}:${quest.id}:E${expIndex}`;
+      // Each color appears exactly slots times
+      const pool = [];
+      for (const col of chosen) for (let i = 0; i < slots; i++) pool.push(col);
 
-  currentExperiment = generateExperiment({ act, quest, expIndex, seed });
+      // We'll distribute into (bottleCount - emptyBottles) bottles.
+      const filledCount = cfg.bottleCount - cfg.emptyBottles;
 
-  // HUD
-  hudTitle.textContent = currentExperiment.lore.title;
-  hudMeta.textContent =
-    `${act.name} • ${quest.name} • Thesis: ${THESES[currentExperiment.thesis].name} • Goal: ${currentExperiment.teaching_goal} • Difficulty: ${currentExperiment.difficulty.score}`;
-  say(currentExperiment.lore.intro_line, 2.2);
+      // Safety: pool size = colors*slots; must match filledCount*slots
+      // If mismatch, adjust by trimming colors.
+      // (This keeps it stable while we iterate to a “solvable generator” later.)
+      let targetCells = filledCount * slots;
+      while (pool.length > targetCells) pool.pop();
+      while (pool.length < targetCells) pool.push(chosen[Math.floor(Math.random()*chosen.length)]);
 
-  // Build vessels from board
-  const cap = currentExperiment.board_init.capacity;
-  const board = currentExperiment.board_init.vessels;
+      // chaosFactor controls how hard we shuffle the pool
+      const shuffles = Math.round(1 + cfg.chaosFactor * 6);
+      for (let i=0;i<shuffles;i++) shuffle(pool);
 
-  // decide labware types (flavor)
-  vessels = board.map((stack, i) => {
-    const type = (i % 3 === 0) ? "flask" : "tube";
-    return new Vessel(0, 0, type, cap, stack);
-  });
+      // Create bottles
+      const out = [];
 
-  // clear drag state
-  drag.state = "idle";
-  drag.source = null;
-  drag.target = null;
-  drag.anim = null;
-  clearSelection();
+      // Filled bottles
+      for (let i = 0; i < filledCount; i++) {
+        const cells = [];
+        for (let s = 0; s < slots; s++) cells.push(pool.pop());
+        out.push({ cells, locked: false });
+      }
 
-  layoutVessels();
-}
+      // Empty bottles
+      for (let i = 0; i < cfg.emptyBottles; i++) {
+        out.push({ cells: [], locked: false });
+      }
 
-// buttons
-document.getElementById("btnNext").addEventListener("click", () => {
-  expIndex++;
-  loadExperiment();
-});
-document.getElementById("btnPrev").addEventListener("click", () => {
-  expIndex = Math.max(1, expIndex - 1);
-  loadExperiment();
-});
+      // Add locked bottles (random bottles become locked)
+      const lockN = Math.min(cfg.lockedBottles, out.length);
+      const indices = Array.from({length: out.length}, (_, i) => i);
+      shuffle(indices);
+      for (let i=0;i<lockN;i++){
+        const idx = indices[i];
+        out[idx].locked = true;
+      }
 
-loadExperiment();
+      // Wildcard slot (visual-only in this prototype)
+      wildBottleIndex = null;
+      wildBottleSlot = null;
+      if (cfg.wildcardSlots > 0) {
+        // Choose one non-empty bottle if possible
+        const candidates = out.map((b, i) => ({b, i}))
+          .filter(x => !x.b.locked && x.b.cells.length > 0);
+        if (candidates.length) {
+          const pick = candidates[Math.floor(Math.random()*candidates.length)];
+          wildBottleIndex = pick.i;
+          wildBottleSlot = Math.floor(Math.random()*slots); // 0..3 (bottom->top)
+        }
+      }
 
-/* ===========================
-   Loop
-=========================== */
-function loop(now) {
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  // ambient vignette
-  ctx.save();
-  ctx.globalAlpha = 0.12;
-  ctx.fillStyle = "#000";
-  ctx.fillRect(0,0,innerWidth,innerHeight);
-  ctx.restore();
-
-  drawBench();
-  drawTargetHint();
-
-  // timers
-  for (const v of vessels) if (v.shakeT > 0) v.shakeT = Math.max(0, v.shakeT - 1/60);
-  if (msgTimer > 0) msgTimer -= 1/60;
-
-  // animations
-  if (drag.anim?.kind === "pour") drag.anim.update(now);
-  else if (drag.anim) {
-    drag.anim.t += 1/60;
-    const t = clamp(drag.anim.t / drag.anim.dur, 0, 1);
-    const ease = t * (2 - t);
-    const a = drag.anim;
-    const src = drag.source;
-    src.x = lerp(a.fromX, a.toX, ease);
-    src.y = lerp(a.fromY, a.toY, ease);
-    drag.tilt = lerp(a.fromTilt, a.toTilt, ease);
-    drag.lift = lerp(14, 0, ease);
-    if (t >= 1) {
-      const done = a.onDone;
-      drag.anim = null;
-      done();
+      return out;
     }
-  }
 
-  // draw vessels (dragged on top)
-  const dragged = (drag.state === "dragging" || drag.state === "animating") ? drag.source : null;
+    // ============================================================
+    // Rendering + Mechanics (tap-to-pour)
+    // ============================================================
+    function updateHud(){
+      lvlEl.textContent = String(game.level);
+      movesEl.textContent = String(game.moves);
+      invalidEl.textContent = String(game.invalid);
+      resetsEl.textContent = String(game.resets);
+    }
 
-  for (const v of vessels) {
-    if (v === dragged) continue;
-    v.draw();
-  }
-  if (dragged) {
-    dragged.draw({
-      overrideX: dragged.x,
-      overrideY: dragged.y,
-      tilt: drag.tilt,
-      lift: drag.lift,
-      alpha: 1
+    function renderBoard(){
+      boardEl.innerHTML = "";
+      const slots = game.currentLevelConfig?.maxSlots || 4;
+
+      bottles.forEach((b, i) => {
+        const el = document.createElement("div");
+        el.className = "bottle" + (selected === i ? " selected" : "") + (b.locked ? " locked" : "");
+        el.dataset.idx = i;
+
+        const head = document.createElement("div");
+        head.className = "bottle-header";
+        head.innerHTML = `<span>Bottle ${i+1}</span><span>${b.cells.length}/${slots}</span>`;
+        el.appendChild(head);
+
+        // Render slots top->bottom visually, while stored bottom->top
+        for (let s = slots - 1; s >= 0; s--) {
+          const slot = document.createElement("div");
+          slot.className = "slot" + ((i === wildBottleIndex && s === wildBottleSlot) ? " wild" : "");
+          const color = b.cells[s] || null;
+          if (color) {
+            const fill = document.createElement("div");
+            fill.className = "fill";
+            fill.style.background = color;
+            slot.appendChild(fill);
+          }
+          el.appendChild(slot);
+        }
+
+        el.addEventListener("click", () => onBottleTap(i));
+        boardEl.appendChild(el);
+      });
+    }
+
+    function onBottleTap(i){
+      // locked bottles can't be selected or targeted
+      if (bottles[i].locked) return;
+
+      if (selected === null) {
+        selected = i;
+        renderBoard();
+        return;
+      }
+      if (selected === i) {
+        selected = null;
+        renderBoard();
+        return;
+      }
+
+      const from = selected;
+      const to = i;
+      selected = null;
+
+      const ok = pour(from, to);
+      if (!ok) game.invalid++;
+
+      renderBoard();
+      updateHud();
+      updateReadouts();
+    }
+
+    function topColor(cells){
+      return cells.length ? cells[cells.length - 1] : null;
+    }
+
+    function countTopRun(cells){
+      const t = topColor(cells);
+      if (!t) return 0;
+      let n = 0;
+      for (let i = cells.length - 1; i >= 0; i--) {
+        if (cells[i] === t) n++;
+        else break;
+      }
+      return n;
+    }
+
+    function allSame(arr){
+      if (!arr.length) return false;
+      return arr.every(x => x === arr[0]);
+    }
+
+    function pour(fromIdx, toIdx){
+      const t0 = performance.now();
+      const from = bottles[fromIdx];
+      const to = bottles[toIdx];
+      const slots = game.currentLevelConfig?.maxSlots || 4;
+
+      // hard invalid rules
+      if (from.locked || to.locked) {
+        playerModel.onMoveAttempt({ ok:false, intoEmpty:false, completedBottle:false, dtMs: performance.now() - t0 });
+        return false;
+      }
+
+      if (!from.cells.length) {
+        playerModel.onMoveAttempt({ ok:false, intoEmpty:false, completedBottle:false, dtMs: performance.now() - t0 });
+        return false;
+      }
+      if (to.cells.length >= slots) {
+        playerModel.onMoveAttempt({ ok:false, intoEmpty:false, completedBottle:false, dtMs: performance.now() - t0 });
+        return false;
+      }
+
+      const color = topColor(from.cells);
+      const toTop = topColor(to.cells);
+
+      // Basic rule: can pour into empty or same color top
+      // "reactionRules" could later add more constraints; for now it's classic.
+      if (toTop && toTop !== color) {
+        playerModel.onMoveAttempt({ ok:false, intoEmpty:false, completedBottle:false, dtMs: performance.now() - t0 });
+        return false;
+      }
+
+      const run = countTopRun(from.cells);
+      const free = slots - to.cells.length;
+      const moveCount = Math.min(run, free);
+      const targetWasEmpty = (to.cells.length === 0);
+
+      for (let k = 0; k < moveCount; k++) to.cells.push(from.cells.pop());
+
+      game.moves++;
+
+      const completedBottle = (to.cells.length === slots && allSame(to.cells));
+      playerModel.onMoveAttempt({
+        ok: true,
+        intoEmpty: targetWasEmpty,
+        completedBottle,
+        dtMs: performance.now() - t0
+      });
+
+      // Level progression rule (placeholder): if >= half bottles are solved, next level
+      const solved = bottles.filter(b => b.cells.length === slots && allSame(b.cells)).length;
+      if (solved >= Math.max(2, Math.floor((bottles.length - (game.currentLevelConfig?.emptyBottles || 2)) / 2))) {
+        nextLevel();
+      }
+
+      return true;
+    }
+
+    // ============================================================
+    // Level Flow
+    // ============================================================
+    function startLevel(level, isReset = false) {
+      if (isReset) {
+        game.resets++;
+        playerModel.onReset();
+      }
+
+      game.moves = 0;
+      game.invalid = 0;
+      playerModel.onLevelStart();
+
+      const bank = inferBANK(playerModel);
+      game.currentLevelConfig = getLevelConfigFromBANK(bank.bankPrimary, bank.bankConfidence, level);
+
+      bottles = generateLevel(game.currentLevelConfig);
+      selected = null;
+
+      // Update UI
+      updateHud();
+      updateReadouts();
+      renderBoard();
+
+      // Optional: auto quest-node every 4 levels
+      // if ((level - 1) % 4 === 0) fetchQuestNode();
+    }
+
+    function nextLevel() {
+      game.level++;
+      startLevel(game.level, false);
+    }
+
+    // ============================================================
+    // Buttons
+    // ============================================================
+    btnNew.addEventListener("click", () => {
+      // fresh run
+      game.sessionSeed = Math.floor(Math.random() * 1e9).toString(36);
+      game.level = 1;
+      game.lastUsedVoiceIds = [];
+      startLevel(game.level, true);
     });
-  }
 
-  requestAnimationFrame(loop);
-}
-requestAnimationFrame(loop);
+    btnNextLevel.addEventListener("click", () => nextLevel());
 
-</script>
+    // ============================================================
+    // Init
+    // ============================================================
+    startLevel(game.level, false);
+  </script>
 </body>
 </html>
