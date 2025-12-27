@@ -48,7 +48,7 @@
     }
     .bottle.selected { outline: 3px solid rgba(130, 210, 255,.45); box-shadow: 0 0 0 6px rgba(80,140,255,.12), inset 0 0 0 2px rgba(255,255,255,.04); }
     .seg { width:100%; height: 22%; }
-    .controls { display:flex; gap:10px; padding: 0 16px 16px 16px; }
+    .controls { display:flex; gap:10px; padding: 0 16px 16px 16px; flex-wrap:wrap; }
     .toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background:#0b121c; border:1px solid #243244; border-radius: 999px; padding: 10px 14px; font-weight:700; opacity:0; transition: opacity .18s ease; pointer-events:none;}
     .toast.show { opacity:1; }
     .pourFX {
@@ -76,14 +76,14 @@
       </div>
       <div class="content">
         <h2 id="questTitle">—</h2>
-        <p id="dmIntro" class="small">Press <b>Quest Node</b> to brew the next scene.</p>
+        <p id="dmIntro" class="small">Press <b>Quest Node</b> to brew the next scene (and a gameplay modifier).</p>
         <p id="dmMid" class="small"></p>
         <p id="dmVerdict" class="small"></p>
 
         <div class="metaRow">
           <div class="meta">B.A.N.K: <span id="bankOut" class="mono">—</span></div>
           <div class="meta">SinTags: <span id="sinsOut" class="mono">—</span></div>
-          <div class="meta">LevelCfg: <span id="cfgOut" class="mono">—</span></div>
+          <div class="meta">Modifier: <span id="modOut" class="mono">—</span></div>
           <div class="meta">Status: <span id="statusOut" class="mono">ready</span></div>
         </div>
       </div>
@@ -98,6 +98,7 @@
           <div class="meta">Moves: <span id="movesOut" class="mono">0</span></div>
           <div class="meta">Invalid: <span id="badOut" class="mono">0</span></div>
           <div class="meta">Resets: <span id="resetOut" class="mono">0</span></div>
+          <div class="meta">Cfg: <span id="cfgOut" class="mono">—</span></div>
           <div class="meta small">Tap bottle → tap target. Satisfying pour.</div>
         </div>
       </div>
@@ -105,6 +106,8 @@
       <div class="controls">
         <button id="btnNext">Next Level</button>
         <button id="btnReset">Reset Run</button>
+        <button id="btnApplyMod">Apply Modifier Now</button>
+        <div class="meta small">Tip: Brew a Quest Node, then play the next level to feel the modifier.</div>
       </div>
     </div>
   </div>
@@ -113,19 +116,13 @@
   <div class="pourFX" id="pourFX"></div>
 
 <script type="module">
-  // ---------------------------
-  // API base auto-detect
-  // ---------------------------
   const DEFAULT_PROD = "https://ma-bottle-fill-api.onrender.com";
   const DEFAULT_LOCAL = "http://localhost:8787";
   const isLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1";
   const apiBaseEl = document.getElementById("apiBase");
   apiBaseEl.value = isLocal ? DEFAULT_LOCAL : DEFAULT_PROD;
 
-  // ---------------------------
-  // Single-flight + cooldown (CLIENT)
-  // ---------------------------
-  const inflight = new Map(); // key -> Promise
+  const inflight = new Map();
   function singleFlight(key, fn) {
     if (inflight.has(key)) return inflight.get(key);
     const p = (async () => {
@@ -140,9 +137,6 @@
   function canCallNow() { return Date.now() >= cooldownUntil; }
   function setCooldown(ms=2500) { cooldownUntil = Date.now() + ms; }
 
-  // ---------------------------
-  // UI helpers
-  // ---------------------------
   const statusOut = document.getElementById("statusOut");
   const questTitle = document.getElementById("questTitle");
   const dmIntro = document.getElementById("dmIntro");
@@ -150,6 +144,7 @@
   const dmVerdict = document.getElementById("dmVerdict");
   const bankOut = document.getElementById("bankOut");
   const sinsOut = document.getElementById("sinsOut");
+  const modOut = document.getElementById("modOut");
   const cfgOut = document.getElementById("cfgOut");
 
   const toast = document.getElementById("toast");
@@ -159,56 +154,38 @@
     setTimeout(()=>toast.classList.remove("show"), 1400);
   }
 
-  // ---------------------------
-  // Player/run state
-  // ---------------------------
   let runSeed = Math.floor(Math.random() * 1e9);
   let questId = 1;
   let level = 1;
 
-  // Player inference signals (simple starter)
-  const sig = {
-    moves: 0,
-    invalid: 0,
-    resets: 0,
-    moveTimes: [],
-    lastMoveAt: 0,
-  };
+  // Modifier brewed by Quest Node; applied to NEXT recipe then cleared.
+  let pendingModifier = null;
 
-  function avg(arr) {
-    if (!arr.length) return 0;
-    return arr.reduce((a,b)=>a+b,0) / arr.length;
-  }
+  const sig = { moves:0, invalid:0, resets:0, moveTimes:[], lastMoveAt:0 };
+  function avg(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0; }
 
-  // crude BANK classifier (starter): picks based on speed + resets + invalid
   function inferBANK() {
-    const pace = avg(sig.moveTimes.slice(-12)); // ms
+    const pace = avg(sig.moveTimes.slice(-12));
     const invalidRate = sig.moves ? (sig.invalid / sig.moves) : 0;
     const resetRate = sig.resets ? (sig.resets / Math.max(1, level)) : 0;
 
-    // heuristic scoring
-    const score = { B: 0, A: 0, N: 0, K: 0 };
-
-    // Blueprint: slower, methodical, low invalid
+    const score = { B:0, A:0, N:0, K:0 };
     score.B += pace > 1400 ? 1.2 : 0;
     score.B += invalidRate < 0.10 ? 1.0 : 0;
 
-    // Action: fast, fewer hesitations
     score.A += pace && pace < 900 ? 1.2 : 0;
     score.A += invalidRate < 0.22 ? 0.5 : 0;
 
-    // Nurturing: more resets / hesitation (not bad—just style)
     score.N += resetRate > 0.30 ? 1.0 : 0;
     score.N += invalidRate > 0.18 ? 0.6 : 0;
 
-    // Knowledge: experiments, some invalid but low resets
     score.K += invalidRate > 0.12 ? 0.7 : 0;
     score.K += resetRate < 0.25 ? 0.7 : 0;
 
     const entries = Object.entries(score).sort((a,b)=>b[1]-a[1]);
     const [bankPrimary, top] = entries[0];
     const second = entries[1][1];
-    const conf = Math.max(0.25, Math.min(0.92, 0.35 + (top - second) * 0.55));
+    const conf = Math.max(0.25, Math.min(0.92, 0.35 + (top-second)*0.55));
     return { bankPrimary, bankConfidence: Number(conf.toFixed(2)) };
   }
 
@@ -222,18 +199,38 @@
     return tags.slice(0,3);
   }
 
-  // ---------------------------
-  // Fetch helpers (with 429 backoff)
-  // ---------------------------
+  function formatMod(mod) {
+    if (!mod) return "—";
+    const parts = [];
+    const map = [
+      ["bottleCountDelta","bottles"],
+      ["colorsDelta","colors"],
+      ["capacityDelta","cap"],
+      ["emptyBottlesDelta","empty"],
+      ["lockedBottlesDelta","locks"],
+      ["wildcardSlotsDelta","wild"],
+    ];
+    for (const [k,label] of map) {
+      const v = mod[k] ?? 0;
+      if (v) parts.push(`${label}${v>0?"+":""}${v}`);
+    }
+    const tag = mod.ruleTag && mod.ruleTag !== "none" ? mod.ruleTag : "";
+    return (parts.length ? parts.join(" ") : "no-delta") + (tag ? ` | ${tag}` : "");
+  }
+
+  function setPendingModifier(mod) {
+    pendingModifier = mod;
+    modOut.textContent = formatMod(mod);
+  }
+
   async function postJSON(path, body) {
     const base = apiBaseEl.value.trim().replace(/\/+$/, "");
     const url = base + path;
     const r = await fetch(url, {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
       body: JSON.stringify(body)
     });
-
     if (!r.ok) {
       let detailText = "";
       try { detailText = await r.text(); } catch {}
@@ -247,9 +244,6 @@
     return await r.json();
   }
 
-  // ---------------------------
-  // Quest Node (CLIENT)
-  // ---------------------------
   async function fetchQuestNode() {
     const { bankPrimary, bankConfidence } = inferBANK();
     const sinTags = inferSinTags();
@@ -258,15 +252,7 @@
     sinsOut.textContent = sinTags.join(", ");
 
     statusOut.textContent = "brewing...";
-    const payload = {
-      act: Math.ceil(level/5),
-      questId,
-      bankPrimary,
-      bankConfidence,
-      sinTags,
-      seed: runSeed,
-      level
-    };
+    const payload = { act: Math.ceil(level/5), questId, bankPrimary, bankConfidence, sinTags, seed: runSeed, level };
 
     try {
       const data = await postJSON("/api/quest-node", payload);
@@ -275,11 +261,12 @@
       dmIntro.textContent = q.dm_intro;
       dmMid.textContent = q.dm_midpoint;
       dmVerdict.textContent = q.dm_verdict;
+      setPendingModifier(q.modifier);
       statusOut.textContent = "ok";
+      showToast("Modifier brewed for next level");
     } catch (e) {
-      // 429: respect retry-after by extending cooldown
       if (e.status === 429) {
-        const ms = (e.retryAfter ? e.retryAfter * 1000 : 20000);
+        const ms = (e.retryAfter ? e.retryAfter*1000 : 20000);
         setCooldown(ms);
         statusOut.textContent = "rate-limited";
         showToast("Rate limited. Brewing cooldown…");
@@ -287,11 +274,6 @@
         statusOut.textContent = "quest error";
         showToast("Quest error (check server).");
       }
-      // Keep a readable fallback
-      questTitle.textContent = "Fallback Brew (Server Unhappy)";
-      dmIntro.textContent = "The lab lights flicker. Your API gremlins demand tribute. Brew anyway.";
-      dmMid.textContent = "Stop spam-clicking like a raccoon at a vending machine. One pull. One pour.";
-      dmVerdict.textContent = "Run clean experiments. Fewer retries. Better results. [SIG:MA_V1]";
       console.warn(e, e.detailText);
     }
   }
@@ -302,8 +284,13 @@
     await singleFlight("quest-node", fetchQuestNode);
   });
 
+  document.getElementById("btnApplyMod").addEventListener("click", async () => {
+    showToast(pendingModifier ? "Applying modifier…" : "No modifier to apply");
+    await loadLevel(true);
+  });
+
   // ---------------------------
-  // Bottle fill game (simple water-sort)
+  // Bottle fill
   // ---------------------------
   const grid = document.getElementById("grid");
   const levelOut = document.getElementById("levelOut");
@@ -313,23 +300,11 @@
   const pourFX = document.getElementById("pourFX");
 
   const PALETTE = [
-    "#00D1FF", // cyan
-    "#FF4D6D", // hot pink-red
-    "#FFD400", // yellow
-    "#7CFF6B", // neon green
-    "#A855F7", // purple
-    "#FF8A00", // orange
-    "#00FFA8", // mint
-    "#2E5BFF", // royal blue
-    "#FF3DF2", // magenta
-    "#C2FF00", // lime
+    "#00D1FF","#FF4D6D","#FFD400","#7CFF6B","#A855F7",
+    "#FF8A00","#00FFA8","#2E5BFF","#FF3DF2","#C2FF00",
   ];
 
-  const state = {
-    bottles: [],
-    capacity: 4,
-    selected: -1
-  };
+  const state = { bottles:[], capacity:4, selected:-1 };
 
   function isSolved() {
     return state.bottles.every(b => {
@@ -338,203 +313,147 @@
       return b.every(x => x === b[0]);
     });
   }
-
-  function topColor(b) {
-    if (!b.length) return null;
-    return b[b.length - 1];
-  }
-  function topRunCount(b) {
+  function topColor(b){ return b.length ? b[b.length-1] : null; }
+  function topRunCount(b){
     if (!b.length) return 0;
     const c = topColor(b);
-    let n = 0;
-    for (let i = b.length - 1; i >= 0; i--) {
-      if (b[i] === c) n++;
-      else break;
-    }
+    let n=0;
+    for (let i=b.length-1;i>=0;i--){ if (b[i]===c) n++; else break; }
     return n;
   }
-
-  function canPour(from, to) {
-    if (from === to) return false;
-    const a = state.bottles[from];
-    const b = state.bottles[to];
+  function canPour(from,to){
+    if (from===to) return false;
+    const a=state.bottles[from], b=state.bottles[to];
     if (!a.length) return false;
-    if (b.length >= state.capacity) return false;
-
-    const color = topColor(a);
-    const target = topColor(b);
-    return (target === null || target === color);
+    if (b.length>=state.capacity) return false;
+    const color=topColor(a), target=topColor(b);
+    return (target===null || target===color);
   }
 
-  function doPour(from, to) {
-    if (!canPour(from, to)) {
-      sig.invalid++;
-      badOut.textContent = String(sig.invalid);
+  function bottleCenter(i){
+    const el=document.querySelector(`[data-bottle="${i}"]`);
+    if(!el) return {x:innerWidth/2,y:innerHeight/2};
+    const r=el.getBoundingClientRect();
+    return { x:r.left+r.width/2, y:r.top+r.height/4 };
+  }
+  function playPourFX(from,to,color,amount){
+    const a=bottleCenter(from), b=bottleCenter(to);
+    pourFX.style.background=color;
+    pourFX.style.opacity="1";
+    pourFX.style.left=a.x+"px";
+    pourFX.style.top=a.y+"px";
+    const dx=b.x-a.x, dy=b.y-a.y;
+    const dur=Math.max(260, Math.min(580, 220+amount*90));
+    pourFX.animate([
+      { transform:"translate(-50%,-50%) scale(1)", opacity:0.9 },
+      { transform:`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.9)`, opacity:0.85 },
+      { transform:`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.7)`, opacity:0.0 }
+    ], { duration: dur, easing:"cubic-bezier(.2,.8,.2,1)" });
+    setTimeout(()=>{ pourFX.style.opacity="0"; }, dur);
+  }
+
+  function doPour(from,to){
+    if(!canPour(from,to)){
+      sig.invalid++; badOut.textContent=String(sig.invalid);
       showToast("Invalid pour");
       return false;
     }
-    const a = state.bottles[from];
-    const b = state.bottles[to];
+    const a=state.bottles[from], b=state.bottles[to];
+    const color=topColor(a);
+    const run=topRunCount(a);
+    const space=state.capacity-b.length;
+    const amount=Math.min(run,space);
 
-    const color = topColor(a);
-    const run = topRunCount(a);
-    const space = state.capacity - b.length;
-    const amount = Math.min(run, space);
+    const now=performance.now();
+    if(sig.lastMoveAt) sig.moveTimes.push(now-sig.lastMoveAt);
+    sig.lastMoveAt=now;
 
-    // record timing
-    const now = performance.now();
-    if (sig.lastMoveAt) sig.moveTimes.push(now - sig.lastMoveAt);
-    sig.lastMoveAt = now;
+    playPourFX(from,to,PALETTE[color%PALETTE.length],amount);
+    for(let i=0;i<amount;i++) b.push(a.pop());
 
-    // animate "stream"
-    playPourFX(from, to, color, amount);
-
-    for (let i = 0; i < amount; i++) {
-      b.push(a.pop());
-    }
-    sig.moves++;
-    movesOut.textContent = String(sig.moves);
+    sig.moves++; movesOut.textContent=String(sig.moves);
     render();
 
-    if (isSolved()) {
+    if(isSolved()){
       showToast("Solved! Next level…");
       setTimeout(()=>nextLevel(), 700);
     }
     return true;
   }
 
-  function bottleCenter(i) {
-    const el = document.querySelector(`[data-bottle="${i}"]`);
-    if (!el) return {x: innerWidth/2, y: innerHeight/2};
-    const r = el.getBoundingClientRect();
-    return { x: r.left + r.width/2, y: r.top + r.height/4 };
-  }
+  function countEmpty(){ return state.bottles.filter(b=>b.length===0).length; }
 
-  function playPourFX(from, to, color, amount) {
-    const a = bottleCenter(from);
-    const b = bottleCenter(to);
-    pourFX.style.background = color;
-    pourFX.style.opacity = "1";
-    pourFX.style.left = a.x + "px";
-    pourFX.style.top = a.y + "px";
+  function render(){
+    grid.innerHTML="";
+    state.bottles.forEach((b,i)=>{
+      const bottle=document.createElement("div");
+      bottle.className="bottle"+(state.selected===i?" selected":"");
+      bottle.dataset.bottle=String(i);
 
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-
-    const dur = Math.max(260, Math.min(580, 220 + amount * 90));
-    pourFX.animate([
-      { transform: "translate(-50%,-50%) scale(1)", opacity: 0.9 },
-      { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.9)`, opacity: 0.85 },
-      { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.7)`, opacity: 0.0 }
-    ], { duration: dur, easing: "cubic-bezier(.2,.8,.2,1)" });
-
-    setTimeout(()=>{ pourFX.style.opacity="0"; }, dur);
-  }
-
-  function render() {
-    grid.innerHTML = "";
-    state.bottles.forEach((b, i) => {
-      const bottle = document.createElement("div");
-      bottle.className = "bottle" + (state.selected === i ? " selected" : "");
-      bottle.dataset.bottle = String(i);
-
-      // segments bottom-up
-      for (let s = 0; s < state.capacity; s++) {
-        const seg = document.createElement("div");
-        seg.className = "seg";
-        const colorIndex = b[s] ?? null;
-        seg.style.background = colorIndex === null ? "transparent" : PALETTE[colorIndex % PALETTE.length];
+      for(let s=0;s<state.capacity;s++){
+        const seg=document.createElement("div");
+        seg.className="seg";
+        const colorIndex=b[s] ?? null;
+        seg.style.background = colorIndex===null ? "transparent" : PALETTE[colorIndex%PALETTE.length];
         bottle.appendChild(seg);
       }
 
-      bottle.addEventListener("click", () => {
-        if (state.selected === -1) {
-          state.selected = i;
-          render();
-          return;
-        }
-        if (state.selected === i) {
-          state.selected = -1;
-          render();
-          return;
-        }
-        // try pour
-        const success = doPour(state.selected, i);
-        state.selected = -1;
-        if (!success) render();
+      bottle.addEventListener("click", ()=>{
+        if(state.selected===-1){ state.selected=i; render(); return; }
+        if(state.selected===i){ state.selected=-1; render(); return; }
+        const success=doPour(state.selected,i);
+        state.selected=-1;
+        if(!success) render();
       });
 
       grid.appendChild(bottle);
     });
 
-    levelOut.textContent = String(level);
-    movesOut.textContent = String(sig.moves);
-    badOut.textContent = String(sig.invalid);
-    resetOut.textContent = String(sig.resets);
-
-    // simple cfg tag for DM
+    levelOut.textContent=String(level);
+    movesOut.textContent=String(sig.moves);
+    badOut.textContent=String(sig.invalid);
+    resetOut.textContent=String(sig.resets);
     cfgOut.textContent = `b${state.bottles.length}/c${state.capacity}/e${countEmpty()}`;
   }
 
-  function countEmpty() {
-    return state.bottles.filter(b => b.length === 0).length;
-  }
-
-  // ---------------------------
-  // Level recipe -> generate solvable-ish boards
-  // ---------------------------
-  function shuffle(arr) {
-    for (let i=arr.length-1;i>0;i--){
-      const j = Math.floor(Math.random()*(i+1));
-      [arr[i],arr[j]] = [arr[j],arr[i]];
+  function shuffle(arr){
+    for(let i=arr.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [arr[i],arr[j]]=[arr[j],arr[i]];
     }
     return arr;
   }
 
-  function buildBoardFromRecipe(recipe) {
-    const colors = recipe.colors;
-    const bottles = recipe.bottleCount;
-    const cap = recipe.capacity;
-    const empty = recipe.emptyBottles;
+  function buildBoardFromRecipe(recipe){
+    const colors=recipe.colors, bottles=recipe.bottleCount, cap=recipe.capacity, empty=recipe.emptyBottles;
 
-    // Build solved stacks for each color
-    const colorStacks = [];
-    for (let c=0;c<colors;c++){
-      colorStacks.push(Array.from({length:cap}, ()=>c));
-    }
+    const colorStacks=[];
+    for(let c=0;c<colors;c++) colorStacks.push(Array.from({length:cap}, ()=>c));
 
-    // Combine and shuffle into a pool
-    const pool = shuffle(colorStacks.flat());
-
-    // create bottles
-    const board = Array.from({length:bottles}, ()=>[]);
-    // fill bottles except empties
-    const fillCount = bottles - empty;
-    let idx = 0;
-    for (let b=0;b<fillCount;b++){
-      for (let s=0;s<cap;s++){
-        if (idx < pool.length) board[b].push(pool[idx++]);
+    const pool=shuffle(colorStacks.flat());
+    const board=Array.from({length:bottles}, ()=>[]);
+    const fillCount=bottles-empty;
+    let idx=0;
+    for(let b=0;b<fillCount;b++){
+      for(let s=0;s<cap;s++){
+        if(idx<pool.length) board[b].push(pool[idx++]);
       }
     }
 
-    // scramble: perform random valid-ish pours to create a puzzle
-    state.capacity = cap;
-    state.bottles = board;
-    state.selected = -1;
+    state.capacity=cap;
+    state.bottles=board;
+    state.selected=-1;
 
-    const scramble = Math.max(40, Math.min(240, recipe.difficulty * 22 + 60));
-    for (let k=0;k<scramble;k++){
-      const a = Math.floor(Math.random()*bottles);
-      const t = Math.floor(Math.random()*bottles);
-      if (a===t) continue;
-      if (!canPour(a,t)) continue;
-      // do a single unit pour in scramble to avoid instantly solved
-      const from = state.bottles[a];
-      const to = state.bottles[t];
-      if (!from.length || to.length>=cap) continue;
-      const col = topColor(from);
-      const tgt = topColor(to);
-      if (tgt !== null && tgt !== col) continue;
+    const scramble=Math.max(40, Math.min(260, recipe.difficulty*24+60));
+    for(let k=0;k<scramble;k++){
+      const a=Math.floor(Math.random()*bottles);
+      const t=Math.floor(Math.random()*bottles);
+      if(a===t) continue;
+      if(!canPour(a,t)) continue;
+      const from=state.bottles[a], to=state.bottles[t];
+      if(!from.length || to.length>=cap) continue;
+      const col=topColor(from), tgt=topColor(to);
+      if(tgt!==null && tgt!==col) continue;
       to.push(from.pop());
     }
   }
@@ -550,79 +469,70 @@
       bankConfidence,
       sinTags,
       seed: runSeed,
-      level
+      level,
+      modifier: pendingModifier
     };
 
-    statusOut.textContent = "distilling...";
+    statusOut.textContent="distilling...";
     const data = await postJSON("/api/level-recipe", payload);
-    statusOut.textContent = "ok";
+    statusOut.textContent="ok";
+
+    // consume modifier (applies to THIS level only)
+    if (pendingModifier) {
+      showToast("Modifier consumed");
+      setPendingModifier(null);
+    }
+
     return data.recipe;
   }
 
-  async function loadLevel() {
-    // IMPORTANT: Single-flight prevents multiple calls (load + button + retries)
-    const recipe = await singleFlight(`level-recipe:${runSeed}:${questId}:${level}`, fetchLevelRecipe)
-      .catch((e) => {
-        if (e.status === 429) {
-          const ms = (e.retryAfter ? e.retryAfter * 1000 : 20000);
-          setCooldown(ms);
-          statusOut.textContent = "rate-limited";
-          showToast("Rate limited. Using fallback level.");
-        } else {
-          statusOut.textContent = "recipe error";
-          showToast("Recipe error. Using fallback level.");
-        }
-        console.warn(e, e.detailText);
-        // fallback recipe
-        return {
-          version:"fallback",
-          title:"Fallback Level",
-          lore:"Server is cranky. Brew locally.",
-          difficulty: Math.min(7, 2 + Math.floor(level/2)),
-          colors: 5,
-          bottleCount: 10,
-          capacity: 4,
-          emptyBottles: 2,
-          lockedBottles: 0,
-          wildcardSlots: 0,
-          elements:["Au","Fe","Na","Cl","C"],
-          sinTags:["indecision"],
-          bonuses:[],
-          constraints:[]
-        };
-      });
+  async function loadLevel(forceApply=false){
+    const key=`level-recipe:${runSeed}:${questId}:${level}:${forceApply?1:0}`;
+    const recipe = await singleFlight(key, ()=>fetchLevelRecipe()).catch((e)=>{
+      if(e.status===429){
+        const ms=(e.retryAfter ? e.retryAfter*1000 : 20000);
+        setCooldown(ms);
+        statusOut.textContent="rate-limited";
+        showToast("Rate limited. Using fallback level.");
+      } else {
+        statusOut.textContent="recipe error";
+        showToast("Recipe error. Using fallback level.");
+      }
+      console.warn(e, e.detailText);
+      return {
+        version:"fallback", title:"Fallback Level", lore:"Server is cranky. Brew locally.",
+        difficulty: Math.min(7, 2 + Math.floor(level/2)),
+        colors:5, bottleCount:10, capacity:4, emptyBottles:2, lockedBottles:0, wildcardSlots:0,
+        elements:["Au","Fe","Na","Cl","C"], sinTags:["indecision"], bonuses:[], constraints:[],
+        appliedModifier:{ lockedBottlesDelta:0, emptyBottlesDelta:0, capacityDelta:0, wildcardSlotsDelta:0, colorsDelta:0, bottleCountDelta:0, ruleTag:"none", bonusObjective:"" }
+      };
+    });
 
     buildBoardFromRecipe(recipe);
     render();
   }
 
-  function nextLevel() {
+  function nextLevel(){
     level++;
     questId = Math.ceil(level/4);
-    sig.moves = 0;
-    sig.invalid = 0;
-    sig.moveTimes = [];
-    sig.lastMoveAt = 0;
-    loadLevel();
+    sig.moves=0; sig.invalid=0; sig.moveTimes=[]; sig.lastMoveAt=0;
+    loadLevel(false);
   }
 
-  function resetRun() {
+  function resetRun(){
     sig.resets++;
-    resetOut.textContent = String(sig.resets);
-    runSeed = Math.floor(Math.random() * 1e9);
-    level = 1;
-    questId = 1;
-    sig.moves = 0; sig.invalid = 0; sig.moveTimes = []; sig.lastMoveAt = 0;
-    loadLevel();
+    runSeed = Math.floor(Math.random()*1e9);
+    level=1; questId=1;
+    sig.moves=0; sig.invalid=0; sig.moveTimes=[]; sig.lastMoveAt=0;
+    setPendingModifier(null);
+    loadLevel(false);
     showToast("Run reset");
   }
 
-  document.getElementById("btnNext").addEventListener("click", () => nextLevel());
-  document.getElementById("btnReset").addEventListener("click", () => resetRun());
+  document.getElementById("btnNext").addEventListener("click", ()=>nextLevel());
+  document.getElementById("btnReset").addEventListener("click", ()=>resetRun());
 
-  // Initial load: only ONE call (level recipe). Quest node is manual.
-  loadLevel();
-
+  loadLevel(false);
 </script>
 </body>
 </html>
