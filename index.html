@@ -2,1031 +2,743 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
-  />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>The Marketing Alchemist — Bottle Fill (Mobile)</title>
+  <title>Marketing Alchemist — Bottle Fill (Mobile)</title>
 
   <style>
     :root{
-      --bg:#060b14;
-      --panel:#0c1524;
-      --stroke:#1b2b46;
-      --txt:#e8eef7;
-      --muted:#a9b6c8;
+      --bg0:#060a12;
+      --bg1:#0b1220;
+      --panel:#0d1728;
+      --stroke:#22324a;
+      --stroke2:#2a3b57;
+      --text:#e8f0ff;
+      --muted:#a7b4cc;
 
-      --pad: 14px;
-      --r: 18px;
+      --bankB:#3aa0ff; /* Blue */
+      --bankA:#ff3b3b; /* Red */
+      --bankN:#3dff6a; /* Green */
+      --bankK:#ffd43b; /* Yellow */
 
-      /* scaled by JS from #app width */
-      --cell: 70px;
-      --bottleW: 58px;
-      --bottleH: 155px;
-      --neckH: 16px;
-
-      /* bottle geometry */
-      --glass: rgba(255,255,255,.08);
-      --glassEdge: rgba(255,255,255,.18);
-      --shine: rgba(255,255,255,.10);
-
-      /* motion */
-      --ease: cubic-bezier(.2,.9,.2,1);
+      --radius:18px;
+      --shadow: 0 14px 40px rgba(0,0,0,.45);
+      --safeTop: env(safe-area-inset-top);
+      --safeBottom: env(safe-area-inset-bottom);
     }
 
     *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
-    html, body { height:100%; margin:0; background:#000; color: var(--txt);
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
-    body { overscroll-behavior:none; touch-action: manipulation; }
+    html,body{ height:100%; margin:0; background: radial-gradient(1200px 900px at 50% -10%, #132246, #070b14 60%, #05070c); color:var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji"; }
+    button{ font:inherit; color:inherit; }
 
-    #phone{
-      height: 100%;
+    /* --- Mobile frame --- */
+    .app{
+      height:100%;
       display:flex;
       justify-content:center;
-      padding:
-        calc(env(safe-area-inset-top) + 10px)
-        calc(env(safe-area-inset-right) + 10px)
-        calc(env(safe-area-inset-bottom) + 10px)
-        calc(env(safe-area-inset-left) + 10px);
-      background: radial-gradient(1000px 800px at 30% 10%, #0b1a33 0%, #050910 55%, #000 100%);
+      align-items:stretch;
+      padding: calc(10px + var(--safeTop)) 10px calc(10px + var(--safeBottom));
     }
 
-    #app{
-      width: min(440px, 100%);
+    .phone{
+      width: min(430px, 100%);
       height: 100%;
+      max-height: 900px;
       display:flex;
       flex-direction:column;
-      gap: 12px;
+      gap:10px;
       position:relative;
     }
 
-    /* Top: Quest / DM */
-    header.top{
-      background: linear-gradient(180deg, rgba(12,21,36,0.95), rgba(8,14,25,0.95));
+    /* --- Header (optional placeholder bar) --- */
+    .topbar{
+      background: linear-gradient(180deg, rgba(14,25,45,.9), rgba(10,18,32,.75));
       border:1px solid var(--stroke);
-      border-radius: var(--r);
-      padding: var(--pad);
-    }
-
-    .titleRow{
-      display:flex; align-items:center; justify-content:space-between; gap: 10px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding:12px 12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      min-height:56px;
     }
     .brand{
-      font-weight: 900; letter-spacing: .2px;
-      font-size: 20px; line-height: 1.1;
-      display:flex; align-items:center; gap: 8px;
+      display:flex; align-items:center; gap:10px;
+      font-weight:800; letter-spacing:.2px;
     }
-
-    .rightControls{
-      display:flex; align-items:center; gap: 10px;
-    }
-
-    .apiPill{
-      display:flex; align-items:center; gap:8px;
+    .brand .dot{ width:10px; height:10px; border-radius:999px; background:#66ffcc; box-shadow:0 0 18px rgba(102,255,204,.65); }
+    .brand small{ color:var(--muted); font-weight:600; }
+    .pill{
+      display:flex; align-items:center; gap:10px;
+      padding:10px 12px;
       border:1px solid var(--stroke);
-      background: rgba(10,18,32,0.9);
-      color: var(--txt);
-      padding: 8px 10px;
-      border-radius: 999px;
-      font-weight: 800;
-      max-width: 240px;
-    }
-    .apiPill .lbl{ opacity:.8; font-weight: 800; }
-    .apiPill input{
-      width: 150px; max-width: 38vw;
-      background: transparent; border:0; outline: none;
-      color: var(--txt);
-      font-weight: 800;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      font-size: 13px;
+      border-radius:999px;
+      background: rgba(6,10,18,.55);
+      color:var(--muted);
+      font-weight:700;
     }
 
-    button.pill{
+    /* --- Main stage (this is where layers live) --- */
+    .stage{
+      flex:1;
+      position:relative;
+      border-radius: var(--radius);
       border:1px solid var(--stroke);
-      background: rgba(10,18,32,0.9);
-      color: var(--txt);
-      padding: 10px 12px;
-      border-radius: 999px;
-      font-weight: 900;
-    }
-    button.pill:active{ transform: translateY(1px); }
-
-    .questCard{
-      margin-top: 10px;
-      padding: 12px;
-      border-radius: 14px;
-      border: 1px solid rgba(27,43,70,.9);
-      background: rgba(6,11,20,.7);
-    }
-    .questTitle{
-      font-size: 18px;
-      font-weight: 900;
-      margin-bottom: 6px;
-    }
-    .questText{
-      font-size: 15px;
-      color: var(--muted);
-      line-height: 1.35;
-      min-height: 42px;
-    }
-    .chips{
-      display:flex;
-      flex-wrap:wrap;
-      gap: 8px;
-      margin-top: 10px;
-    }
-    .chip{
-      font-size: 12px;
-      padding: 8px 10px;
-      border-radius: 999px;
-      border:1px solid var(--stroke);
-      background: rgba(10,18,32,0.9);
-      color: var(--txt);
-      white-space: nowrap;
-    }
-
-    /* Middle: play area */
-    main.play{
-      flex: 1;
-      min-height: 0;
-      background: rgba(12,21,36,0.7);
-      border:1px solid var(--stroke);
-      border-radius: var(--r);
-      padding: 12px;
+      background: linear-gradient(180deg, rgba(12,20,36,.8), rgba(6,10,18,.85));
+      box-shadow: var(--shadow);
       overflow:hidden;
-      position: relative;
     }
 
-    .hudRow{
-      display:flex; gap: 8px; align-items:center; justify-content:space-between;
-      margin-bottom: 10px;
-    }
-    .hudLeft, .hudRight{ display:flex; gap: 8px; align-items:center; flex-wrap:wrap; }
-    .hudTitle{ font-weight: 900; font-size: 18px; }
-    .hudPill{
-      font-size: 12px;
-      padding: 8px 10px;
-      border-radius: 999px;
-      border:1px solid var(--stroke);
-      background: rgba(10,18,32,0.9);
-      color: var(--txt);
-      white-space: nowrap;
-    }
-
-    .bottleGrid{
-      height: calc(100% - 50px);
+    /* Split the stage into: upper overlay space + lower gameplay space */
+    .stageInner{
+      height:100%;
       display:grid;
-      grid-template-columns: repeat(4, var(--cell));
-      justify-content:center;
-      align-content:center;
-      gap: 10px;
-      position: relative;
+      grid-template-rows: 1fr auto; /* top area grows, bottom gameplay fixed-ish */
     }
 
-    /* Bottle */
-    .bottleSlot{
-      width: var(--cell);
-      height: calc(var(--bottleH) + 18px);
+    /* --- Lower gameplay space: Modifiers + Bottle Grid --- */
+    .gameLower{
+      position:relative;
+      padding: 10px 10px 12px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      background: linear-gradient(180deg, rgba(6,10,18,0), rgba(6,10,18,.55));
+    }
+
+    /* Modifiers row */
+    .modRow{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .modPanel{
+      flex:1;
+      border:1px solid var(--stroke);
+      border-radius: var(--radius);
+      background: rgba(10,18,32,.55);
+      padding:10px;
+      display:flex;
+      gap:10px;
+      align-items:stretch;
+    }
+    .modSlot{
+      flex:1;
+      border:1px dashed rgba(167,180,204,.35);
+      border-radius: 14px;
+      background: rgba(6,10,18,.35);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      min-height:52px;
+      position:relative;
+      overflow:hidden;
+    }
+    .modSlot span{
+      color:rgba(232,240,255,.65);
+      font-weight:800;
+      letter-spacing:.4px;
+      font-size:13px;
+      text-transform:uppercase;
+    }
+    .modPlus{
+      width:34px; height:34px;
+      border-radius:999px;
+      border:1px solid var(--stroke2);
+      background: rgba(255,255,255,.06);
+      display:grid; place-items:center;
+      font-size:20px;
+      line-height:1;
+      color:rgba(232,240,255,.85);
+    }
+    .modLabel{
+      font-weight:800;
+      color:rgba(232,240,255,.85);
+      font-size:12px;
+      letter-spacing:.4px;
+      text-transform:uppercase;
+      opacity:.8;
+      align-self:flex-start;
+      padding:6px 8px;
+      border:1px solid rgba(34,50,74,.65);
+      border-radius:999px;
+      background: rgba(6,10,18,.45);
+    }
+
+    /* Bottle grid panel */
+    .bottlePanel{
+      border:1px solid var(--stroke);
+      border-radius: var(--radius);
+      background: rgba(10,18,32,.55);
+      padding:10px;
+    }
+    .bottleTitle{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      margin-bottom:10px;
+    }
+    .bottleTitle h2{
+      margin:0;
+      font-size:16px;
+      letter-spacing:.2px;
+    }
+    .bottleTitle .hint{
+      color:var(--muted);
+      font-weight:700;
+      font-size:12px;
+    }
+
+    /* 5x3 beakers maximum — responsive sizing */
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap:8px;
+      /* Aim for comfortable thumb size and allow shrink */
+      --cellMin: 52px;
+    }
+    .cell{
+      aspect-ratio: 2 / 3; /* tall beaker silhouette area */
+      border-radius: 18px;
+      border:1px solid rgba(167,180,204,.25);
+      background: rgba(6,10,18,.45);
+      position:relative;
+      overflow:hidden;
       display:flex;
       align-items:flex-end;
       justify-content:center;
-      position: relative;
+      padding:8px 6px;
     }
-
-    .bottle{
-      width: var(--bottleW);
-      height: var(--bottleH);
-      border-radius: 14px 14px 16px 16px;
-      position: relative;
-      border: 2px solid var(--glassEdge);
-      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
-      box-shadow: 0 10px 20px rgba(0,0,0,.35);
-      overflow:hidden;
-      transform: translateZ(0);
-    }
-
-    .bottle::before{
+    .cell::before{
       content:"";
-      position:absolute; inset:0;
-      background: linear-gradient(90deg, transparent 0%, var(--shine) 35%, transparent 70%);
-      opacity:.5;
-      pointer-events:none;
-      transform: translateX(-20%);
-    }
-
-    .neck{
       position:absolute;
-      top: -12px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: calc(var(--bottleW) * .58);
-      height: calc(var(--neckH) + 8px);
-      border-radius: 10px 10px 10px 10px;
-      border: 2px solid var(--glassEdge);
-      background: rgba(255,255,255,.03);
+      inset:10% 16% 12% 16%;
+      border-radius: 14px 14px 18px 18px;
+      border:2px solid rgba(232,240,255,.18);
+      background: rgba(255,255,255,.02);
+    }
+    .cellLabel{
+      position:relative;
+      z-index:2;
+      font-size:11px;
+      color:rgba(232,240,255,.55);
+      font-weight:800;
+      letter-spacing:.2px;
+      text-transform:uppercase;
+      user-select:none;
     }
 
-    .liquidStack{
+    /* If the screen is narrow, move to 4 columns (still supports 5×3 logically; visually it wraps) */
+    @media (max-width: 360px){
+      .grid{ grid-template-columns: repeat(4, 1fr); }
+    }
+
+    /* --- BANK IDENTIFIER (left rail, always visible) --- */
+    .bankRail{
       position:absolute;
-      inset: 0;
-      display:flex;
-      flex-direction:column-reverse;
-    }
-
-    .layer{
-      width:100%;
-      height: 0px;
-      transition: height 260ms var(--ease);
-    }
-
-    .bottle.selected{
-      outline: 3px solid rgba(110,190,255,.95);
-      box-shadow: 0 0 0 6px rgba(110,190,255,.15), 0 12px 24px rgba(0,0,0,.5);
-    }
-    .bottle.invalid{
-      animation: shake 240ms var(--ease);
-      outline: 3px solid rgba(255,90,90,.95);
-      box-shadow: 0 0 0 6px rgba(255,90,90,.15);
-    }
-    @keyframes shake{
-      0%{ transform: translateX(0); }
-      25%{ transform: translateX(-4px); }
-      50%{ transform: translateX(4px); }
-      75%{ transform: translateX(-3px); }
-      100%{ transform: translateX(0); }
-    }
-
-    /* Pour animation */
-    .pourStream{
-      position:absolute;
-      width: 10px;
-      border-radius: 999px;
-      filter: drop-shadow(0 6px 10px rgba(0,0,0,.35));
-      opacity: 0;
-      transform-origin: top center;
-    }
-    .pourStream.on{
-      opacity: 1;
-      animation: stream 520ms var(--ease) forwards;
-    }
-    @keyframes stream{
-      0%{ transform: scaleY(.2); }
-      25%{ transform: scaleY(1); }
-      70%{ transform: scaleY(1); opacity: 1; }
-      100%{ transform: scaleY(.25); opacity: 0; }
-    }
-
-    /* Bottom layout */
-    footer.bottom{
-      display:grid;
-      grid-template-columns: 120px 1fr;
-      gap: 10px;
-      align-items:end;
-    }
-
-    .characterZone{
-      height: 120px;
-      border-radius: var(--r);
+      left:8px;
+      top:8px;
+      bottom:8px;
+      width:64px;
+      border-radius: 20px;
       border:1px solid var(--stroke);
-      background: rgba(12,21,36,0.75);
+      background: rgba(6,10,18,.55);
+      box-shadow: 0 10px 26px rgba(0,0,0,.35);
       display:flex;
+      flex-direction:column;
       align-items:center;
       justify-content:center;
-      font-weight: 900;
-      color: rgba(255,255,255,.55);
+      padding:10px 8px;
+      gap:10px;
+      z-index:30;
+      transition: width .22s ease, transform .22s ease;
+      overflow:hidden;
+      touch-action: manipulation;
+    }
+    .bankRail.expanded{
+      width: 210px;
+      align-items:stretch;
+    }
+    .bankLetters{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:10px;
+      flex: 0 0 auto;
+    }
+    .bankLetter{
+      width:42px;
+      height:42px;
+      border-radius: 14px;
+      border:1px solid rgba(167,180,204,.28);
+      background: rgba(255,255,255,.03);
+      display:grid;
+      place-items:center;
+      font-weight:1000;
+      font-size:20px;
+      color: rgba(232,240,255,.35);
+      user-select:none;
+    }
+    .bankLetter.active.B{ color: var(--bankB); text-shadow: 0 0 18px rgba(58,160,255,.35); }
+    .bankLetter.active.A{ color: var(--bankA); text-shadow: 0 0 18px rgba(255,59,59,.35); }
+    .bankLetter.active.N{ color: var(--bankN); text-shadow: 0 0 18px rgba(61,255,106,.35); }
+    .bankLetter.active.K{ color: var(--bankK); text-shadow: 0 0 18px rgba(255,212,59,.35); }
+
+    .bankInfo{
+      flex:1 1 auto;
+      opacity:0;
+      transform: translateX(-10px);
+      transition: opacity .18s ease, transform .18s ease;
+      padding:10px 10px 10px 6px;
+      color:rgba(232,240,255,.78);
+      font-weight:700;
+      font-size:12px;
+      line-height:1.35;
+    }
+    .bankRail.expanded .bankInfo{
+      opacity:1;
+      transform: translateX(0);
+    }
+    .bankInfo .row{
+      display:flex; gap:8px; align-items:flex-start;
+      padding:6px 8px;
+      border-radius: 12px;
+      border:1px solid rgba(34,50,74,.55);
+      background: rgba(10,18,32,.4);
+      margin-bottom:8px;
+    }
+    .bankInfo b{ display:inline-block; width:16px; }
+    .bankInfo .b{ color: var(--bankB); }
+    .bankInfo .a{ color: var(--bankA); }
+    .bankInfo .n{ color: var(--bankN); }
+    .bankInfo .k{ color: var(--bankK); }
+    .bankHint{
+      margin-top:8px;
+      color:rgba(167,180,204,.85);
+      font-weight:700;
+      font-size:11px;
     }
 
-    .speechZone{ display:flex; flex-direction:column; gap: 10px; }
-    .speechBubble{
-      min-height: 76px;
-      border-radius: var(--r);
-      border:1px solid var(--stroke);
-      background: rgba(12,21,36,0.75);
-      padding: 12px;
-      font-size: 14px;
-      color: var(--muted);
-      line-height: 1.35;
+    /* --- DM overlay (quest node moments pause gameplay) --- */
+    .dmOverlay{
+      position:absolute;
+      inset:0;
+      display:none; /* shown when active */
+      z-index:40;
+      background: radial-gradient(900px 700px at 65% 20%, rgba(30,80,160,.18), rgba(0,0,0,.55));
+      backdrop-filter: blur(3px);
     }
-    .modifiersBar{
-      height: 58px;
-      border-radius: var(--r);
+    .dmOverlay.active{ display:block; }
+
+    /* Speech bubble wrapper */
+    .speechWrap{
+      position:absolute;
+      left:84px; /* leaves room for BANK rail */
+      right:10px;
+      top:10px;
+      border-radius: var(--radius);
       border:1px solid var(--stroke);
-      background: rgba(12,21,36,0.75);
+      background: rgba(10,18,32,.72);
+      box-shadow: 0 18px 44px rgba(0,0,0,.45);
+      padding:12px 12px 12px 12px;
+      overflow:hidden;
+    }
+    .speechHeader{
       display:flex;
       align-items:center;
-      gap: 10px;
-      padding: 0 12px;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:8px;
+    }
+    .speechHeader .title{
+      font-weight:1000;
+      letter-spacing:.2px;
+      font-size:14px;
+      color:rgba(232,240,255,.92);
+    }
+    .speechHeader .sub{
+      color:rgba(167,180,204,.92);
+      font-weight:800;
+      font-size:12px;
+    }
+
+    /* Speech bubble area auto-shrinks */
+    .speechText{
+      width:100%;
+      border-radius: 14px;
+      border:1px solid rgba(34,50,74,.55);
+      background: rgba(6,10,18,.45);
+      padding:12px;
+      line-height:1.25;
+      font-weight:800;
       overflow:hidden;
-      color: rgba(255,255,255,.55);
-      font-weight: 900;
+      display:flex;
+      align-items:flex-start;
+      justify-content:flex-start;
+      min-height: 90px;
+      max-height: 210px;
+    }
+    .speechText p{
+      margin:0;
+      width:100%;
+      font-size: 18px; /* will auto-shrink via JS */
+      letter-spacing:.1px;
+      color:rgba(232,240,255,.95);
+      word-break: break-word;
     }
 
-    /* Optional left BANK tab */
-    .bankTab{
+    /* --- DM character slide-in from left --- */
+    .dmChar{
       position:absolute;
-      left: -42px;
-      top: 110px;
-      width: 130px;
-      transform: rotate(-90deg);
-      transform-origin: left top;
-      background: #000;
-      border:1px solid var(--stroke);
-      color:#fff;
-      padding: 8px 10px;
-      border-radius: 12px;
-      font-weight: 900;
-      letter-spacing:.8px;
-      text-align:center;
-      opacity:.92;
-      pointer-events:none;
+      left:-260px; /* start hidden offscreen */
+      bottom: 18%;
+      width: min(240px, 52vw);
+      height: auto;
+      z-index:45;
+      filter: drop-shadow(0 18px 30px rgba(0,0,0,.55));
+      transform: translateX(0);
+      transition: transform .28s ease-out;
+      will-change: transform;
+      pointer-events:none; /* bubble handles input; close btn is separate */
+    }
+    .dmOverlay.active .dmChar{
+      transform: translateX(280px); /* slides in */
     }
 
-    /* Small phones: 3 columns */
-    @media (max-width: 360px){
-      .bottleGrid{ grid-template-columns: repeat(3, var(--cell)); }
-      footer.bottom{ grid-template-columns: 100px 1fr; }
-      .apiPill input{ width: 120px; }
+    /* Shake effect when arrived */
+    .shake{
+      animation: shake .28s ease-in-out 1;
     }
+    @keyframes shake{
+      0%{ transform: translateX(280px) rotate(0deg); }
+      30%{ transform: translateX(280px) rotate(-2deg); }
+      60%{ transform: translateX(280px) rotate(2deg); }
+      100%{ transform: translateX(280px) rotate(0deg); }
+    }
+
+    /* Close (X) above character */
+    .dmClose{
+      position:absolute;
+      left: 84px;
+      top: 10px;
+      z-index: 60;
+      width:44px; height:44px;
+      border-radius: 14px;
+      border:1px solid rgba(34,50,74,.8);
+      background: rgba(6,10,18,.6);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      font-weight:1000;
+      font-size:18px;
+    }
+    .dmOverlay.active .dmClose{ display:flex; }
+
+    /* --- Shop modal placeholder (for modifiers +) --- */
+    .modal{
+      position:absolute;
+      inset:0;
+      z-index:80;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding: 18px;
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(4px);
+    }
+    .modal.active{ display:flex; }
+    .modalCard{
+      width:min(420px, 100%);
+      border-radius: 22px;
+      border:1px solid var(--stroke);
+      background: rgba(10,18,32,.9);
+      box-shadow: 0 22px 60px rgba(0,0,0,.55);
+      padding:14px;
+    }
+    .modalTop{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      margin-bottom:10px;
+    }
+    .modalTop b{ font-size:15px; letter-spacing:.2px; }
+    .modalTop button{
+      width:40px; height:40px;
+      border-radius: 14px;
+      border:1px solid rgba(34,50,74,.8);
+      background: rgba(6,10,18,.55);
+      font-weight:1000;
+      font-size:16px;
+    }
+    .modalBody{
+      border-radius: 16px;
+      border:1px dashed rgba(167,180,204,.25);
+      background: rgba(6,10,18,.35);
+      padding:12px;
+      color:rgba(232,240,255,.78);
+      font-weight:800;
+      line-height:1.3;
+      min-height: 160px;
+    }
+
+    /* --- Utility --- */
+    .hidden{ display:none !important; }
   </style>
 </head>
 
 <body>
-  <div id="phone">
-    <div id="app">
+  <div class="app">
+    <div class="phone">
+      <div class="topbar">
+        <div class="brand">
+          <div class="dot"></div>
+          <div>
+            <div>The Marketing Alchemist</div>
+            <small>Mobile layout — placeholder zones</small>
+          </div>
+        </div>
+        <div class="pill">Portrait • Tap UI</div>
+      </div>
 
-      <header class="top">
-        <div class="titleRow">
-          <div class="brand">🧪 The Marketing Alchemist <span style="opacity:.65; font-weight:900;">(Quest DM)</span></div>
+      <main class="stage" id="stage">
+        <!-- BANK IDENTIFIER (left rail) -->
+        <aside class="bankRail" id="bankRail" aria-label="BANK Identifier">
+          <div class="bankLetters" aria-hidden="true">
+            <div class="bankLetter B" data-letter="B">B</div>
+            <div class="bankLetter A" data-letter="A">A</div>
+            <div class="bankLetter N" data-letter="N">N</div>
+            <div class="bankLetter K" data-letter="K">K</div>
+          </div>
 
-          <div class="rightControls">
-            <div class="apiPill" title="API base URL (Render)">
-              <span class="lbl">API:</span>
-              <input id="apiBase" value="https://ma-bottle-fill-api.onrender.com" />
+          <div class="bankInfo" id="bankInfo">
+            <div class="row"><b class="b">B</b><div><span class="b">Blueprint</span> — step-by-step, clarity, structure.</div></div>
+            <div class="row"><b class="a">A</b><div><span class="a">Action</span> — fast decisions, results, momentum.</div></div>
+            <div class="row"><b class="n">N</b><div><span class="n">Nurturing</span> — people-first, trust, care, safety.</div></div>
+            <div class="row"><b class="k">K</b><div><span class="k">Knowledge</span> — logic, data, proof, mastery.</div></div>
+            <div class="bankHint">Tap again to collapse.</div>
+          </div>
+        </aside>
+
+        <!-- DM quest overlay (CHARACTER + SPEECH) -->
+        <div class="dmOverlay" id="dmOverlay" aria-hidden="true">
+          <button class="dmClose" id="dmClose" aria-label="Close DM">✕</button>
+
+          <!-- SPEECH BUBBLE -->
+          <section class="speechWrap" role="dialog" aria-modal="true" aria-label="Quest Node">
+            <div class="speechHeader">
+              <div>
+                <div class="title">SPEECH BUBBLE</div>
+                <div class="sub">Quest node moment — game paused</div>
+              </div>
+              <div class="pill" style="padding:8px 10px;">DM • Quest</div>
             </div>
-            <button class="pill" id="questBtn">Quest Node</button>
+
+            <div class="speechText" id="speechText">
+              <p id="speechP">
+                Placeholder quest text. This area should shrink-to-fit longer text without overflowing.
+              </p>
+            </div>
+          </section>
+
+          <!-- CHARACTER (PNG) -->
+          <!-- Replace src with your actual DM PNG path later -->
+          <img
+            class="dmChar"
+            id="dmChar"
+            src=""
+            alt="Marketing Alchemist DM (Character)"
+          />
+        </div>
+
+        <!-- Shop modal placeholder -->
+        <div class="modal" id="shopModal" aria-hidden="true">
+          <div class="modalCard">
+            <div class="modalTop">
+              <b>Modifier Shop (placeholder)</b>
+              <button id="shopClose" aria-label="Close Shop">✕</button>
+            </div>
+            <div class="modalBody">
+              This will be the modifier shop screen later.
+              <br><br>
+              For now: this confirms your “tap (+) → pop-up panel” layout works on mobile.
+            </div>
           </div>
         </div>
 
-        <div class="questCard" id="questCard">
-          <div class="questTitle" id="questTitle">Mobile Build</div>
-          <div class="questText" id="questText">Tap bottles → tap target. Portrait-only layout. DM appears every 3–6 levels (random).</div>
-          <div class="chips">
-            <span class="chip" id="statusChip">Status: ready</span>
-            <span class="chip" id="bankChip">BANK: —</span>
-            <span class="chip" id="sinChip">SinTags: —</span>
-            <span class="chip" id="cfgChip">LevelCfg: —</span>
-          </div>
-        </div>
-      </header>
+        <!-- Main content (layers below overlays) -->
+        <div class="stageInner">
+          <div></div><!-- top spacer (so overlays feel like separate layer) -->
 
-      <main class="play">
-        <div class="hudRow">
-          <div class="hudLeft">
-            <div class="hudTitle">Bottle Fill</div>
-            <div class="hudPill" id="lvlPill">Level: 1</div>
-            <div class="hudPill" id="movesPill">Moves: 0</div>
-            <div class="hudPill" id="badPill">Invalid: 0</div>
-            <div class="hudPill" id="resetPill">Resets: 0</div>
-          </div>
-          <div class="hudRight">
-            <button class="pill" id="nextBtn">Next Level</button>
-            <button class="pill" id="resetBtn">Reset Run</button>
-          </div>
-        </div>
+          <section class="gameLower" aria-label="Gameplay Lower Layer">
+            <!-- MODIFIERS (layer above bottle grid) -->
+            <div class="modRow">
+              <div class="modLabel">MODIFIERS</div>
+              <div class="pill" style="padding:8px 10px;">3 slots • tap (+) later</div>
+            </div>
 
-        <div class="bottleGrid" id="bottleGrid"></div>
+            <div class="modPanel" aria-label="Modifier Slots">
+              <button class="modSlot" data-modslot="1" type="button" aria-label="Modifier slot 1">
+                <div class="modPlus">+</div><span>Slot 1</span>
+              </button>
+              <button class="modSlot" data-modslot="2" type="button" aria-label="Modifier slot 2">
+                <div class="modPlus">+</div><span>Slot 2</span>
+              </button>
+              <button class="modSlot" data-modslot="3" type="button" aria-label="Modifier slot 3">
+                <div class="modPlus">+</div><span>Slot 3</span>
+              </button>
+            </div>
+
+            <!-- BOTTLES GRID (bottom layer / main game) -->
+            <div class="bottlePanel" aria-label="Bottle Grid Area">
+              <div class="bottleTitle">
+                <h2>BOTTLES GRID</h2>
+                <div class="hint">Designed for up to 5×3 beakers</div>
+              </div>
+
+              <div class="grid" id="beakerGrid" aria-label="Beaker Grid">
+                <!-- 15 cells placeholder (5×3) -->
+                <div class="cell"><div class="cellLabel">1</div></div>
+                <div class="cell"><div class="cellLabel">2</div></div>
+                <div class="cell"><div class="cellLabel">3</div></div>
+                <div class="cell"><div class="cellLabel">4</div></div>
+                <div class="cell"><div class="cellLabel">5</div></div>
+
+                <div class="cell"><div class="cellLabel">6</div></div>
+                <div class="cell"><div class="cellLabel">7</div></div>
+                <div class="cell"><div class="cellLabel">8</div></div>
+                <div class="cell"><div class="cellLabel">9</div></div>
+                <div class="cell"><div class="cellLabel">10</div></div>
+
+                <div class="cell"><div class="cellLabel">11</div></div>
+                <div class="cell"><div class="cellLabel">12</div></div>
+                <div class="cell"><div class="cellLabel">13</div></div>
+                <div class="cell"><div class="cellLabel">14</div></div>
+                <div class="cell"><div class="cellLabel">15</div></div>
+              </div>
+            </div>
+
+            <!-- Debug controls (temporary, remove later) -->
+            <div style="display:flex; gap:10px; justify-content:space-between; margin-top:2px;">
+              <button id="demoQuest" class="pill" style="border-radius:14px; justify-content:center; width:49%;">Demo Quest Node</button>
+              <button id="demoBank" class="pill" style="border-radius:14px; justify-content:center; width:49%;">Cycle BANK</button>
+            </div>
+          </section>
+        </div>
       </main>
-
-      <footer class="bottom">
-        <div class="characterZone" id="characterZone">CHARACTER</div>
-        <div class="speechZone">
-          <div class="speechBubble" id="speechBubble">SPEECH BUBBLE</div>
-          <div class="modifiersBar" id="modifiersBar">MODIFIERS</div>
-        </div>
-      </footer>
-
-      <div class="bankTab" id="bankTab">BANK IDENTIFIER</div>
-
     </div>
   </div>
 
   <script>
-    /***********************
-     * MOBILE SCALE (core)
-     ***********************/
-    function applyMobileScale(){
-      const app = document.getElementById("app");
-      const w = app.clientWidth;
-
-      // scaled for 3–4 columns depending on width
-      const cell = Math.max(56, Math.min(86, Math.floor(w * 0.18)));
-      const bottleW = Math.floor(cell * 0.86);
-      const bottleH = Math.floor(cell * 2.25);
-
-      document.documentElement.style.setProperty("--cell", cell + "px");
-      document.documentElement.style.setProperty("--bottleW", bottleW + "px");
-      document.documentElement.style.setProperty("--bottleH", bottleH + "px");
-    }
-    window.addEventListener("resize", applyMobileScale, { passive:true });
-    window.addEventListener("orientationchange", applyMobileScale, { passive:true });
-    applyMobileScale();
-
-    /***********************
-     * COLOR PALETTE (distinct)
-     ***********************/
-    const PALETTE = [
-      { id:"AQUA",   hex:"#18c8ff" },
-      { id:"LIME",   hex:"#6cff3a" },
-      { id:"VIOLET", hex:"#a855ff" },
-      { id:"AMBER",  hex:"#ffb020" },
-      { id:"ROSE",   hex:"#ff3ea5" },
-      { id:"RED",    hex:"#ff3b3b" },
-      { id:"BLUE",   hex:"#2f6bff" },
-      { id:"TEAL",   hex:"#12f0c0" },
-      { id:"SAND",   hex:"#d6b58c" },
-      { id:"SLATE",  hex:"#7b8aa8" }
-    ];
-    const COLOR = Object.fromEntries(PALETTE.map(x => [x.id, x.hex]));
-
-    /***********************
-     * GAME STATE
-     ***********************/
-    const CAP = 4;               // bottle capacity (segments)
-    let level = 1;
-    let moves = 0;
-    let invalid = 0;
-    let resets = 0;
-
-    let bottles = [];            // array of arrays bottom->top colors
-    let initialBottles = [];
-    let selected = -1;
-
-    // DM cadence: random between 3–6 levels
-    let nextDMAt = rollDM(level);
-    let dmVisits = 0;            // how many times DM has appeared
-    // modifier cadence: every 5th DM appearance
-    const MOD_EVERY = 5;
-
-    // lightweight player signals (for BANK inference on server)
-    const telemetry = {
-      startedAt: Date.now(),
-      taps: 0,
-      pours: 0,
-      invalid: 0,
-      resets: 0,
-      hesitations: 0,
-      lastTapAt: 0,
-      streakBad: 0,
-      avgDecisionMs: 0,
-      _decisions: []
-    };
-
-    /***********************
-     * DOM
-     ***********************/
-    const elGrid = document.getElementById("bottleGrid");
-    const lvlPill = document.getElementById("lvlPill");
-    const movesPill = document.getElementById("movesPill");
-    const badPill = document.getElementById("badPill");
-    const resetPill = document.getElementById("resetPill");
-
-    const questBtn = document.getElementById("questBtn");
-    const nextBtn = document.getElementById("nextBtn");
-    const resetBtn = document.getElementById("resetBtn");
-
-    const apiBaseInput = document.getElementById("apiBase");
-    const questTitle = document.getElementById("questTitle");
-    const questText = document.getElementById("questText");
-    const statusChip = document.getElementById("statusChip");
-    const bankChip = document.getElementById("bankChip");
-    const sinChip = document.getElementById("sinChip");
-    const cfgChip = document.getElementById("cfgChip");
-    const speechBubble = document.getElementById("speechBubble");
-    const modifiersBar = document.getElementById("modifiersBar");
-    const bankTab = document.getElementById("bankTab");
-
-    /***********************
-     * UTIL
-     ***********************/
-    function clamp(n,a,b){ return Math.max(a, Math.min(b,n)); }
-    function deepCopy(x){ return JSON.parse(JSON.stringify(x)); }
-
-    function rollDM(currentLevel){
-      // DM every 3–6 levels
-      const span = 3 + Math.floor(Math.random()*4); // 3..6
-      return currentLevel + span;
-    }
-
-    function setStatus(text, ok=true){
-      statusChip.textContent = "Status: " + text;
-      statusChip.style.borderColor = ok ? "rgba(27,43,70,.9)" : "rgba(255,90,90,.95)";
-    }
-
-    function apiBase(){
-      let v = (apiBaseInput.value || "").trim();
-      if (!v) return "";
-      // strip trailing slash
-      if (v.endsWith("/")) v = v.slice(0,-1);
-      return v;
-    }
-
-    async function postJSON(path, body){
-      const base = apiBase();
-      if (!base) throw new Error("Missing API base");
-      const url = base + path;
-      const res = await fetch(url, {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify(body)
-      });
-      const txt = await res.text();
-      let json = null;
-      try{ json = JSON.parse(txt); }catch(_){}
-      if (!res.ok){
-        const errMsg = (json && json.error) ? json.error : (txt || ("HTTP " + res.status));
-        const e = new Error(errMsg);
-        e.status = res.status;
-        e.details = json && json.details;
-        throw e;
-      }
-      return json;
-    }
-
-    /***********************
-     * LEVEL GENERATION
-     * - Tries server /api/level-recipe
-     * - Falls back to deterministic local recipe
-     ***********************/
-    function localLevelRecipe(level){
-      // deterministic-ish: seed by level
-      const rng = mulberry32(0xC0FFEE ^ (level * 2654435761));
-      const colorsCount = clamp(3 + Math.floor(level/3), 3, 8);
-      const bottleCount = clamp(6 + Math.floor(level/2), 6, 10);
-      const empties = 2;
-
-      const colors = PALETTE.slice(0, colorsCount).map(c => c.id);
-      // create a pool of segments (each color repeats CAP times)
-      let pool = [];
-      for (const c of colors){
-        for (let i=0;i<CAP;i++) pool.push(c);
-      }
-      // add extra segments if bottleCount*CAP > pool size, repeat colors
-      while (pool.length < (bottleCount-empties)*CAP){
-        const c = colors[Math.floor(rng()*colors.length)];
-        pool.push(c);
-      }
-      // shuffle pool
-      for (let i=pool.length-1;i>0;i--){
-        const j = Math.floor(rng()*(i+1));
-        [pool[i], pool[j]] = [pool[j], pool[i]];
-      }
-
-      // fill bottles
-      const b = [];
-      for (let i=0;i<bottleCount-empties;i++){
-        b.push(pool.slice(i*CAP, (i+1)*CAP));
-      }
-      for (let i=0;i<empties;i++) b.push([]);
-      return {
-        bottleCount,
-        capacity: CAP,
-        colors,
-        bottles: b,
-        levelCfg: `b${bottleCount}/c${colorsCount}/cap${CAP}/local`
-      };
-    }
-
-    function mulberry32(a){
-      return function(){
-        a |= 0; a = a + 0x6D2B79F5 | 0;
-        let t = Math.imul(a ^ a >>> 15, 1 | a);
-        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-        return ((t ^ t >>> 14) >>> 0) / 4294967296;
-      }
-    }
-
-    async function buildLevel(level){
-      setStatus("loading level…");
-      // try server
-      try{
-        const payload = {
-          level,
-          mode: "mobile",
-          capacity: CAP,
-          telemetry: packTelemetry(),
-        };
-        const data = await postJSON("/api/level-recipe", payload);
-        // expect { ok:true, recipe:{bottles:[...], capacity, levelCfg, ...} }
-        const recipe = data.recipe || data.level || data;
-        applyRecipe(recipe);
-        cfgChip.textContent = "LevelCfg: " + (recipe.levelCfg || "server");
-        setStatus("level ready");
-        return;
-      }catch(e){
-        // fallback local
-        const recipe = localLevelRecipe(level);
-        applyRecipe(recipe);
-        cfgChip.textContent = "LevelCfg: " + recipe.levelCfg;
-        setStatus("level ready (fallback)", false);
-      }
-    }
-
-    function applyRecipe(recipe){
-      const b = recipe.bottles || [];
-      bottles = deepCopy(b);
-      initialBottles = deepCopy(b);
-      selected = -1;
-      moves = 0;
-      invalid = 0;
-      updateHUD();
-      render();
-    }
-
-    /***********************
-     * POUR RULES
-     ***********************/
-    function topColor(b){
-      if (!b.length) return null;
-      return b[b.length - 1];
-    }
-
-    function topRunCount(b){
-      if (!b.length) return 0;
-      const c = topColor(b);
-      let n = 0;
-      for (let i=b.length-1;i>=0;i--){
-        if (b[i] !== c) break;
-        n++;
-      }
-      return n;
-    }
-
-    function canPour(fromIdx, toIdx){
-      if (fromIdx === toIdx) return false;
-      const from = bottles[fromIdx];
-      const to = bottles[toIdx];
-      if (!from.length) return false;
-      if (to.length >= CAP) return false;
-
-      const fc = topColor(from);
-      const tc = topColor(to);
-      if (!tc) return true;              // empty target
-      return tc === fc;                  // must match
-    }
-
-    function pourAmount(fromIdx, toIdx){
-      const from = bottles[fromIdx];
-      const to = bottles[toIdx];
-      const run = topRunCount(from);
-      const space = CAP - to.length;
-      return Math.min(run, space);
-    }
-
-    function doPour(fromIdx, toIdx){
-      if (!canPour(fromIdx, toIdx)) return false;
-      const amt = pourAmount(fromIdx, toIdx);
-      if (amt <= 0) return false;
-
-      const c = topColor(bottles[fromIdx]);
-      for (let i=0;i<amt;i++){
-        bottles[fromIdx].pop();
-        bottles[toIdx].push(c);
-      }
-      return { amt, color: c };
-    }
-
-    function isSolved(){
-      // solved if every bottle is empty or full and all same color
-      for (const b of bottles){
-        if (!b.length) continue;
-        if (b.length !== CAP) return false;
-        const c = b[0];
-        for (let i=1;i<b.length;i++){
-          if (b[i] !== c) return false;
-        }
-      }
-      return true;
-    }
-
-    /***********************
-     * RENDER
-     ***********************/
-    function updateHUD(){
-      lvlPill.textContent = "Level: " + level;
-      movesPill.textContent = "Moves: " + moves;
-      badPill.textContent = "Invalid: " + invalid;
-      resetPill.textContent = "Resets: " + resets;
-    }
-
-    function render(){
-      elGrid.innerHTML = "";
-
-      const cols = (window.innerWidth <= 360) ? 3 : 4;
-      // if too many bottles, allow wrapping naturally; grid is centered.
-
-      bottles.forEach((b, idx) => {
-        const slot = document.createElement("div");
-        slot.className = "bottleSlot";
-
-        const bottle = document.createElement("div");
-        bottle.className = "bottle";
-        bottle.dataset.idx = String(idx);
-
-        if (idx === selected) bottle.classList.add("selected");
-
-        const neck = document.createElement("div");
-        neck.className = "neck";
-
-        const stack = document.createElement("div");
-        stack.className = "liquidStack";
-
-        // each segment is equal height
-        const segH = (parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--bottleH")) / CAP);
-        for (let i=0;i<CAP;i++){
-          const layer = document.createElement("div");
-          layer.className = "layer";
-          const c = b[i] || null; // bottom->top, but our b is bottom->top already
-          if (c){
-            layer.style.background = COLOR[c] || c;
-            layer.style.height = segH + "px";
-          }else{
-            layer.style.height = "0px";
-          }
-          stack.appendChild(layer);
-        }
-
-        bottle.appendChild(stack);
-        bottle.appendChild(neck);
-        slot.appendChild(bottle);
-        elGrid.appendChild(slot);
-
-        bottle.addEventListener("click", () => onBottleTap(idx));
-      });
-    }
-
-    function markInvalid(idx){
-      const node = elGrid.querySelector(`.bottle[data-idx="${idx}"]`);
-      if (!node) return;
-      node.classList.remove("invalid");
-      void node.offsetWidth; // reflow
-      node.classList.add("invalid");
-      setTimeout(() => node.classList.remove("invalid"), 260);
-    }
-
-    /***********************
-     * POUR ANIMATION (satisfying stream)
-     ***********************/
-    function streamPour(fromIdx, toIdx, colorHex){
-      const fromEl = elGrid.querySelector(`.bottle[data-idx="${fromIdx}"]`);
-      const toEl = elGrid.querySelector(`.bottle[data-idx="${toIdx}"]`);
-      if (!fromEl || !toEl) return;
-
-      const gridRect = elGrid.getBoundingClientRect();
-      const a = fromEl.getBoundingClientRect();
-      const b = toEl.getBoundingClientRect();
-
-      const x1 = (a.left + a.right)/2 - gridRect.left;
-      const y1 = a.top - gridRect.top + 8;
-      const x2 = (b.left + b.right)/2 - gridRect.left;
-      const y2 = b.top - gridRect.top + 10;
-
-      const dx = x2 - x1;
-      const dy = Math.max(40, y2 - y1);
-
-      const stream = document.createElement("div");
-      stream.className = "pourStream";
-      stream.style.left = (x1 - 5) + "px";
-      stream.style.top = (y1) + "px";
-      stream.style.height = dy + "px";
-      stream.style.background = colorHex;
-      stream.style.transform = `rotate(${Math.atan2(dy, dx) * 180/Math.PI}deg)`;
-      stream.style.width = "10px";
-
-      elGrid.appendChild(stream);
-      requestAnimationFrame(() => stream.classList.add("on"));
-      setTimeout(() => stream.remove(), 620);
-    }
-
-    /***********************
-     * INPUT (tap source -> tap target)
-     ***********************/
-    function onBottleTap(idx){
-      const now = Date.now();
-      telemetry.taps++;
-      if (telemetry.lastTapAt){
-        const dt = now - telemetry.lastTapAt;
-        telemetry._decisions.push(dt);
-        telemetry.avgDecisionMs = Math.round(telemetry._decisions.reduce((a,b)=>a+b,0)/telemetry._decisions.length);
-      }
-      telemetry.lastTapAt = now;
-
-      if (selected === -1){
-        // select only if not empty
-        if (!bottles[idx].length){
-          markInvalid(idx);
-          invalid++;
-          telemetry.invalid++;
-          updateHUD();
-          return;
-        }
-        selected = idx;
-        render();
-        return;
-      }
-
-      // second tap: attempt pour
-      const from = selected;
-      const to = idx;
-
-      if (from === to){
-        // deselect
-        selected = -1;
-        render();
-        return;
-      }
-
-      if (!canPour(from, to)){
-        invalid++;
-        telemetry.invalid++;
-        telemetry.streakBad++;
-        markInvalid(to);
-        // keep selection so user can try another target
-        updateHUD();
-        return;
-      }
-
-      const beforeColor = topColor(bottles[from]);
-      const result = doPour(from, to);
-      moves++;
-      telemetry.pours++;
-      telemetry.streakBad = 0;
-      updateHUD();
-
-      // animate stream
-      streamPour(from, to, COLOR[beforeColor] || beforeColor);
-
-      // re-render after a short delay to let stream read
-      setTimeout(() => {
-        render();
-        // solved?
-        if (isSolved()){
-          speechBubble.textContent = "Solved. Yes, yes. You can stop panic-pouring now.";
-          // auto advance after a beat (optional)
-        }
-      }, 160);
-
-      // auto-deselect if source is empty
-      if (!bottles[from].length) selected = -1;
-    }
-
-    /***********************
-     * DM / QUEST CADENCE
-     * - DM appears at random level intervals (3–6)
-     * - Modifiers only produced every 5th DM appearance
-     ***********************/
-    function shouldShowDM(){
-      return level >= nextDMAt;
-    }
-
-    function shouldRequestModifier(){
-      // only every 5th DM appearance
-      return (dmVisits > 0) && (dmVisits % MOD_EVERY === 0);
-    }
-
-    function packTelemetry(){
-      return {
-        sessionMs: Date.now() - telemetry.startedAt,
-        taps: telemetry.taps,
-        pours: telemetry.pours,
-        invalid: telemetry.invalid,
-        resets: telemetry.resets,
-        avgDecisionMs: telemetry.avgDecisionMs,
-        streakBad: telemetry.streakBad,
-        level,
-        moves,
-      };
-    }
-
-    async function fetchQuestNode({force=false} = {}){
-      const dmNow = force || shouldShowDM();
-      if (!dmNow){
-        questTitle.textContent = "No DM right now";
-        questText.textContent = "Keep brewing. DM appears every 3–6 levels (random).";
-        return;
-      }
-
-      dmVisits++;
-      // if we just triggered DM due to cadence, schedule next
-      if (!force){
-        nextDMAt = rollDM(level);
-      }
-
-      const wantModifier = shouldRequestModifier();
-
-      setStatus("brewing quest…");
-      questTitle.textContent = wantModifier ? "Major Ritual (Modifiers)" : "Minor Check-in";
-      questText.textContent = "Summoning the DM…";
-
-      try{
-        const payload = {
-          level,
-          cadence: { dmEveryMin: 3, dmEveryMax: 6, modifierEveryDM: MOD_EVERY },
-          wantModifier,
-          telemetry: packTelemetry(),
-          // IMPORTANT: prevent BANK confusion with banker/finance
-          bankDefinition: "BANK is a marketing personality system (Blueprint/Action/Nurturing/Knowledge). Not related to finance or banking."
-        };
-
-        const data = await postJSON("/api/quest-node", payload);
-        // expected: { ok:true, node:{ title, text, bank, bank_confidence, sinTags, modifier, levelCfg, ... } }
-        const node = data.node || data.quest || data;
-
-        questTitle.textContent = node.quest_title || node.title || (wantModifier ? "Major Ritual" : "Minor DM Check-in");
-        questText.textContent = node.quest_text || node.text || "…";
-
-        // UI chips
-        const b = node.bank || node.bank_letter || "—";
-        const conf = (node.bank_confidence != null) ? node.bank_confidence : node.bank_score;
-        bankChip.textContent = `BANK: ${b}${(conf!=null) ? ` (${Number(conf).toFixed(2)})` : ""}`;
-
-        const sins = node.sinTags || node.sin_tags || [];
-        sinChip.textContent = "SinTags: " + (Array.isArray(sins) ? sins.join(", ") : (sins || "—"));
-
-        if (node.levelCfg) cfgChip.textContent = "LevelCfg: " + node.levelCfg;
-
-        // show speech + modifiers
-        speechBubble.textContent = node.dm_line || node.quest_dm_line || node.voice_line || node.quest_text || "…";
-
-        const mod = node.modifier || node.modifiers || null;
-        if (wantModifier && mod){
-          modifiersBar.textContent = "MODIFIERS: " + JSON.stringify(mod);
-        } else {
-          modifiersBar.textContent = "MODIFIERS";
-        }
-
-        // bank tab
-        bankTab.textContent = "BANK IDENTIFIER: " + b;
-
-        setStatus("quest ready");
-      }catch(e){
-        setStatus("quest error", false);
-        questTitle.textContent = "Fallback Brew (Server Offline)";
-        questText.textContent = "The lab lights flicker. Your API gremlins demand tribute. Brew anyway.";
-        speechBubble.textContent = "Tap bottles → tap target. Stop overthinking, apprentice.";
-      }
-    }
-
-    /***********************
-     * BUTTONS
-     ***********************/
-    questBtn.addEventListener("click", () => fetchQuestNode({force:true}));
-
-    nextBtn.addEventListener("click", async () => {
-      level++;
-      selected = -1;
-
-      // If cadence hits, fetch DM automatically (minor/major logic)
-      if (shouldShowDM()){
-        await fetchQuestNode({force:false});
-      } else {
-        // quiet UI
-        questTitle.textContent = "Brew in progress";
-        questText.textContent = "No DM. Deterministic level between rituals.";
-      }
-
-      await buildLevel(level);
+    // ---------- BANK rail expand/collapse ----------
+    const bankRail = document.getElementById("bankRail");
+    bankRail.addEventListener("click", (e) => {
+      // Allow click anywhere on rail
+      bankRail.classList.toggle("expanded");
     });
 
-    resetBtn.addEventListener("click", async () => {
-      resets++;
-      telemetry.resets++;
-      selected = -1;
-      // restore initial state
-      bottles = deepCopy(initialBottles);
-      moves = 0;
-      invalid = 0;
-      updateHUD();
-      render();
-      setStatus("reset");
-      speechBubble.textContent = "Reset again? Beautiful. Indecision in its natural habitat.";
+    // ---------- BANK highlighting (demo placeholder) ----------
+    const bankLetters = Array.from(document.querySelectorAll(".bankLetter"));
+    const bankOrder = ["B","A","N","K"];
+    let bankIdx = -1;
+
+    function setActiveBank(letter){
+      bankLetters.forEach(el => el.classList.remove("active"));
+      const target = bankLetters.find(el => el.dataset.letter === letter);
+      if (target) target.classList.add("active");
+    }
+
+    // ---------- DM overlay (quest node pause) ----------
+    const dmOverlay = document.getElementById("dmOverlay");
+    const dmClose = document.getElementById("dmClose");
+    const dmChar = document.getElementById("dmChar");
+    const speechP = document.getElementById("speechP");
+    const speechText = document.getElementById("speechText");
+
+    // You can set this later to your actual DM PNG path:
+    // dmChar.src = "assets/marketing_alchemist_dm.png";
+    // For now leave blank; the slide-in still works.
+
+    function openDM(text){
+      dmOverlay.classList.add("active");
+      dmOverlay.setAttribute("aria-hidden","false");
+      // Put text
+      speechP.textContent = text || "Quest node placeholder…";
+      fitSpeechText();
+
+      // Shake the character when overlay opens (even if image empty)
+      dmChar.classList.remove("shake");
+      // Wait for slide transition and then shake
+      setTimeout(() => dmChar.classList.add("shake"), 280);
+      setTimeout(() => dmChar.classList.remove("shake"), 650);
+    }
+
+    function closeDM(){
+      dmOverlay.classList.remove("active");
+      dmOverlay.setAttribute("aria-hidden","true");
+    }
+
+    dmClose.addEventListener("click", closeDM);
+    // Also allow tapping outside bubble to close? (optional)
+    dmOverlay.addEventListener("click", (e) => {
+      // only close if tapping the dim background (not the bubble itself)
+      const bubble = document.querySelector(".speechWrap");
+      if (!bubble.contains(e.target) && e.target !== dmChar) closeDM();
     });
 
-    /***********************
-     * INIT
-     ***********************/
-    (async function init(){
-      // initial DM message
-      questTitle.textContent = "Mobile Layout Locked";
-      questText.textContent = "Portrait-first. No desktop drift. Tap bottle → tap target. DM appears randomly every 3–6 levels.";
+    // ---------- Speech bubble shrink-to-fit ----------
+    function fitSpeechText(){
+      // Start large, shrink until it fits in container
+      const max = 18;
+      const min = 12;
+      let size = max;
+      speechP.style.fontSize = size + "px";
 
-      // build level 1
-      await buildLevel(level);
+      // Force layout measurement
+      const fits = () => speechText.scrollHeight <= speechText.clientHeight + 1;
 
-      // optional: initial DM on first load? (off by default)
-      // await fetchQuestNode({force:true});
-    })();
+      while (!fits() && size > min){
+        size -= 1;
+        speechP.style.fontSize = size + "px";
+      }
+    }
+    window.addEventListener("resize", () => {
+      if (dmOverlay.classList.contains("active")) fitSpeechText();
+    });
+
+    // ---------- Modifiers (+) → Shop modal placeholder ----------
+    const shopModal = document.getElementById("shopModal");
+    const shopClose = document.getElementById("shopClose");
+    document.querySelectorAll(".modSlot").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        shopModal.classList.add("active");
+        shopModal.setAttribute("aria-hidden","false");
+      });
+    });
+    shopClose.addEventListener("click", ()=>{
+      shopModal.classList.remove("active");
+      shopModal.setAttribute("aria-hidden","true");
+    });
+    shopModal.addEventListener("click", (e)=>{
+      if (e.target === shopModal){
+        shopModal.classList.remove("active");
+        shopModal.setAttribute("aria-hidden","true");
+      }
+    });
+
+    // ---------- Demo buttons (temporary helpers) ----------
+    document.getElementById("demoQuest").addEventListener("click", ()=>{
+      openDM(
+        "Quest Node: The lab lights flicker. You can keep tapping bottles like a gremlin… or you can think for two seconds and win.\n\n(Placeholder text; this will be LLM output later.)"
+      );
+    });
+
+    document.getElementById("demoBank").addEventListener("click", ()=>{
+      bankIdx = (bankIdx + 1) % bankOrder.length;
+      setActiveBank(bankOrder[bankIdx]);
+    });
+
+    // Default: show grey letters only
+    setActiveBank(null);
   </script>
 </body>
 </html>
