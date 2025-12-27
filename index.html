@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-  <title>Marketing Alchemist — Bottle Fill (Path 1.3 Spicy Ramp)</title>
+  <title>Marketing Alchemist — Bottle Fill</title>
 
   <style>
     :root { color-scheme: dark; }
@@ -185,7 +185,7 @@
       <div class="panel-header">
         <div class="dm-title">🧪 The Marketing Alchemist <span style="opacity:.75;font-weight:700;">(Quest DM)</span></div>
         <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-          <span class="pill">API: <code id="apiReadout">localhost:8787</code></span>
+          <span class="pill">API: <code id="apiReadout">—</code></span>
           <button id="btnQuest">Quest Node</button>
         </div>
       </div>
@@ -215,7 +215,7 @@
           <span class="pill">Invalid: <span id="invalid">0</span></span>
           <span class="pill">Resets: <span id="resets">0</span></span>
         </div>
-        <div class="pill" style="opacity:.78;">Tap bottle → tap target. Spicy ramp = more interlocks.</div>
+        <div class="pill" style="opacity:.78;">Tap bottle → tap target. Satisfying pour. Spicy ramp.</div>
       </div>
 
       <div class="panel-body">
@@ -231,7 +231,7 @@
           <button id="btnReset">Reset Run</button>
         </div>
         <div style="opacity:.78; font-size:12px;">
-          Path 1.3: Score band + solver-lite + beam solve-moves proxy (spicy).
+          Path 1.3: score band + solver-lite + beam solve-moves proxy (spicy).
         </div>
       </div>
     </div>
@@ -240,7 +240,9 @@
 
 <script>
 /* =========================================================
-   CONFIG
+   API BASE (AUTO SWITCH)
+   - Local: localhost
+   - GitHub Pages: Render
 ========================================================= */
 const API_BASE =
   (location.hostname === "localhost" || location.hostname === "127.0.0.1")
@@ -250,7 +252,14 @@ const API_BASE =
 const API_RECIPE = `${API_BASE}/api/level-recipe`;
 const API_QUEST  = `${API_BASE}/api/quest-node`;
 
+document.getElementById("apiReadout").textContent =
+  (location.hostname === "localhost" || location.hostname === "127.0.0.1")
+    ? "localhost:8787"
+    : "ma-bottle-fill-api.onrender.com";
 
+/* =========================================================
+   CONFIG
+========================================================= */
 const COLORS = [
   "#00A3FF", "#FF3B30", "#34C759", "#FFCC00",
   "#AF52DE", "#FF9500", "#00C7BE", "#FF2D55",
@@ -489,6 +498,47 @@ async function fetchLevelRecipe(){
   return json.recipe;
 }
 
+async function fetchQuestNode(){
+  const bank = inferBANK(playerModel);
+  const sins = inferSinTagsFromModel(playerModel);
+
+  const nodeIndex = Math.floor((game.level - 1) / 4) + 1;
+  const seed = `local:${game.sessionSeed}:L${game.level}:node${nodeIndex}`;
+
+  const body = {
+    act: game.level < 10 ? "ACT_I" : (game.level < 25 ? "ACT_II" : "ACT_III"),
+    questId: "Q1",
+    thesis: "UR_without_CL",
+    bankPrimary: bank.bankPrimary,
+    bankConfidence: bank.bankConfidence,
+    intensity: game.level < 8 ? "standard" : "hard",
+    historyIds: game.lastUsedVoiceIds.slice(-20),
+    sinTags: sins,
+    performanceSummary: {
+      levels_completed: game.level - 1,
+      avg_time_to_first_move_ms: Math.round(playerModel.firstMoveMs ?? 650),
+      avg_move_time_ms: Math.round(playerModel.avgMoveMs()),
+      invalid_pour_rate: clamp01(playerModel.invalidRate()),
+      illegal_reaction_rate: 0.0,
+      resets_per_level: clamp01(playerModel.resets / Math.max(1, game.level - 1)),
+      bonus_chase_rate: clamp01(playerModel.bonusChase / Math.max(1, playerModel.moves)),
+      buffer_move_ratio: clamp01(playerModel.bufferRatio()),
+      commitment_ratio: clamp01(playerModel.commitmentRatio())
+    },
+    seed
+  };
+
+  const res = await fetch(API_QUEST, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error || "Quest node failed");
+  return json.payload;
+}
+
 function fallbackRecipe(level){
   const colors = Math.min(7, 4 + Math.floor(level / 3));
   return {
@@ -530,7 +580,7 @@ function hashSeed(str){
 }
 
 /* =========================================================
-   Shared board primitives
+   Board primitives
 ========================================================= */
 function topColor(b){ return b.cells.length ? b.cells[b.cells.length-1] : null; }
 function topRun(b){
@@ -607,7 +657,7 @@ function boardStats(board, slots=4){
 ========================================================= */
 function validateBoardSolverLite(board, rng, opts={}){
   const slots = 4;
-  const maxSteps = opts.maxSteps ?? 300;     // spicy: a bit longer
+  const maxSteps = opts.maxSteps ?? 300;
   const maxRepeats = opts.maxRepeats ?? 18;
   const minLegalMoves = opts.minLegalMoves ?? 8;
 
@@ -622,10 +672,10 @@ function validateBoardSolverLite(board, rng, opts={}){
 
   function scoreMove(mv){
     let s = 0;
-    if (mv.toFill > 0) s += 10;          // spicy: stronger consolidation bias
-    s += Math.min(7, mv.run);            // bigger runs matter
-    if (mv.toFill === 0) s += 2;         // empties still useful, but less "free"
-    if (mv.run >= 3) s += 4;             // finishing
+    if (mv.toFill > 0) s += 10;
+    s += Math.min(7, mv.run);
+    if (mv.toFill === 0) s += 2;
+    if (mv.run >= 3) s += 4;
     s += rng() * 2;
     return s;
   }
@@ -672,20 +722,15 @@ function validateBoardSolverLite(board, rng, opts={}){
 
 /* =========================================================
    Path 1.3 Beam solve-moves proxy (spicy)
-   - Not a full solver; returns estimated solve effort
 ========================================================= */
 function estimateSolveMovesBeam(board, rng, opts={}){
   const slots = 4;
-
-  const beamWidth = opts.beamWidth ?? 22;      // spicy: more breadth
-  const expansions = opts.expansions ?? 520;   // spicy: deeper proxy
+  const beamWidth = opts.beamWidth ?? 22;
+  const expansions = opts.expansions ?? 520;
   const plateauLimit = opts.plateauLimit ?? 90;
-
   const colors = opts.colors ?? 6;
 
   function heuristicScore(bd){
-    // Higher = closer to solved (so we want maximize)
-    // Reward solved bottles and 3-stacks, penalize segmentation and mixedness
     const st = boardStats(bd, slots);
     return (
       st.solved * 120 +
@@ -695,22 +740,15 @@ function estimateSolveMovesBeam(board, rng, opts={}){
       st.empties * 2
     );
   }
-
   function solvedCount(bd){
     let s=0; for (const b of bd) if (isSolvedBottle(b, slots)) s++; return s;
   }
 
   const startScore = heuristicScore(board);
-  const goalSolved = Math.max(1, Math.floor(colors)); // want all colors solved ideally, proxy: reach near-full
+  const goalSolved = Math.max(1, Math.floor(colors));
   const startSolved = solvedCount(board);
 
-  // state: { bd, g (moves), hscore }
-  let beam = [{
-    bd: cloneBoard(board),
-    g: 0,
-    hs: startScore
-  }];
-
+  let beam = [{ bd: cloneBoard(board), g: 0, hs: startScore }];
   let bestHs = startScore;
   let bestG = 0;
   let plateau = 0;
@@ -719,7 +757,6 @@ function estimateSolveMovesBeam(board, rng, opts={}){
   seen.add(serializeBoard(beam[0].bd));
 
   for (let e=0; e<expansions; e++){
-    // Expand best candidates
     beam.sort((a,b)=> (b.hs - a.hs) || (a.g - b.g));
     beam = beam.slice(0, beamWidth);
 
@@ -729,18 +766,15 @@ function estimateSolveMovesBeam(board, rng, opts={}){
       const moves = listLegalMoves(node.bd, slots);
       if (!moves.length) continue;
 
-      // spicy: sample more moves, prefer consolidations
       for (let k=0;k<Math.min(26, moves.length); k++){
         const mv = moves[Math.floor(rng()*moves.length)];
-
-        // tiny bias: avoid pointless empty→empty style moves
         if (mv.toFill === 0 && mv.run === 1 && rng() < 0.55) continue;
 
         const nb = cloneBoard(node.bd);
         doPour(nb, mv.from, mv.to, slots);
 
         const sig = serializeBoard(nb);
-        if (seen.has(sig) && rng() < 0.85) continue; // allow some repeats but mostly skip
+        if (seen.has(sig) && rng() < 0.85) continue;
         seen.add(sig);
 
         const hs = heuristicScore(nb);
@@ -750,7 +784,6 @@ function estimateSolveMovesBeam(board, rng, opts={}){
 
         const sc = solvedCount(nb);
         if (sc >= Math.min(goalSolved, startSolved + Math.max(2, Math.floor(colors/2)))){
-          // we found a state that looks meaningfully closer -> proxy solve moves
           return { estimatedSolveMoves: Math.max(12, g * 1.65), bestScore: hs };
         }
       }
@@ -758,11 +791,9 @@ function estimateSolveMovesBeam(board, rng, opts={}){
 
     if (!candidates.length) break;
 
-    // Keep best candidates as next beam
     candidates.sort((a,b)=> (b.hs - a.hs) || (a.g - b.g));
     beam = candidates.slice(0, beamWidth);
 
-    // plateau tracking
     if (beam[0].hs > bestHs){
       bestHs = beam[0].hs;
       bestG = beam[0].g;
@@ -773,8 +804,6 @@ function estimateSolveMovesBeam(board, rng, opts={}){
     }
   }
 
-  // If we never found a “close enough” state, estimate based on how much progress we made
-  // Lower progress => higher estimated solve
   const progress = Math.max(0, bestHs - startScore);
   const baseline = 28 + (colors * 10);
   const penalty = Math.max(0, 180 - progress) * 0.35;
@@ -784,7 +813,7 @@ function estimateSolveMovesBeam(board, rng, opts={}){
 }
 
 /* =========================================================
-   Path 1.1 + 1.3 difficulty scoring band
+   Difficulty scoring band (Path 1.1)
 ========================================================= */
 function scoreBoardDifficulty(board){
   const slots = 4;
@@ -840,7 +869,6 @@ function targetScoreBand(d){
   return bands[d] || [50, 90];
 }
 
-/* Spicy solve-move bands (higher targets) */
 function targetSolveMovesBand(d){
   const bands = {
     1: [18, 30],
@@ -858,7 +886,7 @@ function targetSolveMovesBand(d){
 }
 
 /* =========================================================
-   Full compiler (Path 1.3 spicy)
+   Compiler: recipe -> board (spicy)
 ========================================================= */
 function compileRecipeToLevel(recipe, seedStr){
   const slots = 4;
@@ -874,8 +902,9 @@ function compileRecipeToLevel(recipe, seedStr){
     const out = [];
     for (const c of colorList) out.push({ cells:[c,c,c,c], locked:false });
 
-    // spicy: fewer empties early unless recipe says otherwise
-    const emptyDefault = (recipe.emptyBottles != null) ? recipe.emptyBottles : (game.level < 6 ? 1 : 2);
+    const emptyDefault =
+      (recipe.emptyBottles != null) ? recipe.emptyBottles : (game.level < 6 ? 1 : 2);
+
     const emptyCount = clampInt(emptyDefault, 1, 5);
     for (let i=0;i<emptyCount;i++) out.push({ cells:[], locked:false });
 
@@ -895,7 +924,6 @@ function compileRecipeToLevel(recipe, seedStr){
       if (a===b) continue;
       if (!canPour(board[a], board[b], slots)) continue;
 
-      // spicy: allow more breaking, but still prevent ultra-trivial dumps
       if (isSolvedBottle(board[a], slots) && board[b].cells.length === 0 && rng() < 0.45) continue;
 
       doPour(board, a, b, slots);
@@ -933,15 +961,12 @@ function compileRecipeToLevel(recipe, seedStr){
 
     const s = scoreBoardDifficulty(candidate);
 
-    // Basic rejects
     if (s.mixed < Math.max(2, Math.floor(colorList.length * 0.60))) continue;
     if (s.legalMoves < 8) continue;
 
-    // Path 1.2 solver-lite: no dead ends / no misery
     const v = validateBoardSolverLite(candidate, rng, { colors: colorList.length });
     if (!v.ok) continue;
 
-    // Path 1.3 proxy: estimate solve effort (spicy)
     const proxy = estimateSolveMovesBeam(candidate, rng, {
       colors: colorList.length,
       beamWidth: 22,
@@ -954,7 +979,6 @@ function compileRecipeToLevel(recipe, seedStr){
     const withinScore = (s.score >= minScore && s.score <= maxScore);
     const withinSolve = (est >= minSolve && est <= maxSolve);
 
-    // distance metric if we don't hit perfect band
     const distScore = withinScore ? 0 : Math.min(Math.abs(s.score - minScore), Math.abs(s.score - maxScore));
     const distSolve = withinSolve ? 0 : Math.min(Math.abs(est - minSolve), Math.abs(est - maxSolve));
     const dist = distScore * 0.55 + distSolve * 0.45;
@@ -964,7 +988,6 @@ function compileRecipeToLevel(recipe, seedStr){
     }
 
     if (withinScore && withinSolve){
-      // Apply locks only after passing feel checks
       applyLocks(candidate, rng);
       best = { board: candidate, dist:0, score: s, proxy };
       break;
@@ -973,7 +996,6 @@ function compileRecipeToLevel(recipe, seedStr){
 
   const finalBoard = (best && best.board) ? best.board : makeSolvedBoard();
 
-  // wildcard visual (optional)
   wildBottleIndex = null;
   wildBottleSlot = null;
   const rngFinal = mulberry32(hashSeed(seedStr + ":wild"));
@@ -986,9 +1008,7 @@ function compileRecipeToLevel(recipe, seedStr){
     }
   }
 
-  // store proxy for UI
   game.lastProxy = best?.proxy || null;
-
   return finalBoard;
 }
 
@@ -1172,53 +1192,14 @@ async function onBottleTap(i){
 }
 
 /* =========================================================
-   Quest Node
+   Quest Node button
 ========================================================= */
-function buildQuestNodeRequest(){
-  const bank = inferBANK(playerModel);
-  const sins = inferSinTagsFromModel(playerModel);
-
-  const nodeIndex = Math.floor((game.level - 1) / 4) + 1;
-  const seed = `local:${game.sessionSeed}:L${game.level}:node${nodeIndex}`;
-
-  return {
-    act: game.level < 10 ? "ACT_I" : (game.level < 25 ? "ACT_II" : "ACT_III"),
-    questId: "Q1",
-    thesis: "UR_without_CL",
-    bankPrimary: bank.bankPrimary,
-    bankConfidence: bank.bankConfidence,
-    intensity: game.level < 8 ? "standard" : "hard",
-    historyIds: game.lastUsedVoiceIds.slice(-20),
-    sinTags: sins,
-    performanceSummary: {
-      levels_completed: game.level - 1,
-      avg_time_to_first_move_ms: Math.round(playerModel.firstMoveMs ?? 650),
-      avg_move_time_ms: Math.round(playerModel.avgMoveMs()),
-      invalid_pour_rate: clamp01(playerModel.invalidRate()),
-      illegal_reaction_rate: 0.0,
-      resets_per_level: clamp01(playerModel.resets / Math.max(1, game.level - 1)),
-      bonus_chase_rate: clamp01(playerModel.bonusChase / Math.max(1, playerModel.moves)),
-      buffer_move_ratio: clamp01(playerModel.bufferRatio()),
-      commitment_ratio: clamp01(playerModel.commitmentRatio())
-    },
-    seed
-  };
-}
-
-async function fetchQuestNode(){
+document.getElementById("btnQuest").addEventListener("click", async () => {
   try{
     document.getElementById("btnQuest").disabled = true;
     setStatus("Distilling…");
 
-    const res = await fetch(API_QUEST, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(buildQuestNodeRequest())
-    });
-
-    const json = await res.json();
-    if (!json.ok) throw new Error(json.error || "Quest node failed");
-    const p = json.payload;
+    const p = await fetchQuestNode();
 
     dmQuestEl.textContent = p.quest_title || "—";
     await typeInto(dmIntroEl, p.dm_intro || "", 11);
@@ -1235,7 +1216,7 @@ async function fetchQuestNode(){
   }finally{
     document.getElementById("btnQuest").disabled = false;
   }
-}
+});
 
 /* =========================================================
    Level flow
@@ -1270,10 +1251,7 @@ async function startLevel(level, isReset=false){
     emptyBottles: clampInt(recipe.emptyBottles ?? (level < 6 ? 1 : 2), 1, 5),
     lockedBottles: clampInt(recipe.lockedBottles ?? 0, 0, 3),
     wildcardSlots: clampInt(recipe.wildcardSlots ?? 0, 0, 2),
-    maxSlots: 4,
-    reactionRules: recipe.rules?.reactionRules || "standard",
-    forgiveness: recipe.rules?.forgiveness || "medium",
-    chaosFactor: clamp01(recipe.chaosFactor ?? 0.42)
+    maxSlots: 4
   };
 
   selected = null;
@@ -1290,20 +1268,10 @@ async function startLevel(level, isReset=false){
   renderBoard();
 }
 
-async function nextLevel(){
-  game.level++;
-  await startLevel(game.level, false);
-}
-
-/* =========================================================
-   Buttons + init
-========================================================= */
-document.getElementById("apiReadout").textContent = "localhost:8787";
-document.getElementById("btnQuest").addEventListener("click", fetchQuestNode);
-
 document.getElementById("btnNext").addEventListener("click", async () => {
   if (isAnimating) return;
-  await nextLevel();
+  game.level++;
+  await startLevel(game.level, false);
 });
 
 document.getElementById("btnReset").addEventListener("click", async () => {
