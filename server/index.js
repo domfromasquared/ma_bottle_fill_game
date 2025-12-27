@@ -7,6 +7,7 @@
  */
 
 import "dotenv/config";
+import { buildLevelRecipeMessages, validateRecipeOrThrow } from "./level_recipe.js";
 
 import express from "express";
 import cors from "cors";
@@ -80,6 +81,27 @@ app.post("/api/quest-node", async (req, res) => {
       voiceBank,
       lexicons
     });
+
+    app.post("/api/level-recipe", async (req, res) => {
+  try {
+    const ctx = normalizeQuestNodeReq(req.body);
+
+    const messages = buildLevelRecipeMessages(ctx);
+
+    // Reuse your existing OpenAI JSON caller.
+    // IMPORTANT: this expects your callLLM_JSON returns a JSON string.
+    const raw = await callLLM_JSON(messages);
+
+    const recipe = validateRecipeOrThrow(JSON.parse(raw));
+    res.json({ ok: true, recipe });
+  } catch (err) {
+    res.status(400).json({
+      ok: false,
+      error: err?.message || "Recipe failed",
+      details: err?.details || null
+    });
+  }
+});
 
     // If key missing, fail fast with helpful error
     if (!process.env.OPENAI_API_KEY) {
