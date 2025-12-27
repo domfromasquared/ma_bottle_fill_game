@@ -2,631 +2,1031 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-  <title>Marketing Alchemist — Bottle Fill (Quest DM)</title>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+  />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>The Marketing Alchemist — Bottle Fill (Mobile)</title>
+
   <style>
-    :root { color-scheme: dark; }
-    body { margin:0; background:#0b0f14; color:#e6edf3; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
-    .wrap { max-width: 1100px; margin: 0 auto; padding: 16px; display:flex; flex-direction:column; gap:14px; }
-    .card { border:1px solid #243244; border-radius: 18px; background: linear-gradient(180deg,#0f1724,#0b121c); box-shadow: 0 20px 50px rgba(0,0,0,.25); overflow:hidden; }
-    .cardHeader { display:flex; align-items:center; justify-content:space-between; padding: 14px 16px; border-bottom: 1px solid #1e2a3c; }
-    .title { font-size: 34px; font-weight: 800; letter-spacing: -0.5px; display:flex; align-items:center; gap:10px;}
-    .pill { border:1px solid #243244; border-radius: 999px; padding: 8px 12px; background:#0b121c; display:inline-flex; align-items:center; gap:10px; }
-    .pill input { width: 360px; max-width: 56vw; background: transparent; border: none; outline: none; color:#e6edf3; font: inherit; }
-    button { cursor:pointer; border:1px solid #243244; background:#111a27; color:#e6edf3; border-radius: 14px; padding: 10px 14px; font-weight: 700; }
-    button:disabled { opacity: .55; cursor:not-allowed; }
-    .content { padding: 18px 16px; }
-    h2 { margin: 0 0 10px 0; font-size: 36px; letter-spacing: -0.5px; }
-    p { margin: 0 0 10px 0; font-size: 26px; line-height: 1.22; color:#d7deea; }
-    .metaRow { display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; }
-    .meta { display:inline-flex; align-items:center; gap:10px; border:1px solid #243244; border-radius: 999px; padding: 10px 12px; background:#0b121c; font-size: 20px; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-    .small { font-size: 16px; color:#aab6ca; }
-    .split { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; flex-wrap:wrap; }
-    .gameHeader { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
-    .stats { display:flex; gap:10px; flex-wrap:wrap; }
-    .grid { display:flex; flex-wrap:wrap; gap:16px; padding: 18px 16px; min-height: 300px; }
-    .bottle {
-      width: 84px; height: 220px;
-      border-radius: 22px 22px 26px 26px;
-      border: 2px solid rgba(220,232,255,.14);
-      background: rgba(0,0,0,.25);
+    :root{
+      --bg:#060b14;
+      --panel:#0c1524;
+      --stroke:#1b2b46;
+      --txt:#e8eef7;
+      --muted:#a9b6c8;
+
+      --pad: 14px;
+      --r: 18px;
+
+      /* scaled by JS from #app width */
+      --cell: 70px;
+      --bottleW: 58px;
+      --bottleH: 155px;
+      --neckH: 16px;
+
+      /* bottle geometry */
+      --glass: rgba(255,255,255,.08);
+      --glassEdge: rgba(255,255,255,.18);
+      --shine: rgba(255,255,255,.10);
+
+      /* motion */
+      --ease: cubic-bezier(.2,.9,.2,1);
+    }
+
+    *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { height:100%; margin:0; background:#000; color: var(--txt);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    body { overscroll-behavior:none; touch-action: manipulation; }
+
+    #phone{
+      height: 100%;
+      display:flex;
+      justify-content:center;
+      padding:
+        calc(env(safe-area-inset-top) + 10px)
+        calc(env(safe-area-inset-right) + 10px)
+        calc(env(safe-area-inset-bottom) + 10px)
+        calc(env(safe-area-inset-left) + 10px);
+      background: radial-gradient(1000px 800px at 30% 10%, #0b1a33 0%, #050910 55%, #000 100%);
+    }
+
+    #app{
+      width: min(440px, 100%);
+      height: 100%;
+      display:flex;
+      flex-direction:column;
+      gap: 12px;
       position:relative;
-      box-shadow: inset 0 0 0 2px rgba(255,255,255,.03);
-      display:flex; flex-direction:column-reverse;
+    }
+
+    /* Top: Quest / DM */
+    header.top{
+      background: linear-gradient(180deg, rgba(12,21,36,0.95), rgba(8,14,25,0.95));
+      border:1px solid var(--stroke);
+      border-radius: var(--r);
+      padding: var(--pad);
+    }
+
+    .titleRow{
+      display:flex; align-items:center; justify-content:space-between; gap: 10px;
+    }
+    .brand{
+      font-weight: 900; letter-spacing: .2px;
+      font-size: 20px; line-height: 1.1;
+      display:flex; align-items:center; gap: 8px;
+    }
+
+    .rightControls{
+      display:flex; align-items:center; gap: 10px;
+    }
+
+    .apiPill{
+      display:flex; align-items:center; gap:8px;
+      border:1px solid var(--stroke);
+      background: rgba(10,18,32,0.9);
+      color: var(--txt);
+      padding: 8px 10px;
+      border-radius: 999px;
+      font-weight: 800;
+      max-width: 240px;
+    }
+    .apiPill .lbl{ opacity:.8; font-weight: 800; }
+    .apiPill input{
+      width: 150px; max-width: 38vw;
+      background: transparent; border:0; outline: none;
+      color: var(--txt);
+      font-weight: 800;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+    }
+
+    button.pill{
+      border:1px solid var(--stroke);
+      background: rgba(10,18,32,0.9);
+      color: var(--txt);
+      padding: 10px 12px;
+      border-radius: 999px;
+      font-weight: 900;
+    }
+    button.pill:active{ transform: translateY(1px); }
+
+    .questCard{
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(27,43,70,.9);
+      background: rgba(6,11,20,.7);
+    }
+    .questTitle{
+      font-size: 18px;
+      font-weight: 900;
+      margin-bottom: 6px;
+    }
+    .questText{
+      font-size: 15px;
+      color: var(--muted);
+      line-height: 1.35;
+      min-height: 42px;
+    }
+    .chips{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .chip{
+      font-size: 12px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border:1px solid var(--stroke);
+      background: rgba(10,18,32,0.9);
+      color: var(--txt);
+      white-space: nowrap;
+    }
+
+    /* Middle: play area */
+    main.play{
+      flex: 1;
+      min-height: 0;
+      background: rgba(12,21,36,0.7);
+      border:1px solid var(--stroke);
+      border-radius: var(--r);
+      padding: 12px;
       overflow:hidden;
-      user-select:none;
-      touch-action: manipulation;
+      position: relative;
+    }
+
+    .hudRow{
+      display:flex; gap: 8px; align-items:center; justify-content:space-between;
+      margin-bottom: 10px;
+    }
+    .hudLeft, .hudRight{ display:flex; gap: 8px; align-items:center; flex-wrap:wrap; }
+    .hudTitle{ font-weight: 900; font-size: 18px; }
+    .hudPill{
+      font-size: 12px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border:1px solid var(--stroke);
+      background: rgba(10,18,32,0.9);
+      color: var(--txt);
+      white-space: nowrap;
+    }
+
+    .bottleGrid{
+      height: calc(100% - 50px);
+      display:grid;
+      grid-template-columns: repeat(4, var(--cell));
+      justify-content:center;
+      align-content:center;
+      gap: 10px;
+      position: relative;
+    }
+
+    /* Bottle */
+    .bottleSlot{
+      width: var(--cell);
+      height: calc(var(--bottleH) + 18px);
+      display:flex;
+      align-items:flex-end;
+      justify-content:center;
+      position: relative;
+    }
+
+    .bottle{
+      width: var(--bottleW);
+      height: var(--bottleH);
+      border-radius: 14px 14px 16px 16px;
+      position: relative;
+      border: 2px solid var(--glassEdge);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      box-shadow: 0 10px 20px rgba(0,0,0,.35);
+      overflow:hidden;
       transform: translateZ(0);
     }
-    .bottle::before {
+
+    .bottle::before{
       content:"";
-      position:absolute; inset: 10px 10px 10px 10px;
-      border-radius: 18px 18px 22px 22px;
-      border:1px solid rgba(255,255,255,.06);
+      position:absolute; inset:0;
+      background: linear-gradient(90deg, transparent 0%, var(--shine) 35%, transparent 70%);
+      opacity:.5;
+      pointer-events:none;
+      transform: translateX(-20%);
+    }
+
+    .neck{
+      position:absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(var(--bottleW) * .58);
+      height: calc(var(--neckH) + 8px);
+      border-radius: 10px 10px 10px 10px;
+      border: 2px solid var(--glassEdge);
+      background: rgba(255,255,255,.03);
+    }
+
+    .liquidStack{
+      position:absolute;
+      inset: 0;
+      display:flex;
+      flex-direction:column-reverse;
+    }
+
+    .layer{
+      width:100%;
+      height: 0px;
+      transition: height 260ms var(--ease);
+    }
+
+    .bottle.selected{
+      outline: 3px solid rgba(110,190,255,.95);
+      box-shadow: 0 0 0 6px rgba(110,190,255,.15), 0 12px 24px rgba(0,0,0,.5);
+    }
+    .bottle.invalid{
+      animation: shake 240ms var(--ease);
+      outline: 3px solid rgba(255,90,90,.95);
+      box-shadow: 0 0 0 6px rgba(255,90,90,.15);
+    }
+    @keyframes shake{
+      0%{ transform: translateX(0); }
+      25%{ transform: translateX(-4px); }
+      50%{ transform: translateX(4px); }
+      75%{ transform: translateX(-3px); }
+      100%{ transform: translateX(0); }
+    }
+
+    /* Pour animation */
+    .pourStream{
+      position:absolute;
+      width: 10px;
+      border-radius: 999px;
+      filter: drop-shadow(0 6px 10px rgba(0,0,0,.35));
+      opacity: 0;
+      transform-origin: top center;
+    }
+    .pourStream.on{
+      opacity: 1;
+      animation: stream 520ms var(--ease) forwards;
+    }
+    @keyframes stream{
+      0%{ transform: scaleY(.2); }
+      25%{ transform: scaleY(1); }
+      70%{ transform: scaleY(1); opacity: 1; }
+      100%{ transform: scaleY(.25); opacity: 0; }
+    }
+
+    /* Bottom layout */
+    footer.bottom{
+      display:grid;
+      grid-template-columns: 120px 1fr;
+      gap: 10px;
+      align-items:end;
+    }
+
+    .characterZone{
+      height: 120px;
+      border-radius: var(--r);
+      border:1px solid var(--stroke);
+      background: rgba(12,21,36,0.75);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight: 900;
+      color: rgba(255,255,255,.55);
+    }
+
+    .speechZone{ display:flex; flex-direction:column; gap: 10px; }
+    .speechBubble{
+      min-height: 76px;
+      border-radius: var(--r);
+      border:1px solid var(--stroke);
+      background: rgba(12,21,36,0.75);
+      padding: 12px;
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+    .modifiersBar{
+      height: 58px;
+      border-radius: var(--r);
+      border:1px solid var(--stroke);
+      background: rgba(12,21,36,0.75);
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      padding: 0 12px;
+      overflow:hidden;
+      color: rgba(255,255,255,.55);
+      font-weight: 900;
+    }
+
+    /* Optional left BANK tab */
+    .bankTab{
+      position:absolute;
+      left: -42px;
+      top: 110px;
+      width: 130px;
+      transform: rotate(-90deg);
+      transform-origin: left top;
+      background: #000;
+      border:1px solid var(--stroke);
+      color:#fff;
+      padding: 8px 10px;
+      border-radius: 12px;
+      font-weight: 900;
+      letter-spacing:.8px;
+      text-align:center;
+      opacity:.92;
       pointer-events:none;
     }
-    .bottle.selected { outline: 3px solid rgba(130, 210, 255,.45); box-shadow: 0 0 0 6px rgba(80,140,255,.12), inset 0 0 0 2px rgba(255,255,255,.04); }
-    .seg { width:100%; height: 22%; }
-    .controls { display:flex; gap:10px; padding: 0 16px 16px 16px; flex-wrap:wrap; }
-    .toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background:#0b121c; border:1px solid #243244; border-radius: 999px; padding: 10px 14px; font-weight:700; opacity:0; transition: opacity .18s ease; pointer-events:none;}
-    .toast.show { opacity:1; }
-    .pourFX {
-      position: fixed; width: 10px; height: 10px; border-radius: 999px;
-      pointer-events:none;
-      opacity:0;
-      transform: translate(-50%, -50%);
-      filter: blur(.2px);
+
+    /* Small phones: 3 columns */
+    @media (max-width: 360px){
+      .bottleGrid{ grid-template-columns: repeat(3, var(--cell)); }
+      footer.bottom{ grid-template-columns: 100px 1fr; }
+      .apiPill input{ width: 120px; }
     }
   </style>
 </head>
+
 <body>
-  <div class="wrap">
-    <div class="card" id="dmCard">
-      <div class="cardHeader">
-        <div class="title">🧪 The Marketing Alchemist <span style="opacity:.7">(Quest DM)</span></div>
-        <div class="split">
-          <div class="pill">
-            <span style="opacity:.7">API:</span>
-            <input id="apiBase" class="mono" />
+  <div id="phone">
+    <div id="app">
+
+      <header class="top">
+        <div class="titleRow">
+          <div class="brand">🧪 The Marketing Alchemist <span style="opacity:.65; font-weight:900;">(Quest DM)</span></div>
+
+          <div class="rightControls">
+            <div class="apiPill" title="API base URL (Render)">
+              <span class="lbl">API:</span>
+              <input id="apiBase" value="https://ma-bottle-fill-api.onrender.com" />
+            </div>
+            <button class="pill" id="questBtn">Quest Node</button>
           </div>
-          <button id="btnQuest">Quest Node</button>
         </div>
-      </div>
-      <div class="content">
-        <h2 id="questTitle">—</h2>
-        <p id="dmIntro" class="small">Quest Nodes are brewed ONLY on every <b>5th level</b> (5, 10, 15…).</p>
-        <p id="dmMid" class="small"></p>
-        <p id="dmVerdict" class="small"></p>
 
-        <div class="metaRow">
-          <div class="meta">B.A.N.K: <span id="bankOut" class="mono">—</span></div>
-          <div class="meta">SinTags: <span id="sinsOut" class="mono">—</span></div>
-          <div class="meta">Modifier: <span id="modOut" class="mono">—</span></div>
-          <div class="meta">Recipe: <span id="recipeSrcOut" class="mono">—</span></div>
-          <div class="meta">Status: <span id="statusOut" class="mono">ready</span></div>
+        <div class="questCard" id="questCard">
+          <div class="questTitle" id="questTitle">Mobile Build</div>
+          <div class="questText" id="questText">Tap bottles → tap target. Portrait-only layout. DM appears every 3–6 levels (random).</div>
+          <div class="chips">
+            <span class="chip" id="statusChip">Status: ready</span>
+            <span class="chip" id="bankChip">BANK: —</span>
+            <span class="chip" id="sinChip">SinTags: —</span>
+            <span class="chip" id="cfgChip">LevelCfg: —</span>
+          </div>
         </div>
-      </div>
-    </div>
+      </header>
 
-    <div class="card">
-      <div class="cardHeader gameHeader">
-        <div class="title" style="font-size:28px">Bottle Fill</div>
-        <div class="stats">
-          <div class="meta">Level: <span id="levelOut" class="mono">1</span></div>
-          <div class="meta">Moves: <span id="movesOut" class="mono">0</span></div>
-          <div class="meta">Invalid: <span id="badOut" class="mono">0</span></div>
-          <div class="meta">Resets: <span id="resetOut" class="mono">0</span></div>
-          <div class="meta">Cfg: <span id="cfgOut" class="mono">—</span></div>
-          <div class="meta small">Tap bottle → tap target. Satisfying pour.</div>
+      <main class="play">
+        <div class="hudRow">
+          <div class="hudLeft">
+            <div class="hudTitle">Bottle Fill</div>
+            <div class="hudPill" id="lvlPill">Level: 1</div>
+            <div class="hudPill" id="movesPill">Moves: 0</div>
+            <div class="hudPill" id="badPill">Invalid: 0</div>
+            <div class="hudPill" id="resetPill">Resets: 0</div>
+          </div>
+          <div class="hudRight">
+            <button class="pill" id="nextBtn">Next Level</button>
+            <button class="pill" id="resetBtn">Reset Run</button>
+          </div>
         </div>
-      </div>
-      <div class="grid" id="grid"></div>
-      <div class="controls">
-        <button id="btnNext">Next Level</button>
-        <button id="btnReset">Reset Run</button>
-        <div class="meta small">LLM only runs on level 5/10/15… Filler levels are deterministic.</div>
-      </div>
+
+        <div class="bottleGrid" id="bottleGrid"></div>
+      </main>
+
+      <footer class="bottom">
+        <div class="characterZone" id="characterZone">CHARACTER</div>
+        <div class="speechZone">
+          <div class="speechBubble" id="speechBubble">SPEECH BUBBLE</div>
+          <div class="modifiersBar" id="modifiersBar">MODIFIERS</div>
+        </div>
+      </footer>
+
+      <div class="bankTab" id="bankTab">BANK IDENTIFIER</div>
+
     </div>
   </div>
 
-  <div class="toast" id="toast"></div>
-  <div class="pourFX" id="pourFX"></div>
+  <script>
+    /***********************
+     * MOBILE SCALE (core)
+     ***********************/
+    function applyMobileScale(){
+      const app = document.getElementById("app");
+      const w = app.clientWidth;
 
-<script type="module">
-  const DEFAULT_PROD = "https://ma-bottle-fill-api.onrender.com";
-  const DEFAULT_LOCAL = "http://localhost:8787";
-  const isLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1";
-  const apiBaseEl = document.getElementById("apiBase");
-  apiBaseEl.value = isLocal ? DEFAULT_LOCAL : DEFAULT_PROD;
+      // scaled for 3–4 columns depending on width
+      const cell = Math.max(56, Math.min(86, Math.floor(w * 0.18)));
+      const bottleW = Math.floor(cell * 0.86);
+      const bottleH = Math.floor(cell * 2.25);
 
-  const inflight = new Map();
-  function singleFlight(key, fn) {
-    if (inflight.has(key)) return inflight.get(key);
-    const p = (async () => { try { return await fn(); } finally { inflight.delete(key); } })();
-    inflight.set(key, p);
-    return p;
-  }
+      document.documentElement.style.setProperty("--cell", cell + "px");
+      document.documentElement.style.setProperty("--bottleW", bottleW + "px");
+      document.documentElement.style.setProperty("--bottleH", bottleH + "px");
+    }
+    window.addEventListener("resize", applyMobileScale, { passive:true });
+    window.addEventListener("orientationchange", applyMobileScale, { passive:true });
+    applyMobileScale();
 
-  let cooldownUntil = 0;
-  function canCallNow() { return Date.now() >= cooldownUntil; }
-  function setCooldown(ms=2500) { cooldownUntil = Date.now() + ms; }
-
-  const statusOut = document.getElementById("statusOut");
-  const questTitle = document.getElementById("questTitle");
-  const dmIntro = document.getElementById("dmIntro");
-  const dmMid = document.getElementById("dmMid");
-  const dmVerdict = document.getElementById("dmVerdict");
-  const bankOut = document.getElementById("bankOut");
-  const sinsOut = document.getElementById("sinsOut");
-  const modOut = document.getElementById("modOut");
-  const cfgOut = document.getElementById("cfgOut");
-  const recipeSrcOut = document.getElementById("recipeSrcOut");
-
-  const toast = document.getElementById("toast");
-  function showToast(msg) {
-    toast.textContent = msg;
-    toast.classList.add("show");
-    setTimeout(()=>toast.classList.remove("show"), 1400);
-  }
-
-  let runSeed = Math.floor(Math.random() * 1e9);
-  let questId = 1;
-  let level = 1;
-
-  let pendingModifier = null;
-  let anchorRecipe = null;
-  let anchorLevel = 0;
-
-  const sig = { moves:0, invalid:0, resets:0, moveTimes:[], lastMoveAt:0 };
-  const avg = (arr)=> arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
-
-  function inferBANK() {
-    const pace = avg(sig.moveTimes.slice(-12));
-    const invalidRate = sig.moves ? (sig.invalid / sig.moves) : 0;
-    const resetRate = sig.resets ? (sig.resets / Math.max(1, level)) : 0;
-
-    const score = { B:0, A:0, N:0, K:0 };
-    score.B += pace > 1400 ? 1.2 : 0;
-    score.B += invalidRate < 0.10 ? 1.0 : 0;
-
-    score.A += pace && pace < 900 ? 1.2 : 0;
-    score.A += invalidRate < 0.22 ? 0.5 : 0;
-
-    score.N += resetRate > 0.30 ? 1.0 : 0;
-    score.N += invalidRate > 0.18 ? 0.6 : 0;
-
-    score.K += invalidRate > 0.12 ? 0.7 : 0;
-    score.K += resetRate < 0.25 ? 0.7 : 0;
-
-    const entries = Object.entries(score).sort((a,b)=>b[1]-a[1]);
-    const [bankPrimary, top] = entries[0];
-    const second = entries[1][1];
-    const conf = Math.max(0.25, Math.min(0.92, 0.35 + (top-second)*0.55));
-    return { bankPrimary, bankConfidence: Number(conf.toFixed(2)) };
-  }
-
-  function inferSinTags() {
-    const tags = [];
-    if (sig.resets >= 2 && sig.resets > level/2) tags.push("over_reset");
-    const pace = avg(sig.moveTimes.slice(-12));
-    if (pace > 1500) tags.push("hesitation");
-    if ((sig.moves && sig.invalid/sig.moves > 0.18)) tags.push("indecision");
-    if (!tags.length) tags.push("steady_hand");
-    return tags.slice(0,3);
-  }
-
-  function formatMod(mod) {
-    if (!mod) return "—";
-    const parts = [];
-    const map = [
-      ["bottleCountDelta","bottles"],
-      ["colorsDelta","colors"],
-      ["capacityDelta","cap"],
-      ["emptyBottlesDelta","empty"],
-      ["lockedBottlesDelta","locks"],
-      ["wildcardSlotsDelta","wild"],
+    /***********************
+     * COLOR PALETTE (distinct)
+     ***********************/
+    const PALETTE = [
+      { id:"AQUA",   hex:"#18c8ff" },
+      { id:"LIME",   hex:"#6cff3a" },
+      { id:"VIOLET", hex:"#a855ff" },
+      { id:"AMBER",  hex:"#ffb020" },
+      { id:"ROSE",   hex:"#ff3ea5" },
+      { id:"RED",    hex:"#ff3b3b" },
+      { id:"BLUE",   hex:"#2f6bff" },
+      { id:"TEAL",   hex:"#12f0c0" },
+      { id:"SAND",   hex:"#d6b58c" },
+      { id:"SLATE",  hex:"#7b8aa8" }
     ];
-    for (const [k,label] of map) {
-      const v = mod[k] ?? 0;
-      if (v) parts.push(`${label}${v>0?"+":""}${v}`);
-    }
-    const tag = mod.ruleTag && mod.ruleTag !== "none" ? mod.ruleTag : "";
-    return (parts.length ? parts.join(" ") : "no-delta") + (tag ? ` | ${tag}` : "");
-  }
+    const COLOR = Object.fromEntries(PALETTE.map(x => [x.id, x.hex]));
 
-  function setPendingModifier(mod) {
-    pendingModifier = mod;
-    modOut.textContent = formatMod(mod);
-  }
+    /***********************
+     * GAME STATE
+     ***********************/
+    const CAP = 4;               // bottle capacity (segments)
+    let level = 1;
+    let moves = 0;
+    let invalid = 0;
+    let resets = 0;
 
-  // Cadence
-  const QUEST_EVERY = 5; // ONLY call LLM every 5th level
-  function isLLMLevel(lvl) { return (lvl % QUEST_EVERY) === 0; }
-  function nextLLMLevel(lvl) { return lvl + ((QUEST_EVERY - (lvl % QUEST_EVERY)) % QUEST_EVERY || QUEST_EVERY); }
+    let bottles = [];            // array of arrays bottom->top colors
+    let initialBottles = [];
+    let selected = -1;
 
-  // Deterministic RNG
-  function mulberry32(a) {
-    return function() {
-      let t = a += 0x6D2B79F5;
-      t = Math.imul(t ^ (t >>> 15), t | 1);
-      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    }
-  }
-  function hashSeed(a,b,c){
-    let x = (a|0) ^ ((b|0)*0x9E3779B1) ^ ((c|0)*0x85EBCA77);
-    x = Math.imul(x ^ (x>>>16), 0x7feb352d);
-    x = Math.imul(x ^ (x>>>15), 0x846ca68b);
-    x = x ^ (x>>>16);
-    return x >>> 0;
-  }
-  const clamp = (n,min,max)=> Math.max(min, Math.min(max, n));
+    // DM cadence: random between 3–6 levels
+    let nextDMAt = rollDM(level);
+    let dmVisits = 0;            // how many times DM has appeared
+    // modifier cadence: every 5th DM appearance
+    const MOD_EVERY = 5;
 
-  function applyModifier(recipe, mod) {
-    if (!mod) return { recipe, consumed:false };
-    recipe.bottleCount = clamp(recipe.bottleCount + (mod.bottleCountDelta||0), 6, 14);
-    recipe.colors      = clamp(recipe.colors + (mod.colorsDelta||0), 4, 10);
-    recipe.capacity    = clamp(recipe.capacity + (mod.capacityDelta||0), 3, 6);
-    recipe.emptyBottles= clamp(recipe.emptyBottles + (mod.emptyBottlesDelta||0), 1, 6);
-    recipe.lockedBottles = clamp(recipe.lockedBottles + (mod.lockedBottlesDelta||0), 0, 3);
-    recipe.wildcardSlots = clamp(recipe.wildcardSlots + (mod.wildcardSlotsDelta||0), 0, 2);
-    recipe.emptyBottles = Math.min(recipe.emptyBottles, Math.max(1, recipe.bottleCount - 1));
-    recipe.appliedModifier = mod;
-    return { recipe, consumed:true };
-  }
-
-  function makeFillerRecipe() {
-    const { bankPrimary } = inferBANK();
-    const sinTags = inferSinTags();
-    const seed = hashSeed(runSeed, level, questId);
-    const rnd = mulberry32(seed);
-
-    const targetDifficulty = clamp(1 + Math.floor(level / 3) + Math.floor(rnd()*2), 1, 10);
-
-    const base = anchorRecipe ? structuredClone(anchorRecipe) : {
-      version: "local-filler",
-      title: "Filler Brew",
-      lore: "A steady experiment. No theatrics. Just results.",
-      difficulty: targetDifficulty,
-      colors: 5,
-      bottleCount: 10,
-      capacity: 4,
-      emptyBottles: 2,
-      lockedBottles: 0,
-      wildcardSlots: 0,
-      elements: ["Au","Fe","Na","Cl","C"],
-      sinTags: [],
-      bonuses: [],
-      constraints: [],
-      appliedModifier: {
-        lockedBottlesDelta:0, emptyBottlesDelta:0, capacityDelta:0,
-        wildcardSlotsDelta:0, colorsDelta:0, bottleCountDelta:0,
-        ruleTag:"none", bonusObjective:""
-      }
+    // lightweight player signals (for BANK inference on server)
+    const telemetry = {
+      startedAt: Date.now(),
+      taps: 0,
+      pours: 0,
+      invalid: 0,
+      resets: 0,
+      hesitations: 0,
+      lastTapAt: 0,
+      streakBad: 0,
+      avgDecisionMs: 0,
+      _decisions: []
     };
 
-    const wobble = (v, min, max, step=1) => clamp(v + (rnd()<0.33?-step:(rnd()>0.66?step:0)), min, max);
+    /***********************
+     * DOM
+     ***********************/
+    const elGrid = document.getElementById("bottleGrid");
+    const lvlPill = document.getElementById("lvlPill");
+    const movesPill = document.getElementById("movesPill");
+    const badPill = document.getElementById("badPill");
+    const resetPill = document.getElementById("resetPill");
 
-    base.version = "local-filler";
-    base.difficulty = targetDifficulty;
-    base.colors = wobble(clamp(4 + Math.floor(level/4), 4, 10), 4, 10, 1);
-    base.capacity = wobble(4 + (level>=18?1:0) + (level>=32?1:0), 3, 6, 1);
-    base.emptyBottles = clamp(2 + (rnd()<0.2?1:0) - (rnd()>0.9?1:0), 1, 6);
-    base.bottleCount = clamp(base.colors + base.emptyBottles + 3 + Math.floor(rnd()*2), 6, 14);
-    base.lockedBottles = clamp((level>=20?1:0) + (rnd()<0.08?1:0), 0, 3);
-    base.wildcardSlots = clamp((level>=25 && rnd()<0.15)?1:0, 0, 2);
+    const questBtn = document.getElementById("questBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const resetBtn = document.getElementById("resetBtn");
 
-    base.sinTags = sinTags;
-    base.title = `Filler: ${bankPrimary} Distillation`;
-    base.lore = `A controlled run. You don't need fireworks—just cleaner pours.`;
+    const apiBaseInput = document.getElementById("apiBase");
+    const questTitle = document.getElementById("questTitle");
+    const questText = document.getElementById("questText");
+    const statusChip = document.getElementById("statusChip");
+    const bankChip = document.getElementById("bankChip");
+    const sinChip = document.getElementById("sinChip");
+    const cfgChip = document.getElementById("cfgChip");
+    const speechBubble = document.getElementById("speechBubble");
+    const modifiersBar = document.getElementById("modifiersBar");
+    const bankTab = document.getElementById("bankTab");
 
-    const pool = ["H","He","Li","Be","B","C","N","O","F","Ne","Na","Mg","Al","Si","P","S","Cl","Ar","K","Ca","Fe","Cu","Zn","Ag","Au"];
-    const start = Math.floor(rnd()* (pool.length - base.colors));
-    base.elements = pool.slice(start, start + base.colors);
+    /***********************
+     * UTIL
+     ***********************/
+    function clamp(n,a,b){ return Math.max(a, Math.min(b,n)); }
+    function deepCopy(x){ return JSON.parse(JSON.stringify(x)); }
 
-    return base;
-  }
-
-  async function postJSON(path, body) {
-    const base = apiBaseEl.value.trim().replace(/\/+$/, "");
-    const url = base + path;
-    const r = await fetch(url, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) });
-    if (!r.ok) {
-      let detailText = "";
-      try { detailText = await r.text(); } catch {}
-      const retryAfter = r.headers.get("Retry-After");
-      const err = new Error(`${r.status} ${r.statusText}${retryAfter ? ` (Retry-After: ${retryAfter}s)` : ""}`);
-      err.status = r.status;
-      err.retryAfter = retryAfter ? Number(retryAfter) : null;
-      err.detailText = detailText;
-      throw err;
+    function rollDM(currentLevel){
+      // DM every 3–6 levels
+      const span = 3 + Math.floor(Math.random()*4); // 3..6
+      return currentLevel + span;
     }
-    return await r.json();
-  }
 
-  const btnQuest = document.getElementById("btnQuest");
-
-  function updateQuestButton() {
-    if (isLLMLevel(level)) {
-      btnQuest.disabled = false;
-      btnQuest.textContent = "Quest Node";
-      dmIntro.textContent = "Quest Node is available now. Brew it and the modifier affects the NEXT level.";
-    } else {
-      btnQuest.disabled = true;
-      const n = nextLLMLevel(level);
-      btnQuest.textContent = `Quest @ L${n}`;
-      dmIntro.textContent = `Quest Nodes are brewed only on every 5th level. Next brew: level ${n}.`;
+    function setStatus(text, ok=true){
+      statusChip.textContent = "Status: " + text;
+      statusChip.style.borderColor = ok ? "rgba(27,43,70,.9)" : "rgba(255,90,90,.95)";
     }
-  }
 
-  async function brewQuestNode() {
-    const { bankPrimary, bankConfidence } = inferBANK();
-    const sinTags = inferSinTags();
-    bankOut.textContent = `${bankPrimary} (${bankConfidence})`;
-    sinsOut.textContent = sinTags.join(", ");
-
-    statusOut.textContent = "brewing...";
-    const payload = { act: Math.ceil(level/5), questId, bankPrimary, bankConfidence, sinTags, seed: runSeed, level };
-    const data = await postJSON("/api/quest-node", payload);
-    const q = data.payload;
-
-    questTitle.textContent = q.quest_title;
-    dmMid.textContent = q.dm_midpoint;
-    dmVerdict.textContent = q.dm_verdict;
-
-    setPendingModifier(q.modifier);
-    statusOut.textContent = "ok";
-    showToast("Modifier brewed for next level");
-  }
-
-  btnQuest.addEventListener("click", async () => {
-    if (!isLLMLevel(level)) return;
-    if (!canCallNow()) return;
-    setCooldown(2500);
-
-    try {
-      await singleFlight(`quest-node:${runSeed}:${questId}:${level}`, brewQuestNode);
-    } catch (e) {
-      if (e.status === 429) {
-        const ms = (e.retryAfter ? e.retryAfter*1000 : 20000);
-        setCooldown(ms);
-        statusOut.textContent = "rate-limited";
-        showToast("Rate limited. Brewing cooldown…");
-      } else {
-        statusOut.textContent = "quest error";
-        showToast("Quest error (check server).");
-      }
-      console.warn(e, e.detailText);
+    function apiBase(){
+      let v = (apiBaseInput.value || "").trim();
+      if (!v) return "";
+      // strip trailing slash
+      if (v.endsWith("/")) v = v.slice(0,-1);
+      return v;
     }
-  });
 
-  // Game
-  const grid = document.getElementById("grid");
-  const levelOut = document.getElementById("levelOut");
-  const movesOut = document.getElementById("movesOut");
-  const badOut = document.getElementById("badOut");
-  const resetOut = document.getElementById("resetOut");
-  const pourFX = document.getElementById("pourFX");
-
-  const PALETTE = ["#00D1FF","#FF4D6D","#FFD400","#7CFF6B","#A855F7","#FF8A00","#00FFA8","#2E5BFF","#FF3DF2","#C2FF00"];
-  const state = { bottles:[], capacity:4, selected:-1 };
-
-  function isSolved() {
-    return state.bottles.every(b => {
-      if (b.length === 0) return true;
-      if (b.length !== state.capacity) return false;
-      return b.every(x => x === b[0]);
-    });
-  }
-  const topColor = (b)=> b.length ? b[b.length-1] : null;
-  function topRunCount(b){
-    if (!b.length) return 0;
-    const c = topColor(b);
-    let n=0; for(let i=b.length-1;i>=0;i--){ if (b[i]===c) n++; else break; }
-    return n;
-  }
-  function canPour(from,to){
-    if (from===to) return false;
-    const a=state.bottles[from], b=state.bottles[to];
-    if (!a.length) return false;
-    if (b.length>=state.capacity) return false;
-    const color=topColor(a), target=topColor(b);
-    return (target===null || target===color);
-  }
-  function bottleCenter(i){
-    const el=document.querySelector(`[data-bottle="${i}"]`);
-    if(!el) return {x:innerWidth/2,y:innerHeight/2};
-    const r=el.getBoundingClientRect();
-    return {x:r.left+r.width/2, y:r.top+r.height/4};
-  }
-  function playPourFX(from,to,color,amount){
-    const a=bottleCenter(from), b=bottleCenter(to);
-    pourFX.style.background=color;
-    pourFX.style.opacity="1";
-    pourFX.style.left=a.x+"px"; pourFX.style.top=a.y+"px";
-    const dx=b.x-a.x, dy=b.y-a.y;
-    const dur=Math.max(260, Math.min(580, 220+amount*90));
-    pourFX.animate([
-      { transform:"translate(-50%,-50%) scale(1)", opacity:0.9 },
-      { transform:`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.9)`, opacity:0.85 },
-      { transform:`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.7)`, opacity:0.0 }
-    ], { duration:dur, easing:"cubic-bezier(.2,.8,.2,1)" });
-    setTimeout(()=> pourFX.style.opacity="0", dur);
-  }
-  function doPour(from,to){
-    if(!canPour(from,to)){
-      sig.invalid++; badOut.textContent=String(sig.invalid);
-      showToast("Invalid pour");
-      return false;
-    }
-    const a=state.bottles[from], b=state.bottles[to];
-    const color=topColor(a);
-    const run=topRunCount(a);
-    const space=state.capacity-b.length;
-    const amount=Math.min(run,space);
-
-    const now=performance.now();
-    if(sig.lastMoveAt) sig.moveTimes.push(now-sig.lastMoveAt);
-    sig.lastMoveAt=now;
-
-    playPourFX(from,to,PALETTE[color%PALETTE.length], amount);
-    for(let i=0;i<amount;i++) b.push(a.pop());
-
-    sig.moves++; movesOut.textContent=String(sig.moves);
-    render();
-
-    if(isSolved()){
-      showToast("Solved! Next level…");
-      setTimeout(()=>nextLevel(), 700);
-    }
-    return true;
-  }
-  const countEmpty = ()=> state.bottles.filter(b=>b.length===0).length;
-
-  function render(){
-    grid.innerHTML="";
-    state.bottles.forEach((b,i)=>{
-      const bottle=document.createElement("div");
-      bottle.className="bottle"+(state.selected===i?" selected":"");
-      bottle.dataset.bottle=String(i);
-
-      for(let s=0;s<state.capacity;s++){
-        const seg=document.createElement("div");
-        seg.className="seg";
-        const ci = b[s] ?? null;
-        seg.style.background = (ci===null) ? "transparent" : PALETTE[ci%PALETTE.length];
-        bottle.appendChild(seg);
-      }
-
-      bottle.addEventListener("click", ()=>{
-        if(state.selected===-1){ state.selected=i; render(); return; }
-        if(state.selected===i){ state.selected=-1; render(); return; }
-        const success=doPour(state.selected,i);
-        state.selected=-1;
-        if(!success) render();
+    async function postJSON(path, body){
+      const base = apiBase();
+      if (!base) throw new Error("Missing API base");
+      const url = base + path;
+      const res = await fetch(url, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify(body)
       });
-
-      grid.appendChild(bottle);
-    });
-
-    levelOut.textContent=String(level);
-    movesOut.textContent=String(sig.moves);
-    badOut.textContent=String(sig.invalid);
-    resetOut.textContent=String(sig.resets);
-    cfgOut.textContent=`b${state.bottles.length}/c${state.capacity}/e${countEmpty()}`;
-    updateQuestButton();
-  }
-
-  function shuffle(arr, rnd=Math.random){
-    for(let i=arr.length-1;i>0;i--){
-      const j=Math.floor(rnd()*(i+1));
-      [arr[i],arr[j]]=[arr[j],arr[i]];
-    }
-    return arr;
-  }
-
-  function buildBoardFromRecipe(recipe){
-    const colors=recipe.colors, bottles=recipe.bottleCount, cap=recipe.capacity, empty=recipe.emptyBottles;
-    const rnd = mulberry32(hashSeed(runSeed, level, 1337));
-
-    const colorStacks=[];
-    for(let c=0;c<colors;c++) colorStacks.push(Array.from({length:cap}, ()=>c));
-
-    const pool=shuffle(colorStacks.flat(), rnd);
-    const board=Array.from({length:bottles}, ()=>[]);
-    const fillCount=bottles-empty;
-    let idx=0;
-    for(let b=0;b<fillCount;b++){
-      for(let s=0;s<cap;s++){
-        if(idx<pool.length) board[b].push(pool[idx++]);
+      const txt = await res.text();
+      let json = null;
+      try{ json = JSON.parse(txt); }catch(_){}
+      if (!res.ok){
+        const errMsg = (json && json.error) ? json.error : (txt || ("HTTP " + res.status));
+        const e = new Error(errMsg);
+        e.status = res.status;
+        e.details = json && json.details;
+        throw e;
       }
+      return json;
     }
 
-    state.capacity=cap;
-    state.bottles=board;
-    state.selected=-1;
+    /***********************
+     * LEVEL GENERATION
+     * - Tries server /api/level-recipe
+     * - Falls back to deterministic local recipe
+     ***********************/
+    function localLevelRecipe(level){
+      // deterministic-ish: seed by level
+      const rng = mulberry32(0xC0FFEE ^ (level * 2654435761));
+      const colorsCount = clamp(3 + Math.floor(level/3), 3, 8);
+      const bottleCount = clamp(6 + Math.floor(level/2), 6, 10);
+      const empties = 2;
 
-    const scramble = Math.max(40, Math.min(260, recipe.difficulty*24 + 60));
-    for(let k=0;k<scramble;k++){
-      const a=Math.floor(rnd()*bottles);
-      const t=Math.floor(rnd()*bottles);
-      if(a===t) continue;
-      if(!canPour(a,t)) continue;
-      const from=state.bottles[a], to=state.bottles[t];
-      if(!from.length || to.length>=cap) continue;
-      const col=topColor(from), tgt=topColor(to);
-      if(tgt!==null && tgt!==col) continue;
-      to.push(from.pop());
-    }
-  }
+      const colors = PALETTE.slice(0, colorsCount).map(c => c.id);
+      // create a pool of segments (each color repeats CAP times)
+      let pool = [];
+      for (const c of colors){
+        for (let i=0;i<CAP;i++) pool.push(c);
+      }
+      // add extra segments if bottleCount*CAP > pool size, repeat colors
+      while (pool.length < (bottleCount-empties)*CAP){
+        const c = colors[Math.floor(rng()*colors.length)];
+        pool.push(c);
+      }
+      // shuffle pool
+      for (let i=pool.length-1;i>0;i--){
+        const j = Math.floor(rng()*(i+1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
 
-  async function fetchLLMRecipe() {
-    const { bankPrimary, bankConfidence } = inferBANK();
-    const sinTags = inferSinTags();
-
-    const payload = { act: Math.ceil(level/5), questId, bankPrimary, bankConfidence, sinTags, seed: runSeed, level, modifier: pendingModifier };
-
-    statusOut.textContent = "distilling...";
-    const data = await postJSON("/api/level-recipe", payload);
-    statusOut.textContent = "ok";
-    recipeSrcOut.textContent = "LLM";
-    return data.recipe;
-  }
-
-  function loadFillerRecipe() {
-    statusOut.textContent = "local filler";
-    recipeSrcOut.textContent = "FILLER";
-    return makeFillerRecipe();
-  }
-
-  async function loadLevel() {
-    let recipe;
-    if (isLLMLevel(level)) {
-      recipe = await singleFlight(`llm-recipe:${runSeed}:${questId}:${level}`, async () => {
-        try {
-          const r = await fetchLLMRecipe();
-          anchorRecipe = structuredClone(r);
-          anchorLevel = level;
-          return r;
-        } catch (e) {
-          if (e.status === 429) {
-            const ms = (e.retryAfter ? e.retryAfter*1000 : 20000);
-            setCooldown(ms);
-            statusOut.textContent = "rate-limited";
-            showToast("Rate limited. Using deterministic filler.");
-          } else {
-            statusOut.textContent = "recipe error";
-            showToast("Recipe error. Using deterministic filler.");
-          }
-          console.warn(e, e.detailText);
-          return loadFillerRecipe();
-        }
-      });
-    } else {
-      recipe = loadFillerRecipe();
-    }
-
-    const applied = applyModifier(recipe, pendingModifier);
-    if (applied.consumed) {
-      showToast("Modifier consumed");
-      setPendingModifier(null);
-    } else {
-      recipe.appliedModifier = recipe.appliedModifier || {
-        lockedBottlesDelta:0, emptyBottlesDelta:0, capacityDelta:0,
-        wildcardSlotsDelta:0, colorsDelta:0, bottleCountDelta:0,
-        ruleTag:"none", bonusObjective:""
+      // fill bottles
+      const b = [];
+      for (let i=0;i<bottleCount-empties;i++){
+        b.push(pool.slice(i*CAP, (i+1)*CAP));
+      }
+      for (let i=0;i<empties;i++) b.push([]);
+      return {
+        bottleCount,
+        capacity: CAP,
+        colors,
+        bottles: b,
+        levelCfg: `b${bottleCount}/c${colorsCount}/cap${CAP}/local`
       };
     }
 
-    buildBoardFromRecipe(recipe);
-    render();
-  }
+    function mulberry32(a){
+      return function(){
+        a |= 0; a = a + 0x6D2B79F5 | 0;
+        let t = Math.imul(a ^ a >>> 15, 1 | a);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      }
+    }
 
-  function nextLevel(){
-    level++;
-    questId = Math.ceil(level/4);
-    sig.moves=0; sig.invalid=0; sig.moveTimes=[]; sig.lastMoveAt=0;
-    loadLevel();
-  }
+    async function buildLevel(level){
+      setStatus("loading level…");
+      // try server
+      try{
+        const payload = {
+          level,
+          mode: "mobile",
+          capacity: CAP,
+          telemetry: packTelemetry(),
+        };
+        const data = await postJSON("/api/level-recipe", payload);
+        // expect { ok:true, recipe:{bottles:[...], capacity, levelCfg, ...} }
+        const recipe = data.recipe || data.level || data;
+        applyRecipe(recipe);
+        cfgChip.textContent = "LevelCfg: " + (recipe.levelCfg || "server");
+        setStatus("level ready");
+        return;
+      }catch(e){
+        // fallback local
+        const recipe = localLevelRecipe(level);
+        applyRecipe(recipe);
+        cfgChip.textContent = "LevelCfg: " + recipe.levelCfg;
+        setStatus("level ready (fallback)", false);
+      }
+    }
 
-  function resetRun(){
-    sig.resets++;
-    runSeed = Math.floor(Math.random()*1e9);
-    level=1; questId=1;
-    sig.moves=0; sig.invalid=0; sig.moveTimes=[]; sig.lastMoveAt=0;
-    setPendingModifier(null);
-    anchorRecipe=null; anchorLevel=0;
-    showToast("Run reset");
-    loadLevel();
-  }
+    function applyRecipe(recipe){
+      const b = recipe.bottles || [];
+      bottles = deepCopy(b);
+      initialBottles = deepCopy(b);
+      selected = -1;
+      moves = 0;
+      invalid = 0;
+      updateHUD();
+      render();
+    }
 
-  document.getElementById("btnNext").addEventListener("click", ()=>nextLevel());
-  document.getElementById("btnReset").addEventListener("click", ()=>resetRun());
+    /***********************
+     * POUR RULES
+     ***********************/
+    function topColor(b){
+      if (!b.length) return null;
+      return b[b.length - 1];
+    }
 
-  updateQuestButton();
-  recipeSrcOut.textContent = "—";
-  loadLevel();
-</script>
+    function topRunCount(b){
+      if (!b.length) return 0;
+      const c = topColor(b);
+      let n = 0;
+      for (let i=b.length-1;i>=0;i--){
+        if (b[i] !== c) break;
+        n++;
+      }
+      return n;
+    }
+
+    function canPour(fromIdx, toIdx){
+      if (fromIdx === toIdx) return false;
+      const from = bottles[fromIdx];
+      const to = bottles[toIdx];
+      if (!from.length) return false;
+      if (to.length >= CAP) return false;
+
+      const fc = topColor(from);
+      const tc = topColor(to);
+      if (!tc) return true;              // empty target
+      return tc === fc;                  // must match
+    }
+
+    function pourAmount(fromIdx, toIdx){
+      const from = bottles[fromIdx];
+      const to = bottles[toIdx];
+      const run = topRunCount(from);
+      const space = CAP - to.length;
+      return Math.min(run, space);
+    }
+
+    function doPour(fromIdx, toIdx){
+      if (!canPour(fromIdx, toIdx)) return false;
+      const amt = pourAmount(fromIdx, toIdx);
+      if (amt <= 0) return false;
+
+      const c = topColor(bottles[fromIdx]);
+      for (let i=0;i<amt;i++){
+        bottles[fromIdx].pop();
+        bottles[toIdx].push(c);
+      }
+      return { amt, color: c };
+    }
+
+    function isSolved(){
+      // solved if every bottle is empty or full and all same color
+      for (const b of bottles){
+        if (!b.length) continue;
+        if (b.length !== CAP) return false;
+        const c = b[0];
+        for (let i=1;i<b.length;i++){
+          if (b[i] !== c) return false;
+        }
+      }
+      return true;
+    }
+
+    /***********************
+     * RENDER
+     ***********************/
+    function updateHUD(){
+      lvlPill.textContent = "Level: " + level;
+      movesPill.textContent = "Moves: " + moves;
+      badPill.textContent = "Invalid: " + invalid;
+      resetPill.textContent = "Resets: " + resets;
+    }
+
+    function render(){
+      elGrid.innerHTML = "";
+
+      const cols = (window.innerWidth <= 360) ? 3 : 4;
+      // if too many bottles, allow wrapping naturally; grid is centered.
+
+      bottles.forEach((b, idx) => {
+        const slot = document.createElement("div");
+        slot.className = "bottleSlot";
+
+        const bottle = document.createElement("div");
+        bottle.className = "bottle";
+        bottle.dataset.idx = String(idx);
+
+        if (idx === selected) bottle.classList.add("selected");
+
+        const neck = document.createElement("div");
+        neck.className = "neck";
+
+        const stack = document.createElement("div");
+        stack.className = "liquidStack";
+
+        // each segment is equal height
+        const segH = (parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--bottleH")) / CAP);
+        for (let i=0;i<CAP;i++){
+          const layer = document.createElement("div");
+          layer.className = "layer";
+          const c = b[i] || null; // bottom->top, but our b is bottom->top already
+          if (c){
+            layer.style.background = COLOR[c] || c;
+            layer.style.height = segH + "px";
+          }else{
+            layer.style.height = "0px";
+          }
+          stack.appendChild(layer);
+        }
+
+        bottle.appendChild(stack);
+        bottle.appendChild(neck);
+        slot.appendChild(bottle);
+        elGrid.appendChild(slot);
+
+        bottle.addEventListener("click", () => onBottleTap(idx));
+      });
+    }
+
+    function markInvalid(idx){
+      const node = elGrid.querySelector(`.bottle[data-idx="${idx}"]`);
+      if (!node) return;
+      node.classList.remove("invalid");
+      void node.offsetWidth; // reflow
+      node.classList.add("invalid");
+      setTimeout(() => node.classList.remove("invalid"), 260);
+    }
+
+    /***********************
+     * POUR ANIMATION (satisfying stream)
+     ***********************/
+    function streamPour(fromIdx, toIdx, colorHex){
+      const fromEl = elGrid.querySelector(`.bottle[data-idx="${fromIdx}"]`);
+      const toEl = elGrid.querySelector(`.bottle[data-idx="${toIdx}"]`);
+      if (!fromEl || !toEl) return;
+
+      const gridRect = elGrid.getBoundingClientRect();
+      const a = fromEl.getBoundingClientRect();
+      const b = toEl.getBoundingClientRect();
+
+      const x1 = (a.left + a.right)/2 - gridRect.left;
+      const y1 = a.top - gridRect.top + 8;
+      const x2 = (b.left + b.right)/2 - gridRect.left;
+      const y2 = b.top - gridRect.top + 10;
+
+      const dx = x2 - x1;
+      const dy = Math.max(40, y2 - y1);
+
+      const stream = document.createElement("div");
+      stream.className = "pourStream";
+      stream.style.left = (x1 - 5) + "px";
+      stream.style.top = (y1) + "px";
+      stream.style.height = dy + "px";
+      stream.style.background = colorHex;
+      stream.style.transform = `rotate(${Math.atan2(dy, dx) * 180/Math.PI}deg)`;
+      stream.style.width = "10px";
+
+      elGrid.appendChild(stream);
+      requestAnimationFrame(() => stream.classList.add("on"));
+      setTimeout(() => stream.remove(), 620);
+    }
+
+    /***********************
+     * INPUT (tap source -> tap target)
+     ***********************/
+    function onBottleTap(idx){
+      const now = Date.now();
+      telemetry.taps++;
+      if (telemetry.lastTapAt){
+        const dt = now - telemetry.lastTapAt;
+        telemetry._decisions.push(dt);
+        telemetry.avgDecisionMs = Math.round(telemetry._decisions.reduce((a,b)=>a+b,0)/telemetry._decisions.length);
+      }
+      telemetry.lastTapAt = now;
+
+      if (selected === -1){
+        // select only if not empty
+        if (!bottles[idx].length){
+          markInvalid(idx);
+          invalid++;
+          telemetry.invalid++;
+          updateHUD();
+          return;
+        }
+        selected = idx;
+        render();
+        return;
+      }
+
+      // second tap: attempt pour
+      const from = selected;
+      const to = idx;
+
+      if (from === to){
+        // deselect
+        selected = -1;
+        render();
+        return;
+      }
+
+      if (!canPour(from, to)){
+        invalid++;
+        telemetry.invalid++;
+        telemetry.streakBad++;
+        markInvalid(to);
+        // keep selection so user can try another target
+        updateHUD();
+        return;
+      }
+
+      const beforeColor = topColor(bottles[from]);
+      const result = doPour(from, to);
+      moves++;
+      telemetry.pours++;
+      telemetry.streakBad = 0;
+      updateHUD();
+
+      // animate stream
+      streamPour(from, to, COLOR[beforeColor] || beforeColor);
+
+      // re-render after a short delay to let stream read
+      setTimeout(() => {
+        render();
+        // solved?
+        if (isSolved()){
+          speechBubble.textContent = "Solved. Yes, yes. You can stop panic-pouring now.";
+          // auto advance after a beat (optional)
+        }
+      }, 160);
+
+      // auto-deselect if source is empty
+      if (!bottles[from].length) selected = -1;
+    }
+
+    /***********************
+     * DM / QUEST CADENCE
+     * - DM appears at random level intervals (3–6)
+     * - Modifiers only produced every 5th DM appearance
+     ***********************/
+    function shouldShowDM(){
+      return level >= nextDMAt;
+    }
+
+    function shouldRequestModifier(){
+      // only every 5th DM appearance
+      return (dmVisits > 0) && (dmVisits % MOD_EVERY === 0);
+    }
+
+    function packTelemetry(){
+      return {
+        sessionMs: Date.now() - telemetry.startedAt,
+        taps: telemetry.taps,
+        pours: telemetry.pours,
+        invalid: telemetry.invalid,
+        resets: telemetry.resets,
+        avgDecisionMs: telemetry.avgDecisionMs,
+        streakBad: telemetry.streakBad,
+        level,
+        moves,
+      };
+    }
+
+    async function fetchQuestNode({force=false} = {}){
+      const dmNow = force || shouldShowDM();
+      if (!dmNow){
+        questTitle.textContent = "No DM right now";
+        questText.textContent = "Keep brewing. DM appears every 3–6 levels (random).";
+        return;
+      }
+
+      dmVisits++;
+      // if we just triggered DM due to cadence, schedule next
+      if (!force){
+        nextDMAt = rollDM(level);
+      }
+
+      const wantModifier = shouldRequestModifier();
+
+      setStatus("brewing quest…");
+      questTitle.textContent = wantModifier ? "Major Ritual (Modifiers)" : "Minor Check-in";
+      questText.textContent = "Summoning the DM…";
+
+      try{
+        const payload = {
+          level,
+          cadence: { dmEveryMin: 3, dmEveryMax: 6, modifierEveryDM: MOD_EVERY },
+          wantModifier,
+          telemetry: packTelemetry(),
+          // IMPORTANT: prevent BANK confusion with banker/finance
+          bankDefinition: "BANK is a marketing personality system (Blueprint/Action/Nurturing/Knowledge). Not related to finance or banking."
+        };
+
+        const data = await postJSON("/api/quest-node", payload);
+        // expected: { ok:true, node:{ title, text, bank, bank_confidence, sinTags, modifier, levelCfg, ... } }
+        const node = data.node || data.quest || data;
+
+        questTitle.textContent = node.quest_title || node.title || (wantModifier ? "Major Ritual" : "Minor DM Check-in");
+        questText.textContent = node.quest_text || node.text || "…";
+
+        // UI chips
+        const b = node.bank || node.bank_letter || "—";
+        const conf = (node.bank_confidence != null) ? node.bank_confidence : node.bank_score;
+        bankChip.textContent = `BANK: ${b}${(conf!=null) ? ` (${Number(conf).toFixed(2)})` : ""}`;
+
+        const sins = node.sinTags || node.sin_tags || [];
+        sinChip.textContent = "SinTags: " + (Array.isArray(sins) ? sins.join(", ") : (sins || "—"));
+
+        if (node.levelCfg) cfgChip.textContent = "LevelCfg: " + node.levelCfg;
+
+        // show speech + modifiers
+        speechBubble.textContent = node.dm_line || node.quest_dm_line || node.voice_line || node.quest_text || "…";
+
+        const mod = node.modifier || node.modifiers || null;
+        if (wantModifier && mod){
+          modifiersBar.textContent = "MODIFIERS: " + JSON.stringify(mod);
+        } else {
+          modifiersBar.textContent = "MODIFIERS";
+        }
+
+        // bank tab
+        bankTab.textContent = "BANK IDENTIFIER: " + b;
+
+        setStatus("quest ready");
+      }catch(e){
+        setStatus("quest error", false);
+        questTitle.textContent = "Fallback Brew (Server Offline)";
+        questText.textContent = "The lab lights flicker. Your API gremlins demand tribute. Brew anyway.";
+        speechBubble.textContent = "Tap bottles → tap target. Stop overthinking, apprentice.";
+      }
+    }
+
+    /***********************
+     * BUTTONS
+     ***********************/
+    questBtn.addEventListener("click", () => fetchQuestNode({force:true}));
+
+    nextBtn.addEventListener("click", async () => {
+      level++;
+      selected = -1;
+
+      // If cadence hits, fetch DM automatically (minor/major logic)
+      if (shouldShowDM()){
+        await fetchQuestNode({force:false});
+      } else {
+        // quiet UI
+        questTitle.textContent = "Brew in progress";
+        questText.textContent = "No DM. Deterministic level between rituals.";
+      }
+
+      await buildLevel(level);
+    });
+
+    resetBtn.addEventListener("click", async () => {
+      resets++;
+      telemetry.resets++;
+      selected = -1;
+      // restore initial state
+      bottles = deepCopy(initialBottles);
+      moves = 0;
+      invalid = 0;
+      updateHUD();
+      render();
+      setStatus("reset");
+      speechBubble.textContent = "Reset again? Beautiful. Indecision in its natural habitat.";
+    });
+
+    /***********************
+     * INIT
+     ***********************/
+    (async function init(){
+      // initial DM message
+      questTitle.textContent = "Mobile Layout Locked";
+      questText.textContent = "Portrait-first. No desktop drift. Tap bottle → tap target. DM appears randomly every 3–6 levels.";
+
+      // build level 1
+      await buildLevel(level);
+
+      // optional: initial DM on first load? (off by default)
+      // await fetchQuestNode({force:true});
+    })();
+  </script>
 </body>
 </html>
