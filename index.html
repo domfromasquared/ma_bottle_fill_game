@@ -242,8 +242,14 @@
 /* =========================================================
    CONFIG
 ========================================================= */
-const API_RECIPE = "http://localhost:8787/api/level-recipe";
-const API_QUEST  = "http://localhost:8787/api/quest-node";
+const API_BASE =
+  (location.hostname === "localhost" || location.hostname === "127.0.0.1")
+    ? "http://localhost:8787"
+    : "https://ma-bottle-fill-api.onrender.com";
+
+const API_RECIPE = `${API_BASE}/api/level-recipe`;
+const API_QUEST  = `${API_BASE}/api/quest-node`;
+
 
 const COLORS = [
   "#00A3FF", "#FF3B30", "#34C759", "#FFCC00",
