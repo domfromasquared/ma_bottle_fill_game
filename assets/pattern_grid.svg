@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <rect width="64" height="64" fill="none"/>
+  <g stroke="white" stroke-opacity="0.14" stroke-width="1">
+    <path d="M0 8 H64"/><path d="M0 16 H64"/><path d="M0 24 H64"/><path d="M0 32 H64"/>
+    <path d="M0 40 H64"/><path d="M0 48 H64"/><path d="M0 56 H64"/>
+    <path d="M8 0 V64"/><path d="M16 0 V64"/><path d="M24 0 V64"/><path d="M32 0 V64"/>
+    <path d="M40 0 V64"/><path d="M48 0 V64"/><path d="M56 0 V64"/>
+  </g>
+</svg>
