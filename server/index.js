@@ -1,9 +1,9 @@
 // server/index.js
-// Marketing Alchemist Bottle Fill API (Voice-Locked)
+// Marketing Alchemist Bottle Fill API (Voice-Locked + Minor/Major DM)
 //
 // Endpoints:
 //   GET  /health
-//   POST /api/quest-node
+//   POST /api/quest-node   (supports wantModifier: boolean)
 //   POST /api/level-recipe
 
 import express from "express";
@@ -71,7 +71,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// ---------- Single-flight (server) ----------
+// ---------- Single-flight ----------
 const INFLIGHT = new Map();
 async function singleFlight(key, fn) {
   if (INFLIGHT.has(key)) return INFLIGHT.get(key);
@@ -117,7 +117,6 @@ function safeJsonParse(raw, label="payload") {
   catch { return { ok:false, error:`${label} JSON.parse failed`, details:{ raw: String(raw).slice(0,1400) } }; }
 }
 
-// Voice drift tripwire (finance/corporate jargon)
 function violatesVoice(text) {
   const t = String(text || "").toLowerCase();
   const forbidden = [
@@ -144,6 +143,17 @@ function fewshotsBlock() {
   }
   return lines.join("\n");
 }
+
+const ZERO_MOD = {
+  lockedBottlesDelta: 0,
+  emptyBottlesDelta: 0,
+  capacityDelta: 0,
+  wildcardSlotsDelta: 0,
+  colorsDelta: 0,
+  bottleCountDelta: 0,
+  ruleTag: "none",
+  bonusObjective: ""
+};
 
 // ---------- Schemas ----------
 const MODIFIER_SCHEMA = {
@@ -223,6 +233,8 @@ app.post("/api/quest-node", async (req, res) => {
     const missing = required.filter(k => context[k] === undefined || context[k] === null || context[k] === "");
     if (missing.length) return fail(res, 400, "Missing required fields", missing);
 
+    const wantModifier = context.wantModifier !== false;
+
     const instructions = `
 ${voiceLock}
 
@@ -230,25 +242,27 @@ ${fewshotsBlock()}
 
 CRITICAL OUTPUT RULES:
 - Return ONLY JSON matching schema.
-- Keep it SHORT and punchy. No long paragraphs.
+- Keep it SHORT and punchy.
 - dm_intro: 1–2 sentences. MUST include (a) clean roast and (b) lab metaphor.
 - dm_midpoint: 1 sentence. MUST be a tactical directive with urgency.
 - dm_verdict: 1 sentence. MUST include signature token: ${DM_SIGNATURE}
 - Use 1–2 required catchphrases per response.
 - HARD BAN: finance/corporate jargon. BANK is personality framework only.
+
+MODIFIER RULE:
+- If wantModifier=false, you MUST output modifier as ALL ZEROS with ruleTag "none".
 `.trim();
 
     const input = `
-Generate the next quest node for this player.
-Personalize to BANK and sinTags.
+Generate the next DM quest node for this player.
+If wantModifier=false, deliver story + directive only (modifier zeros).
 Player context JSON:
 ${JSON.stringify(context, null, 2)}
 
-Modifier guidance (deltas apply to next level only):
-Pick 1–2 meaningful deltas; leave others 0. Add ruleTag + bonusObjective.
+wantModifier = ${wantModifier}
 `.trim();
 
-    const key = `quest:${context.seed}:${context.questId}:${context.level}:${context.bankPrimary}`;
+    const key = `quest:${context.seed}:${context.questId}:${context.level}:${context.bankPrimary}:${wantModifier}`;
     const resp = await singleFlight(key, () =>
       openai.responses.create({
         model: MODEL_QUEST,
@@ -267,12 +281,12 @@ Pick 1–2 meaningful deltas; leave others 0. Add ruleTag + bonusObjective.
 
     const payload = parsed.value;
 
-    // Signature enforcement
     if (typeof payload.dm_verdict !== "string" || !payload.dm_verdict.includes(DM_SIGNATURE)) {
       return fail(res, 400, "LLM voice payload failed validation", ["dm_verdict: missing signature token (risk of tone drift)"]);
     }
 
-    // Forbidden-topic enforcement
+    if (!wantModifier) payload.modifier = { ...ZERO_MOD };
+
     const fullText = [payload.quest_title, payload.dm_intro, payload.dm_midpoint, payload.dm_verdict].join(" ");
     if (violatesVoice(fullText)) {
       return fail(res, 400, "LLM voice drift: forbidden-topic detected", ["Detected finance/corporate language. Voice lock violation."]);
@@ -297,11 +311,7 @@ app.post("/api/level-recipe", async (req, res) => {
     const missing = required.filter(k => context[k] === undefined || context[k] === null || context[k] === "");
     if (missing.length) return fail(res, 400, "Missing required fields", missing);
 
-    const incomingMod = context.modifier || {
-      lockedBottlesDelta:0, emptyBottlesDelta:0, capacityDelta:0,
-      wildcardSlotsDelta:0, colorsDelta:0, bottleCountDelta:0,
-      ruleTag:"none", bonusObjective:""
-    };
+    const incomingMod = context.modifier || { ...ZERO_MOD };
 
     const instructions = `
 ${voiceLock}
@@ -361,7 +371,6 @@ Return appliedModifier equal to these deltas (same object).
       return fail(res, 400, "LLM voice drift: forbidden-topic detected", ["Detected finance/corporate language in recipe text."]);
     }
 
-    // Server clamp safety net
     recipe.capacity = clamp(recipe.capacity, 3, 6);
     recipe.colors = clamp(recipe.colors, 4, 10);
     recipe.bottleCount = clamp(recipe.bottleCount, 6, 14);
