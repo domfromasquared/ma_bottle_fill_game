@@ -65,7 +65,7 @@
       position:absolute;
       inset:0;
       pointer-events:none;
-      opacity:.28;
+      opacity:.56;
       background-size:64px 64px;
       background-repeat:repeat;
       mix-blend-mode: screen;
@@ -74,16 +74,16 @@
     /* Default role mappings */
 .seg.role-volatile::after   { background-image: url("./assets/elements/textures/pattern_ripples.svg"); animation: drift 7s linear infinite; }
 .seg.role-catalyst::after   { background-image: url("./assets/elements/textures/pattern_streaks.svg"); animation: drift 6s linear infinite; }
-.seg.role-stabilizer::after { background-image: url("./assets/elements/textures/pattern_noise.svg"); opacity:.18; }
+.seg.role-stabilizer::after { background-image: url("./assets/elements/textures/pattern_noise.svg"); opacity:.36; }
 .seg.role-structural::after,
-.seg.role-foundational::after { background-image: url("./assets/elements/textures/pattern_grid.svg"); opacity:.22; }
+.seg.role-foundational::after { background-image: url("./assets/elements/textures/pattern_grid.svg"); opacity:.44; }
 .seg.role-transmission::after,
-.seg.role-conversion::after { background-image: url("./assets/elements/textures/pattern_chevrons.svg"); opacity:.22; }
+.seg.role-conversion::after { background-image: url("./assets/elements/textures/pattern_chevrons.svg"); opacity:.44; }
 
 /* Element-specific overrides (optional, improves readability on similar colors) */
-.seg.el-EM::after { background-image: url("./assets/elements/textures/pattern_bubbles.svg"); opacity:.26; animation: drift 8s linear infinite; }
+.seg.el-EM::after { background-image: url("./assets/elements/textures/pattern_bubbles.svg"); opacity:.52; animation: drift 8s linear infinite; }
 .seg.el-CO::after,
-.seg.el-DI::after { background-image: url("./assets/elements/textures/pattern_hatch.svg"); opacity:.22; }
+.seg.el-DI::after { background-image: url("./assets/elements/textures/pattern_hatch.svg"); opacity:.44; }
 
 /* Motion is subtle; respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
