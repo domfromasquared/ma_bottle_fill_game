@@ -1,20 +1,21 @@
-export async function postJSON(baseUrl, path, body){
-  const base = String(baseUrl || "").trim().replace(/\/+$/, "");
-  const url = base + path;
-  const r = await fetch(url, {
+export async function postJSON(apiBase, path, body){
+  const url = apiBase.replace(/\/+$/,"") + path;
+  const res = await fetch(url, {
     method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify(body)
+    headers: { "content-type":"application/json" },
+    body: JSON.stringify(body),
   });
-  if (!r.ok){
-    let detailText = "";
-    try { detailText = await r.text(); } catch {}
-    const retryAfter = r.headers.get("Retry-After");
-    const err = new Error(`${r.status} ${r.statusText}${retryAfter ? ` (Retry-After: ${retryAfter}s)` : ""}`);
-    err.status = r.status;
-    err.retryAfter = retryAfter ? Number(retryAfter) : null;
-    err.detailText = detailText;
+
+  const text = await res.text();
+  let json = null;
+  try{ json = text ? JSON.parse(text) : null; } catch { /* ignore */ }
+
+  if (!res.ok){
+    const err = new Error(`HTTP ${res.status}`);
+    err.status = res.status;
+    err.detailText = text;
+    err.payload = json;
     throw err;
   }
-  return await r.json();
+  return json;
 }
