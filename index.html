@@ -87,7 +87,13 @@
     @media (prefers-reduced-motion: reduce) {
       .seg::after{ animation:none !important; }
     }
-    @keyframes drift {
+   /* Desktop-only calming pass (optional, mobile-first default stays strong) */
+@media (min-width: 900px) {
+  .seg::after {
+    opacity: .6;
+  }
+}
+ @keyframes drift {
       from { background-position: 0 0; }
       to   { background-position: 64px 64px; }
     }
