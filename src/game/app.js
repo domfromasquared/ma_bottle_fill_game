@@ -6,12 +6,16 @@ import { postJSON } from "../utils/http.js";
 import { makeToaster, qs, playPourFX } from "../utils/ui.js";
 
 /**
- * This module replaces the huge inline <script> from index.html.
- * It keeps the same core mechanics you’ve been iterating:
- * - DM visits: seeded & persisted per run (minor/major cadence)
- * - Soft foreshadowing window (DM only, no stabilizer complexity)
- * - Illegal reaction trap: UR_without_CL can hide/lock CL behind a stabilizer bottle
- * - Punish-on-behavior: after X invalid pours in a level, show element punishes line + queue sinTag to bias next thesis pick
+ * Mobile-first UI version:
+ * - Base playfield: Bottles grid
+ * - Bottom overlays: Modifiers bar (persistent), Speech bubble + Character (DM moments)
+ * - BANK rail: persistent left HUD
+ *
+ * Keeps mechanics:
+ * - DM visits (seeded/persisted)
+ * - Soft foreshadowing window
+ * - Stabilizer lock/hide mechanic
+ * - Punish-on-invalid pours -> show punishes line + queue sinTag
  */
 
 // ---------------- Progression gates ----------------
@@ -24,7 +28,7 @@ const DEFAULT_LOCAL = "http://localhost:8787";
 const isLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1";
 
 // ---------------- Punish-on-behavior ----------------
-const INVALID_POUR_PUNISH_THRESHOLD = 3; // X invalid pours in a level triggers punish callout once
+const INVALID_POUR_PUNISH_THRESHOLD = 3;
 const SIN_QUEUE_KEY = "ma_sinQueue";
 
 function loadSinQueue(){ return getJSON(SIN_QUEUE_KEY, []); }
@@ -43,24 +47,7 @@ function consumeSinTag(){
 }
 
 // ---------------- DOM ----------------
-const apiBaseEl = qs("apiBase");
 const statusOut = qs("statusOut");
-const questTitle = qs("questTitle");
-const dmIntro = qs("dmIntro");
-const dmStatus = qs("dmStatus");
-const dmMid = qs("dmMid");
-const dmVerdict = qs("dmVerdict");
-const bankOut = qs("bankOut");
-const sinsOut = qs("sinsOut");
-const modOut = qs("modOut");
-const cfgOut = qs("cfgOut");
-const recipeSrcOut = qs("recipeSrcOut");
-const dmCountOut = qs("dmCountOut");
-const nextDmOut = qs("nextDmOut");
-
-const btnQuest = qs("btnQuest");
-const btnNext = qs("btnNext");
-const btnReset = qs("btnReset");
 
 const grid = qs("grid");
 const legendEl = qs("legend");
@@ -68,12 +55,35 @@ const legendEl = qs("legend");
 const levelOut = qs("levelOut");
 const movesOut = qs("movesOut");
 const badOut = qs("badOut");
-const resetOut = qs("resetOut");
 const pourFX = qs("pourFX");
 
 const showToast = makeToaster(qs("toast"));
 
-apiBaseEl.value = isLocal ? DEFAULT_LOCAL : DEFAULT_PROD;
+// Settings / api base
+const settings = qs("settings");
+const devBtn = qs("devBtn");
+const apiBaseEl = qs("apiBase");
+
+// DM overlays
+const dmCharacter = qs("dmCharacter");
+const dmClose = qs("dmClose");
+const speech = qs("speech");
+const questTitle = qs("questTitle");
+const speechText = qs("speechText");
+const speechSmall = qs("speechSmall");
+
+// BANK rail
+const bankRail = qs("bankRail");
+const bankExpanded = qs("bankExpanded");
+
+// Mod slots
+const modSlot1 = qs("modSlot1");
+const modSlot2 = qs("modSlot2");
+const modSlot3 = qs("modSlot3");
+
+// ---------------- Local api base preference ----------------
+const API_BASE_KEY = "ma_apiBase";
+apiBaseEl.value = localStorage.getItem(API_BASE_KEY) || (isLocal ? DEFAULT_LOCAL : DEFAULT_PROD);
 
 // ---------------- Run/Progress storage keys ----------------
 const RUN_SEED_KEY = "ma_runSeed";
@@ -101,7 +111,6 @@ function loadOrInitRunState(){
 }
 
 let { runSeed, dmAppearCount, nextDMAtLevel } = loadOrInitRunState();
-
 function isDMLevel(lvl){ return lvl === nextDMAtLevel; }
 function isMajorDM(upcomingCount){ return (upcomingCount % DM_MAJOR_EVERY) === 0; }
 
@@ -109,36 +118,6 @@ function scheduleNextDM(currentLevel){
   const gap = randInt(DM_GAP_MIN, DM_GAP_MAX, hashSeed(runSeed, dmAppearCount * 97, currentLevel * 131));
   nextDMAtLevel = currentLevel + gap;
   setNum(NEXT_DM_KEY, nextDMAtLevel);
-}
-
-function updateDMButton(){
-  dmCountOut.textContent = String(dmAppearCount);
-  nextDmOut.textContent = `L${nextDMAtLevel}`;
-
-  if (isDMLevel(level)){
-    const upcoming = dmAppearCount + 1;
-    const major = isMajorDM(upcoming);
-    btnQuest.disabled = false;
-    btnQuest.textContent = major ? "Major Ritual (Brew Modifier)" : "DM Speaks (No Modifier)";
-
-    dmStatus.textContent = major
-      ? "A major ritual is available now. Brew a modifier that affects the NEXT level."
-      : "Minor DM visit. Story + directive only. No modifier brewed this time.";
-  } else {
-    btnQuest.disabled = true;
-    btnQuest.textContent = `DM @ L${nextDMAtLevel}`;
-    dmStatus.textContent =
-      `DM appears randomly every ${DM_GAP_MIN}–${DM_GAP_MAX} levels. ` +
-      `Next appearance: level ${nextDMAtLevel}. ` +
-      `Modifiers only brew on every ${DM_MAJOR_EVERY}th DM appearance.`;
-  }
-}
-
-function renderDM(payload){
-  questTitle.textContent = payload.quest_title || "—";
-  dmIntro.textContent = payload.dm_intro || "";
-  dmMid.textContent = payload.dm_midpoint || "";
-  dmVerdict.textContent = payload.dm_verdict || "";
 }
 
 // ---------------- Telemetry (BANK inference) ----------------
@@ -184,6 +163,13 @@ function inferSinTags(){
 
   if (!tags.length) tags.push("steady_hand");
   return [...new Set(tags)].slice(0,3);
+}
+
+function setBankRail(bankPrimary){
+  const spans = bankRail.querySelectorAll(".bankLetters span");
+  spans.forEach(s => s.classList.remove("on"));
+  const on = bankRail.querySelector(`.bankLetters span[data-bank="${bankPrimary}"]`);
+  if (on) on.classList.add("on");
 }
 
 // ---------------- Thesis selection + palette ----------------
@@ -259,6 +245,7 @@ function renderLegend(recipe){
 
     const el = ELEMENTS[sym];
     if (!el) continue;
+
     const item = document.createElement("div");
     item.className = "legendItem";
     const teaches = el.teaches ? `teaches: ${el.teaches}` : "";
@@ -274,30 +261,9 @@ function renderLegend(recipe){
   }
 }
 
-// ---------------- Modifier (UI placeholder) ----------------
+// ---------------- Modifier (placeholder) ----------------
 let pendingModifier = null;
-function formatMod(mod){
-  if (!mod) return "—";
-  const parts = [];
-  const map = [
-    ["bottleCountDelta","bottles"],
-    ["colorsDelta","colors"],
-    ["capacityDelta","cap"],
-    ["emptyBottlesDelta","empty"],
-    ["lockedBottlesDelta","locks"],
-    ["wildcardSlotsDelta","wild"],
-  ];
-  for (const [k,label] of map){
-    const v = mod[k] ?? 0;
-    if (v) parts.push(`${label}${v>0?"+":""}${v}`);
-  }
-  const tag = mod.ruleTag && mod.ruleTag !== "none" ? mod.ruleTag : "";
-  return (parts.length ? parts.join(" ") : "no-delta") + (tag ? ` | ${tag}` : "");
-}
-function setPendingModifier(mod){
-  pendingModifier = mod;
-  modOut.textContent = formatMod(mod);
-}
+function setPendingModifier(mod){ pendingModifier = mod || null; }
 
 // ---------------- Bottle Game State ----------------
 const state = {
@@ -306,7 +272,7 @@ const state = {
   selected:-1,
   locked:[],
   hiddenSegs:[],
-  stabilizer: null // { idx, unlock, symbol, unlocked:false }
+  stabilizer: null
 };
 
 const topColor = (b)=> b.length ? b[b.length-1] : null;
@@ -369,7 +335,6 @@ function doPour(from,to){
     sig.invalid++; badOut.textContent=String(sig.invalid);
     levelInvalid++;
 
-    // After X invalid pours in this level, show element punishes + queue a sinTag for next thesis pick
     if (!punishedThisLevel && levelInvalid >= INVALID_POUR_PUNISH_THRESHOLD){
       punishedThisLevel = true;
 
@@ -393,7 +358,6 @@ function doPour(from,to){
   const space=state.capacity-b.length;
   const amount=Math.min(run, space);
 
-  // move segments
   for(let i=0;i<amount;i++) b.push(a.pop());
 
   sig.moves++;
@@ -404,6 +368,7 @@ function doPour(from,to){
 
   if (isSolved()){
     showToast("Solved. Next level.");
+    nextLevel();
   }
   render();
   return true;
@@ -415,11 +380,10 @@ let questId = 1;
 let lastRecipe = null;
 
 function computeLevelConfig(){
-  // base, then apply pending modifier if present
   const base = {
-    colors: Math.min(6, 3 + Math.floor((level-1)/6)),  // ramps slowly
+    colors: Math.min(6, 3 + Math.floor((level-1)/6)),
     capacity: 4,
-    bottleCount: null, // derived
+    bottleCount: null,
     emptyBottles: 2,
     lockedBottles: 0,
     wildcardSlots: 0,
@@ -432,7 +396,6 @@ function computeLevelConfig(){
     base.emptyBottles = Math.max(1, Math.min(4, base.emptyBottles + (m.emptyBottlesDelta||0)));
     base.lockedBottles = Math.max(0, Math.min(2, base.lockedBottles + (m.lockedBottlesDelta||0)));
     base.wildcardSlots = Math.max(0, Math.min(2, base.wildcardSlots + (m.wildcardSlotsDelta||0)));
-    // bottleCountDelta can push bottleCount directly, but we keep derived default + delta
     base.bottleCount = (base.colors + base.emptyBottles) + (m.bottleCountDelta||0);
   }
   if (!base.bottleCount) base.bottleCount = base.colors + base.emptyBottles;
@@ -448,7 +411,7 @@ function buildRecipe(){
   const cfg = computeLevelConfig();
   const elements = chooseElementsForThesis(thesisKey, cfg.colors, rng);
 
-  // Illegal reaction trap: if thesis is UR_without_CL, allow UR in palette but hide/lock CL as stabilizer mechanic
+  // Illegal reaction trap
   let stabilizer = null;
   let elementsForPuzzle = [...elements];
 
@@ -456,10 +419,7 @@ function buildRecipe(){
     const hasUR = elementsForPuzzle.includes("UR");
     if (!hasUR) elementsForPuzzle[0] = "UR";
 
-    // CL should exist in schema
     if (ELEMENTS["CL"]){
-      // add CL to palette as an extra "hidden color" only when stabilizer complexity is allowed
-      // before STABILIZER_UNLOCK_LEVEL, we only foreshadow via DM and do NOT introduce CL into the puzzle
       if (level >= STABILIZER_UNLOCK_LEVEL){
         if (!elementsForPuzzle.includes("CL")) elementsForPuzzle.push("CL");
         stabilizer = { unlock:"UR_full", symbol:"CL", idx:-1, unlocked:false };
@@ -467,72 +427,52 @@ function buildRecipe(){
     }
   }
 
-  return {
-    level,
-    cfg,
-    thesisKey,
-    recipeSource: thesisKey, // surfacing where it came from
-    elements: elementsForPuzzle
-  , stabilizer
-  };
+  return { level, cfg, thesisKey, recipeSource: thesisKey, elements: elementsForPuzzle, stabilizer };
 }
 
 function genPuzzle(recipe){
   const cfg = recipe.cfg;
   state.capacity = cfg.capacity;
 
-  // Determine actual palette used for fill colors (exclude hidden stabilizer symbol if needed)
-  // If stabilizer is present, that color still exists in palette, but all its segments live in the locked bottle.
   const symbols = recipe.elements.slice();
   const colors = symbols.length;
 
   const rng = makeRng(hashSeed(runSeed, 9001, level));
-  // Color indices 0..colors-1, but we might place stabilizer color segments specially.
   const stabilizerSym = recipe.stabilizer?.symbol || null;
   const stabilizerIndex = stabilizerSym ? symbols.indexOf(stabilizerSym) : -1;
 
-  // Start with empty bottles
   const bottleCount = cfg.bottleCount;
   const bottles = Array.from({length:bottleCount}, ()=>[]);
   const locked = Array.from({length:bottleCount}, ()=>false);
   const hiddenSegs = Array.from({length:bottleCount}, ()=>false);
 
-  // Fill distribution:
-  // - For normal colors: create capacity segments each.
-  // - For stabilizer color: create capacity segments that will be put into the stabilizer bottle, not shuffled.
   const pool = [];
   for (let ci=0; ci<colors; ci++){
     if (ci === stabilizerIndex) continue;
     for (let k=0;k<cfg.capacity;k++) pool.push(ci);
   }
 
-  // Shuffle pool
   for (let i=pool.length-1;i>0;i--){
     const j = rng.int(0,i);
     [pool[i], pool[j]] = [pool[j], pool[i]];
   }
 
-  // Fill first (colors) bottles with segments (classic)
   let bi = 0;
   while (pool.length){
     if (bottles[bi].length >= cfg.capacity) bi = (bi+1) % (bottleCount - cfg.emptyBottles);
     bottles[bi].push(pool.pop());
   }
 
-  // Ensure last emptyBottles are empty
   for (let i=bottleCount-cfg.emptyBottles; i<bottleCount; i++){
     bottles[i] = [];
   }
 
-  // Locked bottles (optional): lock first N non-empty bottles
   for (let i=0;i<cfg.lockedBottles;i++){
     locked[i] = true;
   }
 
-  // Stabilizer bottle (optional): allocate a bottle at end-1 (but not an empty bottle if possible)
   if (recipe.stabilizer && stabilizerIndex >= 0){
-    // pick an index that is currently empty to keep readability (prefer last)
-    const idx = bottleCount-1; // last bottle
+    const idx = bottleCount-1;
     recipe.stabilizer.idx = idx;
 
     bottles[idx] = Array.from({length:cfg.capacity}, ()=>stabilizerIndex);
@@ -540,7 +480,6 @@ function genPuzzle(recipe){
     hiddenSegs[idx] = true;
   }
 
-  // Commit to state
   state.bottles = bottles;
   state.locked = locked;
   state.hiddenSegs = hiddenSegs;
@@ -563,7 +502,6 @@ function render(){
     bottle.addEventListener("click", () => onBottleTap(i));
     bottle.addEventListener("touchend", (e)=>{ e.preventDefault(); onBottleTap(i); }, {passive:false});
 
-    // segments bottom->top
     const b = state.bottles[i];
     for (let s=0; s<state.capacity; s++){
       const seg = document.createElement("div");
@@ -577,11 +515,9 @@ function render(){
         const el = ELEMENTS[sym];
         seg.style.background = el?.color || "#fff";
 
-        // pattern overlay classes
         if (el?.role) seg.classList.add(`role-${String(el.role).toLowerCase()}`);
         seg.classList.add(`el-${sym}`);
       }
-
       bottle.appendChild(seg);
     }
 
@@ -591,9 +527,7 @@ function render(){
 
 function onBottleTap(i){
   const now = performance.now();
-  if (sig.lastMoveAt){
-    sig.moveTimes.push(now - sig.lastMoveAt);
-  }
+  if (sig.lastMoveAt) sig.moveTimes.push(now - sig.lastMoveAt);
   sig.lastMoveAt = now;
 
   if (state.selected < 0){
@@ -609,15 +543,32 @@ function onBottleTap(i){
   doPour(from,to);
 }
 
-// ---------------- DM click ----------------
-btnQuest.addEventListener("click", async () => {
+function nextLevel(){
+  level++;
+  startLevel();
+}
+
+// ---------------- DM overlay + quest call ----------------
+function showDMOverlay(){
+  dmCharacter.classList.add("show");
+  dmCharacter.setAttribute("aria-hidden","false");
+  speech.classList.add("show");
+  speech.setAttribute("aria-hidden","false");
+}
+
+function hideDMOverlay(){
+  dmCharacter.classList.remove("show");
+  dmCharacter.setAttribute("aria-hidden","true");
+  speech.classList.remove("show");
+  speech.setAttribute("aria-hidden","true");
+}
+
+async function runDMIfAvailable(){
   if (!isDMLevel(level)) return;
 
   const { bankPrimary, bankConfidence } = inferBANK();
   const sinTags = inferSinTags();
-
-  bankOut.textContent = `${bankPrimary} (${Math.round(bankConfidence*100)}%)`;
-  sinsOut.textContent = sinTags.length ? sinTags.join(", ") : "—";
+  setBankRail(bankPrimary);
 
   const upcoming = dmAppearCount + 1;
   const wantModifier = isMajorDM(upcoming);
@@ -627,6 +578,11 @@ btnQuest.addEventListener("click", async () => {
     level < STABILIZER_UNLOCK_LEVEL;
 
   statusOut.textContent = wantModifier ? "brewing..." : "speaking...";
+
+  showDMOverlay();
+  questTitle.textContent = wantModifier ? "Major Ritual" : "DM Speaks";
+  speechText.textContent = "…";
+  speechSmall.textContent = `BANK ${bankPrimary} (${Math.round(bankConfidence*100)}%) · sinTags: ${sinTags.join(", ")}`;
 
   const payload = {
     act: Math.ceil(level/5),
@@ -645,7 +601,17 @@ btnQuest.addEventListener("click", async () => {
     const data = await singleFlight(key, () => postJSON(apiBaseEl.value, "/api/quest-node", payload));
     const q = data.payload;
 
-    renderDM(q);
+    // Render into bubble
+    questTitle.textContent = q.quest_title || (wantModifier ? "Major Ritual" : "DM Speaks");
+
+    const parts = [
+      q.dm_intro || "",
+      q.dm_midpoint || "",
+      q.dm_verdict || ""
+    ].filter(Boolean);
+
+    speechText.textContent = parts.join("\n\n") || "…";
+    speechSmall.textContent = `Next DM scheduled · major every ${DM_MAJOR_EVERY}`;
 
     if (wantModifier){
       setPendingModifier(q.modifier);
@@ -658,85 +624,84 @@ btnQuest.addEventListener("click", async () => {
     dmAppearCount = upcoming;
     setNum(DM_COUNT_KEY, dmAppearCount);
     scheduleNextDM(level);
-    updateDMButton();
 
     statusOut.textContent = "ok";
+    questId++;
   } catch(e){
     statusOut.textContent = (e?.status === 429) ? "rate-limited" : "dm error";
-    showToast((e?.status === 429) ? "Rate limited. Try again soon." : "DM error (check server).");
+    speechText.textContent = (e?.status === 429)
+      ? "Rate limited. Try again soon."
+      : "DM error. Check API base / server.";
     console.warn(e, e.detailText);
   }
-});
+}
 
-// ---------------- Buttons ----------------
-btnNext.addEventListener("click", () => {
-  level++;
-  startLevel();
-});
-btnReset.addEventListener("click", () => {
-  sig.resets++;
-  resetOut.textContent = String(sig.resets);
-
-  // reset run seed + DM schedule + pending modifier + sin queue
-  del(RUN_SEED_KEY); del(DM_COUNT_KEY); del(NEXT_DM_KEY);
-  del(SIN_QUEUE_KEY);
-  runSeed = 0; dmAppearCount = 0; nextDMAtLevel = 0;
-  ({ runSeed, dmAppearCount, nextDMAtLevel } = loadOrInitRunState());
-
-  pendingModifier = null;
-  modOut.textContent = "—";
-
-  level = 1;
-  startLevel();
-});
-
+// ---------------- Level boot ----------------
 function startLevel(){
-  // clear per-level punish tracking
   levelInvalid = 0;
   punishedThisLevel = false;
 
   levelOut.textContent = String(level);
   badOut.textContent = String(sig.invalid);
   movesOut.textContent = String(sig.moves);
-  cfgOut.textContent = "—";
-  recipeSrcOut.textContent = "—";
 
-  updateDMButton();
+  const { bankPrimary } = inferBANK();
+  setBankRail(bankPrimary);
 
   lastRecipe = buildRecipe();
   const recipe = lastRecipe;
 
-  // Apply palette and render legend
   applyElementPalette({ elements: recipe.elements, colors: recipe.elements.length, thesisKey: recipe.thesisKey });
   state.stabilizer = recipe.stabilizer;
 
-  // generate puzzle
   genPuzzle(recipe);
-
-  // render info
-  cfgOut.textContent = `C${recipe.cfg.colors}/B${recipe.cfg.bottleCount}/Cap${recipe.cfg.capacity}/E${recipe.cfg.emptyBottles}` + (recipe.cfg.lockedBottles ? `/L${recipe.cfg.lockedBottles}` : "");
-  recipeSrcOut.textContent = recipe.recipeSource || "—";
-
   renderLegend({ thesisKey: recipe.thesisKey, colors: recipe.elements.length, elements: recipe.elements });
 
-  // If we’re before stabilizer unlock levels and the thesis would be UR_without_CL, we keep it as foreshadow only:
-  // we DO still allow UR in the palette, but we do NOT insert the hidden CL bottle. (recipe.stabilizer will be null in that case)
-  statusOut.textContent = "ready";
   render();
+
+  // If this is a DM level, DM can pop and pause vibe; player can X out to continue
+  if (isDMLevel(level)){
+    runDMIfAvailable();
+  } else {
+    hideDMOverlay();
+  }
+
+  statusOut.textContent = "ready";
 }
+
+// ---------------- UI events ----------------
+devBtn.addEventListener("click", ()=> settings.showModal());
+apiBaseEl.addEventListener("change", ()=>{
+  localStorage.setItem(API_BASE_KEY, apiBaseEl.value.trim());
+});
+
+bankRail.addEventListener("click", ()=>{
+  const expanded = bankRail.classList.toggle("expanded");
+  bankExpanded.setAttribute("aria-hidden", expanded ? "false" : "true");
+});
+
+dmClose.addEventListener("click", ()=>{
+  hideDMOverlay();
+});
+
+// Modifiers shop placeholders
+function modTap(){
+  showToast("Modifier shop (later).");
+}
+modSlot1.addEventListener("click", modTap);
+modSlot2.addEventListener("click", modTap);
+modSlot3.addEventListener("click", modTap);
 
 // ---------------- Boot ----------------
 (function boot(){
-  levelOut.textContent = String(level);
-  movesOut.textContent = String(sig.moves);
-  badOut.textContent = String(sig.invalid);
-  resetOut.textContent = String(sig.resets);
-
-  updateDMButton();
+  // ambient line in bubble only if DM is open; otherwise no overlay
+  hideDMOverlay();
   startLevel();
 
-  // tiny: show some lore in DM card as a default ambient line
-  if (!dmIntro.textContent){
-    dmIntro.textContent = pickLoreLine?.("open") || "You want the potion? Stop being dramatic and pour.";
+  // Optional: show a one-time toast
+  const seen = localStorage.getItem("ma_seenMobileUI");
+  if (!seen){
+    localStorage.setItem("ma_seenMobileUI","1");
+    showToast(pickLoreLine?.("open") || "Tap bottle → tap target.");
   }
 })();
