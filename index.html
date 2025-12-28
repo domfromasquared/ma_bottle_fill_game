@@ -2,73 +2,98 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-  <title>Marketing Alchemist — Bottle Fill (Quest DM)</title>
+  <!-- iPhone safe-area support -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Marketing Alchemist — Bottle Fill</title>
   <link rel="stylesheet" href="./assets/styles.css" />
 </head>
 
 <body>
-  <div class="wrap">
-    <!-- DM / Quest Card -->
-    <div class="card" id="dmCard">
-      <div class="cardHeader">
-        <div class="title">🧪 The Marketing Alchemist <span style="opacity:.7">(Quest DM)</span></div>
-        <div class="split">
-          <div class="pill">
-            <span style="opacity:.7">API:</span>
-            <input id="apiBase" class="mono" />
+  <main class="screen" id="screen">
+    <!-- BANK IDENTIFIER (left rail) -->
+    <button class="bankRail" id="bankRail" aria-label="BANK Identifier">
+      <div class="bankLetters">
+        <span data-bank="B">B</span>
+        <span data-bank="A">A</span>
+        <span data-bank="N">N</span>
+        <span data-bank="K">K</span>
+      </div>
+      <div class="bankExpanded" id="bankExpanded" aria-hidden="true">
+        <div><b>B</b> — Blueprint (structure, steps)</div>
+        <div><b>A</b> — Action (speed, results)</div>
+        <div><b>N</b> — Nurturing (support, trust)</div>
+        <div><b>K</b> — Knowledge (data, logic)</div>
+      </div>
+    </button>
+
+    <!-- BOTTLES GRID (base layer) -->
+    <section class="playfield" aria-label="Bottles Grid">
+      <div class="hud">
+        <div class="hudLeft">
+          <div class="hudTitle">Bottle Fill</div>
+          <div class="hudMeta" id="hudMeta">
+            <span>Lvl <b id="levelOut">1</b></span>
+            <span>Moves <b id="movesOut">0</b></span>
+            <span>Invalid <b id="badOut">0</b></span>
           </div>
-          <button id="btnQuest">DM</button>
         </div>
-      </div>
 
-      <div class="content">
-        <h2 id="questTitle">—</h2>
-
-        <p id="dmIntro"></p>
-        <p id="dmStatus" class="dmStatus"></p>
-        <p id="dmMid" class="small"></p>
-        <p id="dmVerdict" class="small"></p>
-
-        <div class="metaRow">
-          <div class="meta">BANK: <span id="bankOut" class="mono">—</span></div>
-          <div class="meta">SinTags: <span id="sinsOut" class="mono">—</span></div>
-          <div class="meta">DM#: <span id="dmCountOut" class="mono">0</span> <span class="small">(major on #5, #10...)</span></div>
-          <div class="meta">Next DM: <span id="nextDmOut" class="mono">—</span></div>
-          <div class="meta">Modifier: <span id="modOut" class="mono">—</span></div>
-          <div class="meta">Recipe: <span id="recipeSrcOut" class="mono">—</span></div>
-          <div class="meta">Status: <span id="statusOut" class="mono">ready</span></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Game Card -->
-    <div class="card">
-      <div class="cardHeader gameHeader">
-        <div class="title" style="font-size:26px">Bottle Fill</div>
-        <div class="stats">
-          <div class="meta">Level: <span id="levelOut" class="mono">1</span></div>
-          <div class="meta">Moves: <span id="movesOut" class="mono">0</span></div>
-          <div class="meta">Invalid: <span id="badOut" class="mono">0</span></div>
-          <div class="meta">Resets: <span id="resetOut" class="mono">0</span></div>
-          <div class="meta">Cfg: <span id="cfgOut" class="mono">—</span></div>
-          <div class="meta small">Tap bottle → tap target.</div>
-        </div>
+        <!-- tiny, optional dev tap target -->
+        <button class="devBtn" id="devBtn" aria-label="Settings">⚙️</button>
       </div>
 
       <div id="legend" class="legend"></div>
       <div class="grid" id="grid"></div>
+    </section>
 
-      <div class="controls">
-        <button id="btnNext">Next Level</button>
-        <button id="btnReset">Reset Run</button>
-        <span class="small">Filler levels are deterministic. DM visits are seeded + persisted per run.</span>
+    <!-- MODIFIERS (bottom bar) -->
+    <nav class="modBar" aria-label="Modifiers">
+      <button class="modSlot" id="modSlot1" aria-label="Modifier slot 1"><span>+</span></button>
+      <button class="modSlot" id="modSlot2" aria-label="Modifier slot 2"><span>+</span></button>
+      <button class="modSlot" id="modSlot3" aria-label="Modifier slot 3"><span>+</span></button>
+    </nav>
+
+    <!-- CHARACTER (bottom-left overlay) -->
+    <aside class="dmCharacter" id="dmCharacter" aria-hidden="true">
+      <button class="dmClose" id="dmClose" aria-label="Close DM">✕</button>
+      <!-- Placeholder: swap src to your DM PNG path when ready -->
+      <div class="dmAvatar" id="dmAvatar" title="DM"></div>
+    </aside>
+
+    <!-- SPEECH BUBBLE (bottom-right overlay) -->
+    <section class="speech" id="speech" aria-hidden="true">
+      <div class="speechInner">
+        <div class="speechTitle" id="questTitle">—</div>
+        <div class="speechText" id="speechText"></div>
+        <div class="speechSmall" id="speechSmall"></div>
       </div>
-    </div>
-  </div>
+    </section>
 
-  <div class="toast" id="toast"></div>
-  <div class="pourFX" id="pourFX"></div>
+    <!-- overlays -->
+    <div class="toast" id="toast"></div>
+    <div class="pourFX" id="pourFX"></div>
+
+    <!-- settings drawer (simple) -->
+    <dialog class="settings" id="settings">
+      <form method="dialog">
+        <header>
+          <div><b>Settings</b></div>
+          <button class="x" value="cancel" aria-label="Close">✕</button>
+        </header>
+
+        <label class="row">
+          <span>API Base</span>
+          <input id="apiBase" class="mono" placeholder="https://..." />
+        </label>
+
+        <menu>
+          <button value="ok">Done</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <div class="sr" id="statusOut" aria-live="polite">ready</div>
+  </main>
 
   <script type="module" src="./src/app.js"></script>
 </body>
