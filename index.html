@@ -57,42 +57,40 @@
     }
 
     /* --------- SVG Pattern Overlay (Role-Based) ---------
-       NOTE: Paths verified from repo:
-       /assets/pattern_*.svg and /assets/elements/textures/pattern_*.svg
+       Verified repo path: ./assets/elements/textures/pattern_*.svg
     */
     .seg::after{
       content:"";
       position:absolute;
       inset:0;
       pointer-events:none;
-      opacity:.95;
+      opacity:.90;
       background-size:64px 64px;
       background-repeat:repeat;
       mix-blend-mode: screen;
     }
 
     /* Default role mappings */
-.seg.role-volatile::after   { background-image: url("./assets/elements/textures/pattern_ripples.svg"); animation: drift 7s linear infinite; }
-.seg.role-catalyst::after   { background-image: url("./assets/elements/textures/pattern_streaks.svg"); animation: drift 6s linear infinite; }
-.seg.role-stabilizer::after { background-image: url("./assets/elements/textures/pattern_noise.svg"); opacity:.36; }
-.seg.role-structural::after,
-.seg.role-foundational::after { background-image: url("./assets/elements/textures/pattern_grid.svg"); opacity:.44; }
-.seg.role-transmission::after,
-.seg.role-conversion::after { background-image: url("./assets/elements/textures/pattern_chevrons.svg"); opacity:.44; }
+    .seg.role-volatile::after   { background-image: url("./assets/elements/textures/pattern_ripples.svg"); animation: drift 7s linear infinite; }
+    .seg.role-catalyst::after   { background-image: url("./assets/elements/textures/pattern_streaks.svg"); animation: drift 6s linear infinite; }
+    .seg.role-stabilizer::after { background-image: url("./assets/elements/textures/pattern_noise.svg"); opacity:.52; }
+    .seg.role-structural::after,
+    .seg.role-foundational::after { background-image: url("./assets/elements/textures/pattern_grid.svg"); opacity:.66; }
+    .seg.role-transmission::after,
+    .seg.role-conversion::after { background-image: url("./assets/elements/textures/pattern_chevrons.svg"); opacity:.66; }
 
-/* Element-specific overrides (optional, improves readability on similar colors) */
-.seg.el-EM::after { background-image: url("./assets/elements/textures/pattern_bubbles.svg"); opacity:.52; animation: drift 8s linear infinite; }
-.seg.el-CO::after,
-.seg.el-DI::after { background-image: url("./assets/elements/textures/pattern_hatch.svg"); opacity:.44; }
+    /* Element-specific overrides (optional, improves readability on similar colors) */
+    .seg.el-EM::after { background-image: url("./assets/elements/textures/pattern_bubbles.svg"); opacity:.78; animation: drift 8s linear infinite; }
+    .seg.el-CO::after,
+    .seg.el-DI::after { background-image: url("./assets/elements/textures/pattern_hatch.svg"); opacity:.66; }
 
-/* Motion is subtle; respect reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  .seg::after{ animation:none !important; }
-}
-@keyframes drift {
-  from { background-position: 0 0; }
-  to   { background-position: 64px 64px; }
-}
+    @media (prefers-reduced-motion: reduce) {
+      .seg::after{ animation:none !important; }
+    }
+    @keyframes drift {
+      from { background-position: 0 0; }
+      to   { background-position: 64px 64px; }
+    }
 
     .controls { display:flex; gap:10px; padding: 0 16px 16px 16px; flex-wrap:wrap; align-items:center;}
     .toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background:#0b121c; border:1px solid #243244; border-radius: 999px; padding: 10px 14px; font-weight:800; opacity:0; transition: opacity .18s ease; pointer-events:none;}
@@ -194,12 +192,8 @@
       <div class="content">
         <h2 id="questTitle">—</h2>
 
-        <!-- DM dialogue -->
         <p id="dmIntro"></p>
-
-        <!-- Scheduling / system copy -->
         <p id="dmStatus" class="dmStatus"></p>
-
         <p id="dmMid" class="small"></p>
         <p id="dmVerdict" class="small"></p>
 
@@ -286,7 +280,7 @@
   function showToast(msg) {
     toast.textContent = msg;
     toast.classList.add("show");
-    setTimeout(()=>toast.classList.remove("show"), 1400);
+    setTimeout(()=>toast.classList.remove("show"), 1500);
   }
 
   function mulberry32(a) {
@@ -317,6 +311,32 @@
       int(min,max){ return Math.floor(f() * (max - min + 1)) + min; },
       pick(arr){ return arr[Math.floor(f() * arr.length)]; }
     };
+  }
+
+  // ---------- SinTag carryover (invalid behavior -> next thesis bias) ----------
+  const INVALID_POUR_PUNISH_THRESHOLD = 3; // X invalid pours in a level triggers the punish callout once
+  let levelInvalid = 0;
+  let punishedThisLevel = false;
+
+  const SIN_QUEUE_KEY = "ma_sinQueue";
+  function loadSinQueue(){
+    try { return JSON.parse(localStorage.getItem(SIN_QUEUE_KEY) || "[]"); }
+    catch { return []; }
+  }
+  function saveSinQueue(q){
+    localStorage.setItem(SIN_QUEUE_KEY, JSON.stringify(q.slice(0, 12)));
+  }
+  function pushSinTag(tag){
+    if (!tag) return;
+    const q = loadSinQueue();
+    q.push(String(tag));
+    saveSinQueue(q);
+  }
+  function consumeSinTag(){
+    const q = loadSinQueue();
+    const next = q.shift() || null;
+    saveSinQueue(q);
+    return next;
   }
 
   // ---------- DOM ----------
@@ -357,39 +377,6 @@
   const sig = { moves:0, invalid:0, resets:0, moveTimes:[], lastMoveAt:0 };
   const avg = (arr)=> arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
 
-    // ---------- Behavior punish system (invalid pours -> punishes -> sinTag boost) ----------
-  const INVALID_POUR_PUNISH_THRESHOLD = 3; // X invalid pours in a level triggers 1 punish callout
-
-  let levelInvalid = 0;
-  let punishedThisLevel = false;
-
-  // SinTag boosts persist locally and influence the NEXT thesis pick
-  const SINBOOST_KEY = "ma_sinBoost";
-  const sinBoost = (() => {
-    try { return JSON.parse(localStorage.getItem(SINBOOST_KEY) || "{}"); }
-    catch { return {}; }
-  })();
-
-  // These are the boosts currently "active" for this generated level (for display + DM payload if you want later)
-  let activeBoostTags = [];
-
-  function bumpSinTag(tag, amt = 1) {
-    if (!tag) return;
-    sinBoost[tag] = (sinBoost[tag] || 0) + amt;
-    localStorage.setItem(SINBOOST_KEY, JSON.stringify(sinBoost));
-  }
-
-  function consumeSinBoostForLevel() {
-    // Read boosts (to influence thesis pick), then decrement by 1 so it only affects the next pick once
-    const tags = Object.keys(sinBoost).filter(k => (sinBoost[k] || 0) > 0);
-    for (const t of tags) {
-      sinBoost[t] = Math.max(0, (sinBoost[t] || 0) - 1);
-      if (!sinBoost[t]) delete sinBoost[t];
-    }
-    localStorage.setItem(SINBOOST_KEY, JSON.stringify(sinBoost));
-    return tags;
-  }
-
   function inferBANK() {
     const pace = avg(sig.moveTimes.slice(-12));
     const invalidRate = sig.moves ? (sig.invalid / sig.moves) : 0;
@@ -415,22 +402,20 @@
     return { bankPrimary, bankConfidence: Number(conf.toFixed(2)) };
   }
 
-    function inferSinTags() {
+  function inferSinTags() {
     const tags = [];
 
-    // Behavior-derived tags
+    // Pull exactly one carryover sinTag from last level's punish event (if any)
+    const carry = consumeSinTag();
+    if (carry) tags.push(carry);
+
     if (sig.resets >= 2 && sig.resets > level/2) tags.push("over_reset");
     const pace = avg(sig.moveTimes.slice(-12));
     if (pace > 1500) tags.push("hesitation");
     if ((sig.moves && sig.invalid/sig.moves > 0.18)) tags.push("indecision");
 
-    // Boosted tags (from punish events)
-    for (const t of (activeBoostTags || [])) tags.push(t);
-
     if (!tags.length) tags.push("steady_hand");
-
-    // Dedup + cap
-    return [...new Set(tags)].slice(0, 3);
+    return [...new Set(tags)].slice(0,3);
   }
 
   // ---------- Thesis selection + palette ----------
@@ -483,10 +468,6 @@
   function renderLegend(recipe){
     legendEl.innerHTML = "";
 
-        // reset per-level punish tracking
-    levelInvalid = 0;
-    punishedThisLevel = false;
-
     const thesisKey = recipe.thesisKey;
     const thesis = thesisKey ? THESES[thesisKey] : null;
     if (thesis) {
@@ -521,7 +502,7 @@
     }
   }
 
-  // ---------- Modifier (existing UI) ----------
+  // ---------- Modifier (existing UI placeholder) ----------
   let pendingModifier = null;
   function formatMod(mod) {
     if (!mod) return "—";
@@ -610,7 +591,7 @@
     dmVerdict.textContent = payload.dm_verdict || "";
   }
 
-  // ---------- DM Click (adds foreshadowOnly) ----------
+  // ---------- DM Click (foreshadowOnly) ----------
   btnQuest.addEventListener("click", async () => {
     if (!isDMLevel(level)) return;
 
@@ -663,13 +644,8 @@
 
       statusOut.textContent = "ok";
     } catch (e) {
-      if (e.status === 429) {
-        statusOut.textContent = "rate-limited";
-        showToast("Rate limited. Try again soon.");
-      } else {
-        statusOut.textContent = "dm error";
-        showToast("DM error (check server).");
-      }
+      statusOut.textContent = (e?.status === 429) ? "rate-limited" : "dm error";
+      showToast((e?.status === 429) ? "Rate limited. Try again soon." : "DM error (check server).");
       console.warn(e, e.detailText);
     }
   });
@@ -752,33 +728,23 @@
     }
   }
 
-    function doPour(from,to){
+  function doPour(from,to){
     if(!canPour(from,to)){
       sig.invalid++; badOut.textContent=String(sig.invalid);
-
-      // per-level invalid counter
       levelInvalid++;
 
-      // One punish callout per level, after X invalid pours
+      // After X invalid pours in this level, show the element's "punishes" line and queue a sinTag for next thesis pick
       if (!punishedThisLevel && levelInvalid >= INVALID_POUR_PUNISH_THRESHOLD) {
         punishedThisLevel = true;
 
-        // Try to attribute the "sin" to the element the player attempted to pour (source top)
-        const src = state.bottles[from] || [];
-        const ci = src.length ? topColor(src) : null;
-        const sym = (ci !== null && currentElements[ci]) ? currentElements[ci] : null;
+        const a = state.bottles[from] || [];
+        const ci = a.length ? topColor(a) : null;
+        const sym = (ci !== null && ci !== undefined) ? currentElements[ci] : null;
         const el = sym ? ELEMENTS[sym] : null;
 
-        if (el?.punishes) {
-          // Show the element's punish line (canonical)
-          showToast(`${el.symbol} punishes: ${el.punishes}`);
-
-          // Boost the next thesis pick using the punish tag
-          bumpSinTag(el.punishes);
-        } else {
-          showToast("Punished: sloppy handling.");
-          bumpSinTag("sloppiness");
-        }
+        const punishTag = el?.punishes || "sloppiness";
+        showToast(`${el?.symbol || sym || "??"} punishes: ${punishTag}`);
+        pushSinTag(punishTag);
       } else {
         showToast("Invalid pour");
       }
@@ -826,6 +792,7 @@
   function makeFillerRecipe() {
     const { bankPrimary } = inferBANK();
     const sinTags = inferSinTags();
+
     const seed = hashSeed(runSeed, level, questId);
     const rnd = mulberry32(seed);
     const rng = makeRng(seed);
@@ -878,19 +845,14 @@
     if (base.thesisKey === "UR_without_CL" && level >= STABILIZER_UNLOCK_LEVEL) {
       if (!base.elements.includes("UR")) base.elements[0] = "UR";
 
+      // Add CL to palette but exclude it from distribution (via stabilizer bottle)
       if (!base.elements.includes("CL")) {
         base.elements.push("CL");
         base.colors += 1;
       }
 
       base.bottleCount = clamp(base.bottleCount + 1, 6, 14);
-
-      base.stabilizer = {
-        enabled: true,
-        symbol: "CL",
-        fill: 2,
-        unlock: "UR_full"
-      };
+      base.stabilizer = { enabled: true, symbol: "CL", fill: 2, unlock: "UR_full" };
     }
 
     base.lore = `${pickLoreLine("intro", rng)} Thesis: ${THESES[base.thesisKey]?.name || "Unknown Reaction"}.`;
@@ -900,6 +862,10 @@
   function buildBoardFromRecipe(recipe){
     applyElementPalette(recipe);
     renderLegend(recipe);
+
+    // reset per-level punish tracking
+    levelInvalid = 0;
+    punishedThisLevel = false;
 
     const colors=recipe.colors, bottles=recipe.bottleCount, cap=recipe.capacity, empty=recipe.emptyBottles;
     const rnd = mulberry32(hashSeed(runSeed, level, 1337));
@@ -916,7 +882,7 @@
 
     const colorStacks=[];
     for(let c=0;c<colors;c++){
-      if (stabilizerEnabled && c === stabilizerColorIndex) continue;
+      if (stabilizerEnabled && c === stabilizerColorIndex) continue; // keep CL out of distribution
       colorStacks.push(Array.from({length:cap}, ()=>c));
     }
     const pool=shuffle(colorStacks.flat(), rnd);
@@ -929,6 +895,7 @@
       }
     }
 
+    // Create Stabilizer Bottle (locked + hidden) at the last index
     if (stabilizerEnabled && stabilizerColorIndex >= 0) {
       const stabIdx = bottles - 1;
       const fill = clamp(recipe.stabilizer.fill ?? 2, 1, cap-1);
@@ -969,6 +936,7 @@
     localStorage.removeItem("ma_runSeed");
     localStorage.removeItem("ma_dmAppearCount");
     localStorage.removeItem("ma_nextDMAtLevel");
+    localStorage.removeItem(SIN_QUEUE_KEY);
     location.reload();
   }
 
@@ -998,7 +966,6 @@
         } else {
           seg.style.background = (currentPalette[ci] || "#ffffff");
 
-          // Pattern overlay classes (role + element symbol)
           const sym = currentElements[ci];
           const role = (ELEMENTS[sym]?.role || "").toLowerCase();
           if (role) seg.classList.add(`role-${role}`);
