@@ -357,6 +357,39 @@
   const sig = { moves:0, invalid:0, resets:0, moveTimes:[], lastMoveAt:0 };
   const avg = (arr)=> arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
 
+    // ---------- Behavior punish system (invalid pours -> punishes -> sinTag boost) ----------
+  const INVALID_POUR_PUNISH_THRESHOLD = 3; // X invalid pours in a level triggers 1 punish callout
+
+  let levelInvalid = 0;
+  let punishedThisLevel = false;
+
+  // SinTag boosts persist locally and influence the NEXT thesis pick
+  const SINBOOST_KEY = "ma_sinBoost";
+  const sinBoost = (() => {
+    try { return JSON.parse(localStorage.getItem(SINBOOST_KEY) || "{}"); }
+    catch { return {}; }
+  })();
+
+  // These are the boosts currently "active" for this generated level (for display + DM payload if you want later)
+  let activeBoostTags = [];
+
+  function bumpSinTag(tag, amt = 1) {
+    if (!tag) return;
+    sinBoost[tag] = (sinBoost[tag] || 0) + amt;
+    localStorage.setItem(SINBOOST_KEY, JSON.stringify(sinBoost));
+  }
+
+  function consumeSinBoostForLevel() {
+    // Read boosts (to influence thesis pick), then decrement by 1 so it only affects the next pick once
+    const tags = Object.keys(sinBoost).filter(k => (sinBoost[k] || 0) > 0);
+    for (const t of tags) {
+      sinBoost[t] = Math.max(0, (sinBoost[t] || 0) - 1);
+      if (!sinBoost[t]) delete sinBoost[t];
+    }
+    localStorage.setItem(SINBOOST_KEY, JSON.stringify(sinBoost));
+    return tags;
+  }
+
   function inferBANK() {
     const pace = avg(sig.moveTimes.slice(-12));
     const invalidRate = sig.moves ? (sig.invalid / sig.moves) : 0;
@@ -382,14 +415,22 @@
     return { bankPrimary, bankConfidence: Number(conf.toFixed(2)) };
   }
 
-  function inferSinTags() {
+    function inferSinTags() {
     const tags = [];
+
+    // Behavior-derived tags
     if (sig.resets >= 2 && sig.resets > level/2) tags.push("over_reset");
     const pace = avg(sig.moveTimes.slice(-12));
     if (pace > 1500) tags.push("hesitation");
     if ((sig.moves && sig.invalid/sig.moves > 0.18)) tags.push("indecision");
+
+    // Boosted tags (from punish events)
+    for (const t of (activeBoostTags || [])) tags.push(t);
+
     if (!tags.length) tags.push("steady_hand");
-    return tags.slice(0,3);
+
+    // Dedup + cap
+    return [...new Set(tags)].slice(0, 3);
   }
 
   // ---------- Thesis selection + palette ----------
@@ -441,6 +482,10 @@
 
   function renderLegend(recipe){
     legendEl.innerHTML = "";
+
+        // reset per-level punish tracking
+    levelInvalid = 0;
+    punishedThisLevel = false;
 
     const thesisKey = recipe.thesisKey;
     const thesis = thesisKey ? THESES[thesisKey] : null;
@@ -707,12 +752,40 @@
     }
   }
 
-  function doPour(from,to){
+    function doPour(from,to){
     if(!canPour(from,to)){
       sig.invalid++; badOut.textContent=String(sig.invalid);
-      showToast("Invalid pour");
+
+      // per-level invalid counter
+      levelInvalid++;
+
+      // One punish callout per level, after X invalid pours
+      if (!punishedThisLevel && levelInvalid >= INVALID_POUR_PUNISH_THRESHOLD) {
+        punishedThisLevel = true;
+
+        // Try to attribute the "sin" to the element the player attempted to pour (source top)
+        const src = state.bottles[from] || [];
+        const ci = src.length ? topColor(src) : null;
+        const sym = (ci !== null && currentElements[ci]) ? currentElements[ci] : null;
+        const el = sym ? ELEMENTS[sym] : null;
+
+        if (el?.punishes) {
+          // Show the element's punish line (canonical)
+          showToast(`${el.symbol} punishes: ${el.punishes}`);
+
+          // Boost the next thesis pick using the punish tag
+          bumpSinTag(el.punishes);
+        } else {
+          showToast("Punished: sloppy handling.");
+          bumpSinTag("sloppiness");
+        }
+      } else {
+        showToast("Invalid pour");
+      }
+
       return false;
     }
+
     const a=state.bottles[from], b=state.bottles[to];
     const color=topColor(a);
     const run=topRunCount(a);
