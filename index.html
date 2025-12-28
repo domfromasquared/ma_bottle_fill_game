@@ -2,1129 +2,693 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>MA Bottle Fill Game</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Marketing Alchemist — Bottle Fill (Quest DM)</title>
   <style>
-    :root{
-      --bg:#0b0f14;
-      --panel:#111827;
-      --panel2:#0f172a;
-      --text:#e5e7eb;
-      --muted:#94a3b8;
-      --accent:#38bdf8;
-      --accent2:#a78bfa;
-      --danger:#fb7185;
-      --ok:#34d399;
-      --stroke:rgba(255,255,255,.10);
-      --stroke2:rgba(255,255,255,.14);
-      --shadow:0 16px 50px rgba(0,0,0,.45);
-      --radius:18px;
-      --radius2:14px;
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0;
-      background:radial-gradient(1200px 800px at 50% -20%, rgba(56,189,248,.18), transparent 60%),
-                 radial-gradient(900px 700px at 120% 120%, rgba(167,139,250,.14), transparent 55%),
-                 var(--bg);
-      color:var(--text);
-      font-family:var(--sans);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:18px;
-    }
-
-    /* Phone frame */
-    .phone{
-      width:min(460px, 100%);
-      border:1px solid var(--stroke);
-      border-radius:28px;
-      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-      box-shadow:var(--shadow);
-      overflow:hidden;
+    :root { color-scheme: dark; }
+    body { margin:0; background:#0b0f14; color:#e6edf3; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 16px; display:flex; flex-direction:column; gap:14px; }
+    .card { border:1px solid #243244; border-radius: 18px; background: linear-gradient(180deg,#0f1724,#0b121c); box-shadow: 0 20px 50px rgba(0,0,0,.25); overflow:hidden; }
+    .cardHeader { display:flex; align-items:center; justify-content:space-between; padding: 14px 16px; border-bottom: 1px solid #1e2a3c; }
+    .title { font-size: 32px; font-weight: 900; letter-spacing: -0.5px; display:flex; align-items:center; gap:10px;}
+    .pill { border:1px solid #243244; border-radius: 999px; padding: 8px 12px; background:#0b121c; display:inline-flex; align-items:center; gap:10px; }
+    .pill input { width: 360px; max-width: 56vw; background: transparent; border: none; outline: none; color:#e6edf3; font: inherit; }
+    button { cursor:pointer; border:1px solid #243244; background:#111a27; color:#e6edf3; border-radius: 14px; padding: 10px 14px; font-weight: 800; }
+    button:disabled { opacity: .55; cursor:not-allowed; }
+    .content { padding: 18px 16px; }
+    h2 { margin: 0 0 10px 0; font-size: 34px; letter-spacing: -0.5px; }
+    p { margin: 0 0 10px 0; font-size: 20px; line-height: 1.25; color:#d7deea; }
+    .metaRow { display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; }
+    .meta { display:inline-flex; align-items:center; gap:10px; border:1px solid #243244; border-radius: 999px; padding: 10px 12px; background:#0b121c; font-size: 16px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .small { font-size: 14px; color:#aab6ca; }
+    .split { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+    .gameHeader { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+    .stats { display:flex; gap:10px; flex-wrap:wrap; }
+    .grid { display:flex; flex-wrap:wrap; gap:16px; padding: 18px 16px; min-height: 300px; }
+    .bottle {
+      width: 84px; height: 220px;
+      border-radius: 22px 22px 26px 26px;
+      border: 2px solid rgba(220,232,255,.14);
+      background: rgba(0,0,0,.25);
       position:relative;
-    }
-    .topbar{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      padding:14px 14px 10px;
-      border-bottom:1px solid var(--stroke);
-      background:rgba(15,23,42,.65);
-      backdrop-filter: blur(10px);
-      position:sticky;
-      top:0;
-      z-index:20;
-    }
-    .brand{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      min-width:0;
-    }
-    .logo{
-      width:34px;height:34px;border-radius:11px;
-      background:linear-gradient(135deg, rgba(56,189,248,.8), rgba(167,139,250,.75));
-      box-shadow:0 10px 28px rgba(56,189,248,.14);
-    }
-    .brand h1{
-      font-size:14px;
-      margin:0;
-      letter-spacing:.5px;
-      white-space:nowrap;
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,.03);
+      display:flex; flex-direction:column-reverse;
       overflow:hidden;
-      text-overflow:ellipsis;
-    }
-    .metaTop{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      color:var(--muted);
-      font-size:12px;
-    }
-    .pill{
-      border:1px solid var(--stroke);
-      padding:6px 10px;
-      border-radius:999px;
-      background:rgba(0,0,0,.20);
-      display:flex;
-      gap:8px;
-      align-items:center;
-      white-space:nowrap;
-    }
-    .mono{font-family:var(--mono)}
-
-    /* HUD */
-    .hud{
-      display:grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap:10px;
-      padding:10px 14px;
-      border-bottom:1px solid var(--stroke);
-      background:rgba(17,24,39,.55);
-      z-index:10;
-    }
-    .hudBox{
-      border:1px solid var(--stroke);
-      border-radius:14px;
-      padding:10px 10px;
-      background:rgba(0,0,0,.18);
-    }
-    .hudLabel{
-      color:var(--muted);
-      font-size:11px;
-      margin-bottom:6px;
-    }
-    .hudValue{
-      font-size:16px;
-      font-weight:700;
-    }
-
-    /* Layout rows */
-    .content{
-      padding:14px;
-      display:flex;
-      flex-direction:column;
-      gap:12px;
-    }
-
-    /* BANK rail */
-    .bankRail{
-      display:flex;
-      gap:8px;
-      align-items:center;
-      justify-content:space-between;
-      padding:10px 12px;
-      border:1px solid var(--stroke);
-      border-radius:16px;
-      background:rgba(0,0,0,.18);
-    }
-    .bankLetters{
-      display:flex;
-      gap:8px;
-      align-items:center;
-    }
-    .bankLetter{
-      width:34px;height:34px;
-      border-radius:12px;
-      border:1px solid var(--stroke2);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-weight:800;
-      color:rgba(229,231,235,.9);
-      background:rgba(255,255,255,.03);
       user-select:none;
+      touch-action: manipulation;
+      transform: translateZ(0);
     }
-    .bankLetter.active{
-      border-color:rgba(56,189,248,.65);
-      box-shadow:0 0 0 3px rgba(56,189,248,.12);
-      color:#fff;
-    }
-    .bankHint{
-      color:var(--muted);
-      font-size:12px;
-      line-height:1.25;
-      max-width:62%;
-    }
-
-    /* Modifiers bar */
-    .mods{
-      border:1px solid var(--stroke);
-      border-radius:16px;
-      background:rgba(0,0,0,.18);
-      padding:10px 12px;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:10px;
-      min-height:44px;
-    }
-    .mods .left{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      min-width:0;
-    }
-    .mods .tag{
-      font-size:12px;
-      padding:6px 10px;
-      border-radius:999px;
-      border:1px solid var(--stroke2);
-      color:rgba(229,231,235,.92);
-      background:rgba(255,255,255,.03);
-      white-space:nowrap;
-    }
-    .mods .desc{
-      color:var(--muted);
-      font-size:12px;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      white-space:nowrap;
-    }
-
-    /* Controls */
-    .controls{
-      display:flex;
-      gap:10px;
-    }
-    button{
-      border:1px solid var(--stroke2);
-      background:rgba(255,255,255,.03);
-      color:var(--text);
-      border-radius:14px;
-      padding:10px 12px;
-      font-weight:700;
-      font-size:13px;
-      cursor:pointer;
-      flex:1;
-      transition:transform .06s ease, border-color .15s ease, background .15s ease;
-    }
-    button:active{transform:translateY(1px)}
-    button:disabled{
-      opacity:.55;
-      cursor:not-allowed;
-    }
-    .btnPrimary{
-      border-color:rgba(56,189,248,.55);
-      background:rgba(56,189,248,.08);
-    }
-    .btnDanger{
-      border-color:rgba(251,113,133,.45);
-      background:rgba(251,113,133,.07);
-    }
-
-    /* Grid */
-    .gameStack.paused .grid{
+    .bottle::before {
+      content:"";
+      position:absolute; inset: 10px 10px 10px 10px;
+      border-radius: 18px 18px 22px 22px;
+      border:1px solid rgba(255,255,255,.06);
       pointer-events:none;
-      filter: blur(.4px) saturate(.9);
-      opacity:.88;
     }
-    .grid{
-      display:grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap:10px;
-      user-select:none;
+    .bottle.selected { outline: 3px solid rgba(130, 210, 255,.45); box-shadow: 0 0 0 6px rgba(80,140,255,.12), inset 0 0 0 2px rgba(255,255,255,.04); }
+    .seg { width:100%; height: 22%; }
+    .controls { display:flex; gap:10px; padding: 0 16px 16px 16px; flex-wrap:wrap; align-items:center;}
+    .toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background:#0b121c; border:1px solid #243244; border-radius: 999px; padding: 10px 14px; font-weight:800; opacity:0; transition: opacity .18s ease; pointer-events:none;}
+    .toast.show { opacity:1; }
+    .pourFX {
+      position: fixed; width: 10px; height: 10px; border-radius: 999px;
+      pointer-events:none;
+      opacity:0;
+      transform: translate(-50%, -50%);
+      filter: blur(.2px);
     }
-    .bottle{
-      border:1px solid var(--stroke2);
-      border-radius:16px;
-      background:rgba(0,0,0,.18);
-      height:112px;
-      padding:10px 8px;
-      display:flex;
-      flex-direction:column-reverse;
-      gap:6px;
-      position:relative;
-      overflow:hidden;
-    }
-    .bottle.selected{
-      border-color:rgba(167,139,250,.65);
-      box-shadow:0 0 0 3px rgba(167,139,250,.12);
-    }
-    .cell{
-      height:16px;
-      border-radius:8px;
-      border:1px solid rgba(255,255,255,.14);
-      background:rgba(255,255,255,.04);
-    }
-    .cell.fill{
-      border-color:rgba(255,255,255,.25);
-    }
-    .bottleCap{
-      position:absolute;
-      top:8px; left:8px;
-      font-size:10px;
-      color:rgba(229,231,235,.55);
-      letter-spacing:.25px;
-    }
-
-    /* DM card layer */
-    .dmLayer{
-      position:absolute;
-      inset:0;
-      display:none;
-      z-index:40;
-      background:rgba(2,6,23,.72);
-      backdrop-filter: blur(10px);
-      padding:16px;
-    }
-    .dmLayer.show{display:flex}
-    .dmCard{
-      margin:auto;
-      width:100%;
-      max-width:420px;
-      border:1px solid var(--stroke2);
-      border-radius:22px;
-      background:linear-gradient(180deg, rgba(17,24,39,.92), rgba(15,23,42,.92));
-      box-shadow:var(--shadow);
-      overflow:hidden;
-    }
-    .dmCardHeader{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      padding:12px 14px;
-      border-bottom:1px solid var(--stroke);
-      background:rgba(0,0,0,.18);
-    }
-    .dmCardHeader .title{
-      font-weight:800;
-      letter-spacing:.4px;
-      font-size:13px;
-    }
-    .dmCardBody{
-      padding:14px;
-      display:flex;
-      gap:12px;
-      align-items:flex-start;
-    }
-    .dmAvatar{
-      width:56px;height:56px;border-radius:18px;
-      background:linear-gradient(135deg, rgba(251,191,36,.25), rgba(56,189,248,.15));
-      border:1px solid var(--stroke2);
-      flex:0 0 auto;
-    }
-    .dmText{
-      min-width:0;
-    }
-    .dmLine{
-      margin:0 0 10px;
-      color:rgba(229,231,235,.95);
-      line-height:1.3;
-    }
-    .dmLine.muted{color:var(--muted)}
-    .dmActions{
-      display:flex;
-      gap:10px;
-      padding:0 14px 14px;
-    }
-
-    /* Speech bubble layer (for “DM speaks” UI) */
-    .speechLayer{
-      position:absolute;
-      left:14px; right:14px;
-      bottom:14px;
-      border:1px solid var(--stroke2);
-      border-radius:22px;
-      background:linear-gradient(180deg, rgba(17,24,39,.92), rgba(15,23,42,.92));
-      box-shadow:var(--shadow);
-      padding:14px 14px 12px;
-      z-index:35;
-      display:none; /* IMPORTANT: will show when .show */
-    }
-    .speechLayer.show{display:block}
-    .speechTitle{
-      margin:0 0 8px;
-      font-size:13px;
-      font-weight:900;
-      letter-spacing:.35px;
-      color:rgba(255,255,255,.94);
-    }
-    .speechText{
-      margin:0 0 8px;
-      color:rgba(229,231,235,.94);
-      line-height:1.35;
-      font-size:13px;
-    }
-    .speechText.small{
-      color:var(--muted);
-      font-size:12px;
-    }
-    .speechMeta{
-      margin-top:10px;
-      border-top:1px solid var(--stroke);
-      padding-top:10px;
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:6px 10px;
-      font-size:11px;
-      color:rgba(229,231,235,.70);
-    }
-    .meta .mono{color:rgba(229,231,235,.88)}
   </style>
 </head>
-
 <body>
-  <div class="phone">
-    <div class="topbar">
-      <div class="brand">
-        <div class="logo" aria-hidden="true"></div>
-        <h1>MA Bottle Fill Game</h1>
-      </div>
-      <div class="metaTop">
-        <div class="pill">Level <span id="levelOut" class="mono">1</span></div>
-        <div class="pill">Seed <span id="seedOut" class="mono">—</span></div>
-      </div>
-    </div>
-
-    <div class="hud">
-      <div class="hudBox">
-        <div class="hudLabel">Moves</div>
-        <div class="hudValue mono" id="movesOut">0</div>
-      </div>
-      <div class="hudBox">
-        <div class="hudLabel">Invalid</div>
-        <div class="hudValue mono" id="invalidOut">0</div>
-      </div>
-      <div class="hudBox">
-        <div class="hudLabel">Resets</div>
-        <div class="hudValue mono" id="resetsOut">0</div>
-      </div>
-      <div class="hudBox">
-        <div class="hudLabel">Status</div>
-        <div class="hudValue mono" id="statusHud">ready</div>
-      </div>
-    </div>
-
-    <div class="content gameStack" id="gameStack">
-      <div class="bankRail">
-        <div class="bankLetters" aria-label="BANK rail">
-          <div class="bankLetter" id="bankB">B</div>
-          <div class="bankLetter" id="bankA">A</div>
-          <div class="bankLetter" id="bankN">N</div>
-          <div class="bankLetter" id="bankK">K</div>
-        </div>
-        <div class="bankHint" id="bankHint">
-          Your play style shapes the DM. Keep pouring — the DM appears every few levels.
-        </div>
-      </div>
-
-      <div class="mods">
-        <div class="left">
-          <div class="tag" id="modTag">Modifier</div>
-          <div class="desc" id="modDesc">None active.</div>
-        </div>
-        <div class="mono" id="modShort">—</div>
-      </div>
-
-      <div class="controls">
-        <button class="btnDanger" id="btnReset">Reset</button>
-        <button class="btnPrimary" id="btnNext">Next Level</button>
-        <button id="btnQuest" disabled>DM @ L—</button>
-      </div>
-
-      <div class="grid" id="grid" aria-label="Bottle grid"></div>
-    </div>
-
-    <!-- Speech bubble (shown when DM is speaking) -->
-    <section class="speechLayer" id="speechLayer" aria-label="Speech Bubble">
-      <h2 class="speechTitle" id="questTitle">—</h2>
-
-      <!-- Actual DM dialogue opener -->
-      <p class="speechText" id="dmIntro"></p>
-
-      <!-- System / scheduling text (do NOT overwrite dmIntro anymore) -->
-      <p class="speechText small" id="dmStatus"></p>
-
-      <p class="speechText" id="dmMid"></p>
-      <p class="speechText" id="dmVerdict"></p>
-
-      <div class="speechMeta">
-        <div class="meta">BANK: <span id="bankOut" class="mono">—</span></div>
-        <div class="meta">SinTags: <span id="sinsOut" class="mono">—</span></div>
-        <div class="meta">DM#: <span id="dmCountOut" class="mono">0</span></div>
-        <div class="meta">Next: <span id="nextDmOut" class="mono">—</span></div>
-        <div class="meta">Modifier: <span id="modOut" class="mono">—</span></div>
-        <div class="meta">Recipe: <span id="recipeSrcOut" class="mono">—</span></div>
-        <div class="meta">Status: <span id="statusOut" class="mono">ready</span></div>
-      </div>
-    </section>
-
-    <!-- Fullscreen DM overlay -->
-    <div class="dmLayer" id="dmLayer" aria-label="DM overlay">
-      <div class="dmCard">
-        <div class="dmCardHeader">
-          <div class="title">The Marketing Alchemist</div>
-          <button id="dmClose" style="flex:0 0 auto; padding:8px 10px; border-radius:12px;">Close</button>
-        </div>
-        <div class="dmCardBody">
-          <div class="dmAvatar" aria-hidden="true"></div>
-          <div class="dmText">
-            <p class="dmLine" id="dmCardLine1">…</p>
-            <p class="dmLine muted" id="dmCardLine2">…</p>
+  <div class="wrap">
+    <div class="card" id="dmCard">
+      <div class="cardHeader">
+        <div class="title">🧪 The Marketing Alchemist <span style="opacity:.7">(Quest DM)</span></div>
+        <div class="split">
+          <div class="pill">
+            <span style="opacity:.7">API:</span>
+            <input id="apiBase" class="mono" />
           </div>
+          <button id="btnQuest">DM</button>
         </div>
-        <div class="dmActions">
-          <button id="dmOk" class="btnPrimary">Got it</button>
-          <button id="dmCopy">Copy</button>
+      </div>
+      <div class="content">
+        <h2 id="questTitle">—</h2>
+        <p id="dmIntro" class="small">DM appears randomly every <b>3–6</b> levels. Modifiers only brew on every <b>5th DM appearance</b>.</p>
+        <p id="dmMid" class="small"></p>
+        <p id="dmVerdict" class="small"></p>
+
+        <div class="metaRow">
+          <div class="meta">BANK: <span id="bankOut" class="mono">—</span></div>
+          <div class="meta">SinTags: <span id="sinsOut" class="mono">—</span></div>
+          <div class="meta">DM#: <span id="dmCountOut" class="mono">0</span> <span class="small">(major on #5, #10...)</span></div>
+          <div class="meta">Next DM: <span id="nextDmOut" class="mono">—</span></div>
+          <div class="meta">Modifier: <span id="modOut" class="mono">—</span></div>
+          <div class="meta">Recipe: <span id="recipeSrcOut" class="mono">—</span></div>
+          <div class="meta">Status: <span id="statusOut" class="mono">ready</span></div>
         </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cardHeader gameHeader">
+        <div class="title" style="font-size:26px">Bottle Fill</div>
+        <div class="stats">
+          <div class="meta">Level: <span id="levelOut" class="mono">1</span></div>
+          <div class="meta">Moves: <span id="movesOut" class="mono">0</span></div>
+          <div class="meta">Invalid: <span id="badOut" class="mono">0</span></div>
+          <div class="meta">Resets: <span id="resetOut" class="mono">0</span></div>
+          <div class="meta">Cfg: <span id="cfgOut" class="mono">—</span></div>
+          <div class="meta small">Tap bottle → tap target.</div>
+        </div>
+      </div>
+      <div class="grid" id="grid"></div>
+      <div class="controls">
+        <button id="btnNext">Next Level</button>
+        <button id="btnReset">Reset Run</button>
+        <span class="small">Filler levels are deterministic. DM visits are seeded + persisted per run.</span>
       </div>
     </div>
   </div>
 
-  <script type="module">
-    /**********************
-     * Config / Utilities
-     **********************/
-    const API_BASE =
-      location.hostname === "localhost" || location.hostname === "127.0.0.1"
-        ? "http://localhost:8787"
-        : "https://ma-bottle-fill-game.onrender.com";
+  <div class="toast" id="toast"></div>
+  <div class="pourFX" id="pourFX"></div>
 
-    const CAPACITY_DEFAULT = 4;
+<script type="module">
+  const DEFAULT_PROD = "https://ma-bottle-fill-api.onrender.com";
+  const DEFAULT_LOCAL = "http://localhost:8787";
+  const isLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+  const apiBaseEl = document.getElementById("apiBase");
+  apiBaseEl.value = isLocal ? DEFAULT_LOCAL : DEFAULT_PROD;
 
-    // DM scheduling
-    const DM_GAP_MIN = 3;
-    const DM_GAP_MAX = 6;
-    const DM_MAJOR_EVERY = 5;
+  const inflight = new Map();
+  function singleFlight(key, fn) {
+    if (inflight.has(key)) return inflight.get(key);
+    const p = (async () => { try { return await fn(); } finally { inflight.delete(key); } })();
+    inflight.set(key, p);
+    return p;
+  }
 
-    const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+  const statusOut = document.getElementById("statusOut");
+  const questTitle = document.getElementById("questTitle");
+  const dmIntro = document.getElementById("dmIntro");
+  const dmMid = document.getElementById("dmMid");
+  const dmVerdict = document.getElementById("dmVerdict");
+  const bankOut = document.getElementById("bankOut");
+  const sinsOut = document.getElementById("sinsOut");
+  const modOut = document.getElementById("modOut");
+  const cfgOut = document.getElementById("cfgOut");
+  const recipeSrcOut = document.getElementById("recipeSrcOut");
+  const dmCountOut = document.getElementById("dmCountOut");
+  const nextDmOut = document.getElementById("nextDmOut");
 
-    function hashSeed(str) {
-      let h = 2166136261;
-      for (let i = 0; i < str.length; i++) {
-        h ^= str.charCodeAt(i);
-        h = Math.imul(h, 16777619);
-      }
-      return h >>> 0;
+  const toast = document.getElementById("toast");
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add("show");
+    setTimeout(()=>toast.classList.remove("show"), 1400);
+  }
+
+  function mulberry32(a) {
+    return function() {
+      let t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     }
-    function mulberry32(a) {
-      return function() {
-        let t = (a += 0x6D2B79F5);
-        t = Math.imul(t ^ (t >>> 15), t | 1);
-        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-      };
+  }
+  function hashSeed(a,b,c){
+    let x = (a|0) ^ ((b|0)*0x9E3779B1) ^ ((c|0)*0x85EBCA77);
+    x = Math.imul(x ^ (x>>>16), 0x7feb352d);
+    x = Math.imul(x ^ (x>>>15), 0x846ca68b);
+    x = x ^ (x>>>16);
+    return x >>> 0;
+  }
+  const clamp = (n,min,max)=> Math.max(min, Math.min(max, n));
+  function randInt(min, max, seed) {
+    const r = mulberry32(seed)();
+    return Math.floor(r * (max - min + 1)) + min;
+  }
+
+  let level = 1;
+  let questId = 1;
+
+  const sig = { moves:0, invalid:0, resets:0, moveTimes:[], lastMoveAt:0 };
+  const avg = (arr)=> arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+
+  function inferBANK() {
+    const pace = avg(sig.moveTimes.slice(-12));
+    const invalidRate = sig.moves ? (sig.invalid / sig.moves) : 0;
+    const resetRate = sig.resets ? (sig.resets / Math.max(1, level)) : 0;
+
+    const score = { B:0, A:0, N:0, K:0 };
+    score.B += pace > 1400 ? 1.2 : 0;
+    score.B += invalidRate < 0.10 ? 1.0 : 0;
+
+    score.A += pace && pace < 900 ? 1.2 : 0;
+    score.A += invalidRate < 0.22 ? 0.5 : 0;
+
+    score.N += resetRate > 0.30 ? 1.0 : 0;
+    score.N += invalidRate > 0.18 ? 0.6 : 0;
+
+    score.K += invalidRate > 0.12 ? 0.7 : 0;
+    score.K += resetRate < 0.25 ? 0.7 : 0;
+
+    const entries = Object.entries(score).sort((a,b)=>b[1]-a[1]);
+    const [bankPrimary, top] = entries[0];
+    const second = entries[1][1];
+    const conf = Math.max(0.25, Math.min(0.92, 0.35 + (top-second)*0.55));
+    return { bankPrimary, bankConfidence: Number(conf.toFixed(2)) };
+  }
+
+  function inferSinTags() {
+    const tags = [];
+    if (sig.resets >= 2 && sig.resets > level/2) tags.push("over_reset");
+    const pace = avg(sig.moveTimes.slice(-12));
+    if (pace > 1500) tags.push("hesitation");
+    if ((sig.moves && sig.invalid/sig.moves > 0.18)) tags.push("indecision");
+    if (!tags.length) tags.push("steady_hand");
+    return tags.slice(0,3);
+  }
+
+  let pendingModifier = null;
+  function formatMod(mod) {
+    if (!mod) return "—";
+    const parts = [];
+    const map = [
+      ["bottleCountDelta","bottles"],
+      ["colorsDelta","colors"],
+      ["capacityDelta","cap"],
+      ["emptyBottlesDelta","empty"],
+      ["lockedBottlesDelta","locks"],
+      ["wildcardSlotsDelta","wild"],
+    ];
+    for (const [k,label] of map) {
+      const v = mod[k] ?? 0;
+      if (v) parts.push(`${label}${v>0?"+":""}${v}`);
     }
-    function randInt(rng, a, b) {
-      return Math.floor(rng() * (b - a + 1)) + a;
-    }
+    const tag = mod.ruleTag && mod.ruleTag !== "none" ? mod.ruleTag : "";
+    return (parts.length ? parts.join(" ") : "no-delta") + (tag ? ` | ${tag}` : "");
+  }
+  function setPendingModifier(mod) {
+    pendingModifier = mod;
+    modOut.textContent = formatMod(mod);
+  }
 
-    // basic single-flight for DM calls
-    const inflight = new Map();
-    function singleFlight(key, fn) {
-      if (inflight.has(key)) return inflight.get(key);
-      const p = (async () => {
-        try { return await fn(); }
-        finally { inflight.delete(key); }
-      })();
-      inflight.set(key, p);
-      return p;
-    }
+  const DM_GAP_MIN = 3;
+  const DM_GAP_MAX = 6;
+  const DM_MAJOR_EVERY = 5;
 
-    async function postJSON(path, body) {
-      const res = await fetch(`${API_BASE}${path}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body || {})
-      });
-      if (!res.ok) {
-        const retryAfter = res.headers.get("Retry-After");
-        let msg = `HTTP ${res.status}`;
-        try {
-          const data = await res.json();
-          msg = data?.error || msg;
-        } catch {}
-        const err = new Error(msg);
-        err.retryAfter = retryAfter;
-        throw err;
-      }
-      return res.json();
-    }
-
-    /**********************
-     * DOM
-     **********************/
-    const grid = document.getElementById("grid");
-    const gameStack = document.getElementById("gameStack");
-
-    const levelOut = document.getElementById("levelOut");
-    const seedOut = document.getElementById("seedOut");
-    const movesOut = document.getElementById("movesOut");
-    const invalidOut = document.getElementById("invalidOut");
-    const resetsOut = document.getElementById("resetsOut");
-    const statusHud = document.getElementById("statusHud");
-
-    const btnReset = document.getElementById("btnReset");
-    const btnNext = document.getElementById("btnNext");
-    const btnQuest = document.getElementById("btnQuest");
-
-    const bankB = document.getElementById("bankB");
-    const bankA = document.getElementById("bankA");
-    const bankN = document.getElementById("bankN");
-    const bankK = document.getElementById("bankK");
-
-    const modTag = document.getElementById("modTag");
-    const modDesc = document.getElementById("modDesc");
-    const modShort = document.getElementById("modShort");
-
-    const speechLayer = document.getElementById("speechLayer");
-    const questTitle = document.getElementById("questTitle");
-    const dmIntro = document.getElementById("dmIntro");
-    const dmStatus = document.getElementById("dmStatus");
-    const dmMid = document.getElementById("dmMid");
-    const dmVerdict = document.getElementById("dmVerdict");
-
-    const bankOut = document.getElementById("bankOut");
-    const sinsOut = document.getElementById("sinsOut");
-    const dmCountOut = document.getElementById("dmCountOut");
-    const nextDmOut = document.getElementById("nextDmOut");
-    const modOut = document.getElementById("modOut");
-    const recipeSrcOut = document.getElementById("recipeSrcOut");
-    const statusOut = document.getElementById("statusOut");
-
-    const dmLayer = document.getElementById("dmLayer");
-    const dmClose = document.getElementById("dmClose");
-    const dmOk = document.getElementById("dmOk");
-    const dmCopy = document.getElementById("dmCopy");
-    const dmCardLine1 = document.getElementById("dmCardLine1");
-    const dmCardLine2 = document.getElementById("dmCardLine2");
-
-    function setStatus(s) {
-      statusHud.textContent = s;
-      statusOut.textContent = s;
+  function loadOrInitRunState() {
+    let runSeed = Number(localStorage.getItem("ma_runSeed") || "0");
+    if (!runSeed) {
+      runSeed = Math.floor(Math.random() * 1e9);
+      localStorage.setItem("ma_runSeed", String(runSeed));
     }
 
-    /**********************
-     * Game State
-     **********************/
-    const sig = { startTime: Date.now(), moves:0, invalid:0, resets:0 };
+    let dmAppearCount = Number(localStorage.getItem("ma_dmAppearCount") || "0");
+    let nextDMAtLevel = Number(localStorage.getItem("ma_nextDMAtLevel") || "0");
 
-    const state = {
-      level: 1,
-      capacity: CAPACITY_DEFAULT,
-      bottles: [],
-      selected: null,
-      lock: false,
-      runSeed: null,
+    if (!nextDMAtLevel) {
+      nextDMAtLevel = 1 + randInt(DM_GAP_MIN, DM_GAP_MAX, hashSeed(runSeed, 111, 222));
+      localStorage.setItem("ma_nextDMAtLevel", String(nextDMAtLevel));
+    }
 
-      // DM scheduling persistence
-      dmAppearCount: 0,
-      nextDMAtLevel: 0,
+    return { runSeed, dmAppearCount, nextDMAtLevel };
+  }
 
-      // Modifier applied to NEXT level
-      pendingModifier: null,
-      activeModifier: null,
+  let { runSeed, dmAppearCount, nextDMAtLevel } = loadOrInitRunState();
 
-      // debugging
-      lastRecipeSource: "local"
+  function isDMLevel(lvl) { return lvl === nextDMAtLevel; }
+  function isMajorDM(upcomingCount) { return (upcomingCount % DM_MAJOR_EVERY) === 0; }
+
+  function scheduleNextDM(currentLevel) {
+    const gap = randInt(DM_GAP_MIN, DM_GAP_MAX, hashSeed(runSeed, dmAppearCount * 97, currentLevel * 131));
+    nextDMAtLevel = currentLevel + gap;
+    localStorage.setItem("ma_nextDMAtLevel", String(nextDMAtLevel));
+  }
+
+  async function postJSON(path, body) {
+    const base = apiBaseEl.value.trim().replace(/\/+$/, "");
+    const url = base + path;
+    const r = await fetch(url, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) });
+    if (!r.ok) {
+      let detailText = "";
+      try { detailText = await r.text(); } catch {}
+      const retryAfter = r.headers.get("Retry-After");
+      const err = new Error(`${r.status} ${r.statusText}${retryAfter ? ` (Retry-After: ${retryAfter}s)` : ""}`);
+      err.status = r.status;
+      err.retryAfter = retryAfter ? Number(retryAfter) : null;
+      err.detailText = detailText;
+      throw err;
+    }
+    return await r.json();
+  }
+
+  const btnQuest = document.getElementById("btnQuest");
+
+  function updateDMButton() {
+    dmCountOut.textContent = String(dmAppearCount);
+    nextDmOut.textContent = `L${nextDMAtLevel}`;
+
+    if (isDMLevel(level)) {
+      const upcoming = dmAppearCount + 1;
+      const major = isMajorDM(upcoming);
+      btnQuest.disabled = false;
+      btnQuest.textContent = major ? "Major Ritual (Brew Modifier)" : "DM Speaks (No Modifier)";
+      dmIntro.textContent = major
+        ? "A major ritual is available now. Brew a modifier that affects the NEXT level."
+        : "Minor DM visit. Story + directive only. No modifier brewed this time.";
+    } else {
+      btnQuest.disabled = true;
+      btnQuest.textContent = `DM @ L${nextDMAtLevel}`;
+      dmIntro.textContent = `DM appears randomly every ${DM_GAP_MIN}–${DM_GAP_MAX} levels. Next appearance: level ${nextDMAtLevel}. Modifiers only brew on every ${DM_MAJOR_EVERY}th DM appearance.`;
+    }
+  }
+
+  function renderDM(payload) {
+    questTitle.textContent = payload.quest_title || "—";
+    dmMid.textContent = payload.dm_midpoint || "";
+    dmVerdict.textContent = payload.dm_verdict || "";
+  }
+
+  btnQuest.addEventListener("click", async () => {
+    if (!isDMLevel(level)) return;
+
+    const { bankPrimary, bankConfidence } = inferBANK();
+    const sinTags = inferSinTags();
+    bankOut.textContent = `${bankPrimary} (${bankConfidence})`;
+    sinsOut.textContent = sinTags.join(", ");
+
+    const upcoming = dmAppearCount + 1;
+    const wantModifier = isMajorDM(upcoming);
+
+    statusOut.textContent = wantModifier ? "brewing..." : "speaking...";
+
+    const payload = {
+      act: Math.ceil(level/5),
+      questId,
+      bankPrimary,
+      bankConfidence,
+      sinTags,
+      seed: runSeed,
+      level,
+      wantModifier
     };
 
-    function loadRunState() {
-      const seed = localStorage.getItem("runSeed") || null;
-      const dmAppearCount = parseInt(localStorage.getItem("dmAppearCount") || "0", 10);
-      const nextDMAtLevel = parseInt(localStorage.getItem("nextDMAtLevel") || "0", 10);
-      const pendingModifierRaw = localStorage.getItem("pendingModifier");
+    try {
+      const key = `quest-node:${runSeed}:${questId}:${level}:${upcoming}:${wantModifier}`;
+      const data = await singleFlight(key, () => postJSON("/api/quest-node", payload));
+      const q = data.payload;
 
-      state.runSeed = seed || `run_${Date.now()}`;
-      state.dmAppearCount = Number.isFinite(dmAppearCount) ? dmAppearCount : 0;
-      state.nextDMAtLevel = Number.isFinite(nextDMAtLevel) ? nextDMAtLevel : 0;
+      renderDM(q);
 
-      state.pendingModifier = null;
-      if (pendingModifierRaw) {
-        try { state.pendingModifier = JSON.parse(pendingModifierRaw); } catch {}
-      }
-
-      localStorage.setItem("runSeed", state.runSeed);
-    }
-
-    function persistRunState() {
-      localStorage.setItem("runSeed", state.runSeed);
-      localStorage.setItem("dmAppearCount", String(state.dmAppearCount));
-      localStorage.setItem("nextDMAtLevel", String(state.nextDMAtLevel));
-      localStorage.setItem("pendingModifier", state.pendingModifier ? JSON.stringify(state.pendingModifier) : "");
-    }
-
-    /**********************
-     * BANK inference (simple + stable)
-     **********************/
-    function inferBANK() {
-      const elapsed = Math.max(1, (Date.now() - sig.startTime) / 1000);
-      const pace = sig.moves / elapsed;           // moves per second
-      const invalidRate = sig.invalid / Math.max(1, sig.moves);
-      const resetRate = sig.resets / Math.max(1, state.level);
-
-      // Simple heuristic mapping: tune later
-      // Action: high pace
-      // Blueprint: low invalid + structured
-      // Nurturing: higher resets (careful) + lower pace
-      // Knowledge: lower pace but low invalid
-      let scores = { B:0, A:0, N:0, K:0 };
-      scores.A += clamp(pace * 6, 0, 6);
-      scores.B += clamp((1 - invalidRate) * 4, 0, 4);
-      scores.K += clamp((1 - invalidRate) * 3 + (1 - pace) * 2, 0, 5);
-      scores.N += clamp(resetRate * 3 + (1 - pace) * 2, 0, 5);
-
-      const entries = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
-      const [primary, top] = entries[0];
-      const [, second] = entries[1];
-      const confidence = clamp((top - second) / 6, 0.15, 0.95);
-      return { primary, confidence };
-    }
-
-    function inferSinTags() {
-      const tags = [];
-      const invalidRate = sig.invalid / Math.max(1, sig.moves);
-      const elapsed = Math.max(1, (Date.now() - sig.startTime) / 1000);
-      const pace = sig.moves / elapsed;
-
-      if (invalidRate > 0.25) tags.push("impatience");
-      if (pace < 0.06) tags.push("overthinking");
-      if (sig.resets >= 3) tags.push("perfectionism");
-      return tags.slice(0, 3);
-    }
-
-    function setActiveBankLetter(letter) {
-      [bankB, bankA, bankN, bankK].forEach(el => el.classList.remove("active"));
-      const map = { B: bankB, A: bankA, N: bankN, K: bankK };
-      map[letter]?.classList.add("active");
-    }
-
-    /**********************
-     * Level generation (local fallback)
-     **********************/
-    function generateLocalLevel(level, modifier) {
-      // Very simple deterministic generator (not perfect, but stable)
-      const seed = hashSeed(`${state.runSeed}|L${level}|${JSON.stringify(modifier||{})}`);
-      const rng = mulberry32(seed);
-
-      const colors = modifier?.colorCount ? clamp(modifier.colorCount, 3, 8) : clamp(3 + Math.floor(level/3), 3, 8);
-      const empties = modifier?.empties ? clamp(modifier.empties, 1, 3) : 2;
-      const capacity = modifier?.capacity ? clamp(modifier.capacity, 3, 6) : CAPACITY_DEFAULT;
-
-      state.capacity = capacity;
-
-      // build solved stacks
-      const stacks = [];
-      for (let c=0; c<colors; c++) {
-        const color = `c${c}`;
-        stacks.push(Array.from({length: capacity}, ()=>color));
-      }
-      for (let i=0; i<empties; i++) stacks.push([]);
-
-      // shuffle by pouring chunks around (still solvable)
-      const bottles = stacks.map(s => s.slice());
-      const steps = 35 + level*3;
-      for (let i=0; i<steps; i++) {
-        const from = randInt(rng, 0, bottles.length-1);
-        const to = randInt(rng, 0, bottles.length-1);
-        if (from === to) continue;
-        if (!canPour(bottles, from, to, capacity)) continue;
-        bottles.splice(0, bottles.length, ...applyPour(bottles, from, to, capacity));
-      }
-
-      state.lastRecipeSource = "local";
-      return bottles;
-    }
-
-    /**********************
-     * Core Rules (stable + pure)
-     **********************/
-    function canPour(bottles, from, to, cap) {
-      const src = bottles[from];
-      const dst = bottles[to];
-      if (!src || !dst) return false;
-      if (!src.length) return false;
-      if (dst.length >= cap) return false;
-      const color = src[src.length - 1];
-      if (dst.length && dst[dst.length - 1] !== color) return false;
-      return true;
-    }
-
-    function applyPour(bottles, from, to, cap) {
-      const next = bottles.map(b => b.slice());
-      const src = next[from];
-      const dst = next[to];
-      const color = src[src.length - 1];
-
-      while (src.length && src[src.length - 1] === color && dst.length < cap) {
-        dst.push(src.pop());
-      }
-      return next;
-    }
-
-    function isWin(bottles, cap) {
-      return bottles.every(b =>
-        b.length === 0 ||
-        (b.length === cap && b.every(x => x === b[0]))
-      );
-    }
-
-    /**********************
-     * DM Scheduling
-     **********************/
-    function scheduleNextDM(levelNow) {
-      const seed = hashSeed(`${state.runSeed}|DM|${state.dmAppearCount}|L${levelNow}`);
-      const rng = mulberry32(seed);
-      const gap = randInt(rng, DM_GAP_MIN, DM_GAP_MAX);
-      state.nextDMAtLevel = levelNow + gap;
-      persistRunState();
-    }
-
-    function isDMLevel(level) {
-      return level === state.nextDMAtLevel;
-    }
-
-    function isMajorDM(upcomingDmNumber) {
-      return (upcomingDmNumber % DM_MAJOR_EVERY) === 0;
-    }
-
-    function formatModifier(mod) {
-      if (!mod) return "—";
-      const bits = [];
-      if (mod.capacity) bits.push(`cap:${mod.capacity}`);
-      if (mod.colorCount) bits.push(`colors:${mod.colorCount}`);
-      if (mod.empties) bits.push(`empties:${mod.empties}`);
-      if (mod.moveBudget) bits.push(`budget:${mod.moveBudget}`);
-      return bits.join(" ") || "—";
-    }
-
-    function setPendingModifier(mod) {
-      state.pendingModifier = mod || null;
-      persistRunState();
-    }
-
-    /**********************
-     * Render
-     **********************/
-    function colorToCss(c) {
-      // deterministic palette
-      const palette = [
-        "rgba(56,189,248,.85)",   // cyan
-        "rgba(167,139,250,.85)",  // violet
-        "rgba(34,197,94,.80)",    // green
-        "rgba(251,191,36,.85)",   // amber
-        "rgba(244,114,182,.85)",  // pink
-        "rgba(248,113,113,.85)",  // red
-        "rgba(163,230,53,.85)",   // lime
-        "rgba(253,186,116,.85)"   // orange
-      ];
-      const idx = parseInt(c.replace("c",""), 10);
-      return palette[idx % palette.length];
-    }
-
-    function renderGrid() {
-      grid.innerHTML = "";
-      const cap = state.capacity;
-
-      state.bottles.forEach((b, i) => {
-        const el = document.createElement("div");
-        el.className = "bottle" + (state.selected === i ? " selected" : "");
-        el.dataset.i = String(i);
-
-        const capLabel = document.createElement("div");
-        capLabel.className = "bottleCap mono";
-        capLabel.textContent = `${b.length}/${cap}`;
-        el.appendChild(capLabel);
-
-        // cells (bottom up)
-        for (let j=0; j<cap; j++) {
-          const cell = document.createElement("div");
-          cell.className = "cell" + (j < b.length ? " fill" : "");
-          if (j < b.length) cell.style.background = colorToCss(b[j]);
-          el.appendChild(cell);
-        }
-
-        grid.appendChild(el);
-      });
-    }
-
-    function updateHUD() {
-      levelOut.textContent = String(state.level);
-      seedOut.textContent = state.runSeed ? String(hashSeed(state.runSeed)).slice(0,6) : "—";
-      movesOut.textContent = String(sig.moves);
-      invalidOut.textContent = String(sig.invalid);
-      resetsOut.textContent = String(sig.resets);
-
-      dmCountOut.textContent = String(state.dmAppearCount);
-      nextDmOut.textContent = state.nextDMAtLevel ? `L${state.nextDMAtLevel}` : "—";
-      modOut.textContent = formatModifier(state.pendingModifier);
-      recipeSrcOut.textContent = state.lastRecipeSource;
-
-      const active = state.activeModifier;
-      modShort.textContent = formatModifier(active || state.pendingModifier);
-      modDesc.textContent = active
-        ? "Active modifier is applied to this level."
-        : (state.pendingModifier ? "Pending modifier will affect the NEXT level." : "None active.");
-
-      // bank rail + meta
-      const { primary, confidence } = inferBANK();
-      setActiveBankLetter(primary);
-      bankOut.textContent = `${primary} (${Math.round(confidence*100)}%)`;
-      const sins = inferSinTags();
-      sinsOut.textContent = sins.length ? sins.join(", ") : "—";
-    }
-
-    function updateDMButton() {
-      const level = state.level;
-
-      if (!state.nextDMAtLevel || state.nextDMAtLevel < 1) {
-        // first schedule
-        scheduleNextDM(level);
-      }
-
-      if (isDMLevel(level)) {
-        const upcoming = state.dmAppearCount + 1;
-        const major = isMajorDM(upcoming);
-        btnQuest.disabled = false;
-        btnQuest.textContent = major ? "Major Ritual (Brew Modifier)" : "DM Speaks";
-
-        dmStatus.textContent = major
-          ? "A major ritual is available now. Brew a modifier that affects the NEXT level."
-          : "Minor visit: story + directive. No modifier brewed this time.";
+      if (wantModifier) {
+        setPendingModifier(q.modifier);
+        showToast("Modifier brewed for next level");
       } else {
-        btnQuest.disabled = true;
-        btnQuest.textContent = `DM @ L${state.nextDMAtLevel}`;
-        dmStatus.textContent =
-          `DM appears randomly every ${DM_GAP_MIN}–${DM_GAP_MAX} levels. ` +
-          `Next appearance: level ${state.nextDMAtLevel}. ` +
-          `Modifiers only brew on every ${DM_MAJOR_EVERY}th DM appearance.`;
+        setPendingModifier(null);
+        showToast("DM visit (no modifier)");
       }
-    }
 
-    function renderAll() {
-      renderGrid();
-      updateHUD();
+      dmAppearCount = upcoming;
+      localStorage.setItem("ma_dmAppearCount", String(dmAppearCount));
+      scheduleNextDM(level);
       updateDMButton();
-    }
 
-    /**********************
-     * DM UI helpers
-     **********************/
-    function openDM() {
-      gameStack.classList.add("paused");
-      speechLayer.classList.add("show");
-      dmLayer.classList.add("show");
-    }
-    function closeDM() {
-      dmLayer.classList.remove("show");
-      // keep speech bubble visible as a “log” if you want; or hide it:
-      // speechLayer.classList.remove("show");
-      gameStack.classList.remove("paused");
-    }
-
-    dmClose.addEventListener("click", closeDM);
-    dmOk.addEventListener("click", closeDM);
-
-    dmCopy.addEventListener("click", async () => {
-      const text = [questTitle.textContent, dmIntro.textContent, dmMid.textContent, dmVerdict.textContent]
-        .filter(Boolean).join("\n\n");
-      try {
-        await navigator.clipboard.writeText(text);
-        dmCardLine2.textContent = "Copied.";
-      } catch {
-        dmCardLine2.textContent = "Copy failed (clipboard blocked).";
+      statusOut.textContent = "ok";
+    } catch (e) {
+      if (e.status === 429) {
+        statusOut.textContent = "rate-limited";
+        showToast("Rate limited. Try again soon.");
+      } else {
+        statusOut.textContent = "dm error";
+        showToast("DM error (check server).");
       }
+      console.warn(e, e.detailText);
+    }
+  });
+
+  const grid = document.getElementById("grid");
+  const levelOut = document.getElementById("levelOut");
+  const movesOut = document.getElementById("movesOut");
+  const badOut = document.getElementById("badOut");
+  const resetOut = document.getElementById("resetOut");
+  const pourFX = document.getElementById("pourFX");
+
+  const PALETTE = ["#00D1FF","#FF4D6D","#FFD400","#7CFF6B","#A855F7","#FF8A00","#00FFA8","#2E5BFF","#FF3DF2","#C2FF00"];
+  const state = { bottles:[], capacity:4, selected:-1 };
+
+  function isSolved() {
+    return state.bottles.every(b => {
+      if (b.length === 0) return true;
+      if (b.length !== state.capacity) return false;
+      return b.every(x => x === b[0]);
     });
+  }
+  const topColor = (b)=> b.length ? b[b.length-1] : null;
+  function topRunCount(b){
+    if (!b.length) return 0;
+    const c = topColor(b);
+    let n=0; for(let i=b.length-1;i>=0;i--){ if (b[i]===c) n++; else break; }
+    return n;
+  }
+  function canPour(from,to){
+    if (from===to) return false;
+    const a=state.bottles[from], b=state.bottles[to];
+    if (!a.length) return false;
+    if (b.length>=state.capacity) return false;
+    const color=topColor(a), target=topColor(b);
+    return (target===null || target===color);
+  }
 
-    function renderDM(payload) {
-      // ✅ FIX: dmIntro is now populated
-      questTitle.textContent = payload?.quest_title || "—";
-      dmIntro.textContent =
-        payload?.dm_intro ||
-        payload?.dm_opening ||
-        payload?.dm_intro_text ||
-        payload?.opening ||
-        "";
-
-      dmMid.textContent = payload?.dm_midpoint || payload?.midpoint || "";
-      dmVerdict.textContent = payload?.dm_verdict || payload?.verdict || "";
-
-      // also mirror into the overlay card for readability
-      dmCardLine1.textContent = dmIntro.textContent || "…";
-      dmCardLine2.textContent = dmVerdict.textContent || dmMid.textContent || "…";
+  function bottleCenter(i){
+    const el=document.querySelector(`[data-bottle="${i}"]`);
+    if(!el) return {x:innerWidth/2,y:innerHeight/2};
+    const r=el.getBoundingClientRect();
+    return {x:r.left+r.width/2, y:r.top+r.height/4};
+  }
+  function playPourFX(from,to,color,amount){
+    const a=bottleCenter(from), b=bottleCenter(to);
+    pourFX.style.background=color;
+    pourFX.style.opacity="1";
+    pourFX.style.left=a.x+"px"; pourFX.style.top=a.y+"px";
+    const dx=b.x-a.x, dy=b.y-a.y;
+    const dur=Math.max(260, Math.min(580, 220+amount*90));
+    pourFX.animate([
+      { transform:"translate(-50%,-50%) scale(1)", opacity:0.9 },
+      { transform:`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.9)`, opacity:0.85 },
+      { transform:`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.7)`, opacity:0.0 }
+    ], { duration:dur, easing:"cubic-bezier(.2,.8,.2,1)" });
+    setTimeout(()=> pourFX.style.opacity="0", dur);
+  }
+  function doPour(from,to){
+    if(!canPour(from,to)){
+      sig.invalid++; badOut.textContent=String(sig.invalid);
+      showToast("Invalid pour");
+      return false;
     }
+    const a=state.bottles[from], b=state.bottles[to];
+    const color=topColor(a);
+    const run=topRunCount(a);
+    const space=state.capacity-b.length;
+    const amount=Math.min(run,space);
 
-    /**********************
-     * Game Flow
-     **********************/
-    function resetLevel() {
-      sig.resets++;
-      sig.moves = 0;
-      sig.invalid = 0;
-      sig.startTime = Date.now();
-      state.selected = null;
+    const now=performance.now();
+    if(sig.lastMoveAt) sig.moveTimes.push(now-sig.lastMoveAt);
+    sig.lastMoveAt=now;
 
-      // Rebuild the same level deterministically
-      state.bottles = generateLocalLevel(state.level, state.activeModifier);
-      renderAll();
+    playPourFX(from,to,PALETTE[color%PALETTE.length], amount);
+    for(let i=0;i<amount;i++) b.push(a.pop());
+
+    sig.moves++; movesOut.textContent=String(sig.moves);
+    render();
+
+    if(isSolved()){
+      showToast("Solved! Next level…");
+      setTimeout(()=>nextLevel(), 650);
     }
+    return true;
+  }
+  const countEmpty = ()=> state.bottles.filter(b=>b.length===0).length;
 
-    function nextLevel() {
-      state.level++;
-      state.selected = null;
+  function render(){
+    grid.innerHTML="";
+    state.bottles.forEach((b,i)=>{
+      const bottle=document.createElement("div");
+      bottle.className="bottle"+(state.selected===i?" selected":"");
+      bottle.dataset.bottle=String(i);
 
-      // apply pending modifier ONCE
-      state.activeModifier = state.pendingModifier;
-      setPendingModifier(null);
-
-      // if the new level is beyond scheduled DM, keep schedule
-      state.bottles = generateLocalLevel(state.level, state.activeModifier);
-      renderAll();
-    }
-
-    function onWin() {
-      setStatus("win");
-      // auto-advance feel (optional) — keep manual for now
-    }
-
-    function onBottleClick(i) {
-      if (state.lock) return;
-
-      if (state.selected === null) {
-        state.selected = i;
-        renderAll();
-        return;
+      for(let s=0;s<state.capacity;s++){
+        const seg=document.createElement("div");
+        seg.className="seg";
+        const ci = b[s] ?? null;
+        seg.style.background = (ci===null) ? "transparent" : PALETTE[ci%PALETTE.length];
+        bottle.appendChild(seg);
       }
 
-      const from = state.selected;
-      const to = i;
-      state.selected = null;
+      bottle.addEventListener("click", ()=>{
+        if(state.selected===-1){ state.selected=i; render(); return; }
+        if(state.selected===i){ state.selected=-1; render(); return; }
+        const success=doPour(state.selected,i);
+        state.selected=-1;
+        if(!success) render();
+      });
 
-      if (!canPour(state.bottles, from, to, state.capacity)) {
-        sig.invalid++;
-        renderAll();
-        return;
+      grid.appendChild(bottle);
+    });
+
+    levelOut.textContent=String(level);
+    movesOut.textContent=String(sig.moves);
+    badOut.textContent=String(sig.invalid);
+    resetOut.textContent=String(sig.resets);
+    cfgOut.textContent=`b${state.bottles.length}/c${state.capacity}/e${countEmpty()}`;
+    updateDMButton();
+  }
+
+  function shuffle(arr, rnd=Math.random){
+    for(let i=arr.length-1;i>0;i--){
+      const j=Math.floor(rnd()*(i+1));
+      [arr[i],arr[j]]=[arr[j],arr[i]];
+    }
+    return arr;
+  }
+
+  function applyModifier(recipe, mod) {
+    if (!mod) return { recipe, consumed:false };
+    recipe.bottleCount = clamp(recipe.bottleCount + (mod.bottleCountDelta||0), 6, 14);
+    recipe.colors      = clamp(recipe.colors + (mod.colorsDelta||0), 4, 10);
+    recipe.capacity    = clamp(recipe.capacity + (mod.capacityDelta||0), 3, 6);
+    recipe.emptyBottles= clamp(recipe.emptyBottles + (mod.emptyBottlesDelta||0), 1, 6);
+    recipe.lockedBottles = clamp(recipe.lockedBottles + (mod.lockedBottlesDelta||0), 0, 3);
+    recipe.wildcardSlots = clamp(recipe.wildcardSlots + (mod.wildcardSlotsDelta||0), 0, 2);
+    recipe.emptyBottles = Math.min(recipe.emptyBottles, Math.max(1, recipe.bottleCount - 1));
+    recipe.appliedModifier = mod;
+    return { recipe, consumed:true };
+  }
+
+  let anchorRecipe = null;
+  function makeFillerRecipe() {
+    const { bankPrimary } = inferBANK();
+    const sinTags = inferSinTags();
+    const seed = hashSeed(runSeed, level, questId);
+    const rnd = mulberry32(seed);
+
+    const targetDifficulty = clamp(1 + Math.floor(level / 3) + Math.floor(rnd()*2), 1, 10);
+
+    const base = anchorRecipe ? structuredClone(anchorRecipe) : {
+      version: "local-filler",
+      title: "Filler Brew",
+      lore: "A controlled run. No theatrics. Just results.",
+      difficulty: targetDifficulty,
+      colors: 5,
+      bottleCount: 10,
+      capacity: 4,
+      emptyBottles: 2,
+      lockedBottles: 0,
+      wildcardSlots: 0,
+      elements: ["Au","Fe","Na","Cl","C"],
+      sinTags: [],
+      bonuses: [],
+      constraints: [],
+      appliedModifier: {
+        lockedBottlesDelta:0, emptyBottlesDelta:0, capacityDelta:0,
+        wildcardSlotsDelta:0, colorsDelta:0, bottleCountDelta:0,
+        ruleTag:"none", bonusObjective:""
       }
+    };
 
-      // apply move
-      state.bottles = applyPour(state.bottles, from, to, state.capacity);
-      sig.moves++;
+    const wobble = (v, min, max, step=1) => clamp(v + (rnd()<0.33?-step:(rnd()>0.66?step:0)), min, max);
 
-      if (isWin(state.bottles, state.capacity)) onWin();
-      setStatus("ready");
-      renderAll();
+    base.version = "local-filler";
+    base.difficulty = targetDifficulty;
+    base.colors = wobble(clamp(4 + Math.floor(level/4), 4, 10), 4, 10, 1);
+    base.capacity = wobble(4 + (level>=18?1:0) + (level>=32?1:0), 3, 6, 1);
+    base.emptyBottles = clamp(2 + (rnd()<0.2?1:0) - (rnd()>0.9?1:0), 1, 6);
+    base.bottleCount = clamp(base.colors + base.emptyBottles + 3 + Math.floor(rnd()*2), 6, 14);
+    base.lockedBottles = clamp((level>=20?1:0) + (rnd()<0.08?1:0), 0, 3);
+    base.wildcardSlots = clamp((level>=25 && rnd()<0.15)?1:0, 0, 2);
+
+    base.sinTags = sinTags;
+    base.title = `Filler: ${bankPrimary} Distillation`;
+    base.lore = `You want drama. The lab wants precision. Pour cleaner.`;
+
+    const pool = ["H","He","Li","Be","B","C","N","O","F","Ne","Na","Mg","Al","Si","P","S","Cl","Ar","K","Ca","Fe","Cu","Zn","Ag","Au"];
+    const start = Math.floor(rnd()* (pool.length - base.colors));
+    base.elements = pool.slice(start, start + base.colors);
+
+    return base;
+  }
+
+  function buildBoardFromRecipe(recipe){
+    const colors=recipe.colors, bottles=recipe.bottleCount, cap=recipe.capacity, empty=recipe.emptyBottles;
+    const rnd = mulberry32(hashSeed(runSeed, level, 1337));
+
+    const colorStacks=[];
+    for(let c=0;c<colors;c++) colorStacks.push(Array.from({length:cap}, ()=>c));
+
+    const pool=shuffle(colorStacks.flat(), rnd);
+    const board=Array.from({length:bottles}, ()=>[]);
+    const fillCount=bottles-empty;
+    let idx=0;
+    for(let b=0;b<fillCount;b++){
+      for(let s=0;s<cap;s++){
+        if(idx<pool.length) board[b].push(pool[idx++]);
+      }
     }
 
-    grid.addEventListener("click", (e) => {
-      const bottleEl = e.target.closest(".bottle");
-      if (!bottleEl) return;
-      const idx = parseInt(bottleEl.dataset.i, 10);
-      if (!Number.isFinite(idx)) return;
-      onBottleClick(idx);
-    });
+    state.capacity=cap;
+    state.bottles=board;
+    state.selected=-1;
 
-    btnReset.addEventListener("click", () => {
-      resetLevel();
-    });
+    const scramble = Math.max(40, Math.min(260, recipe.difficulty*24 + 60));
+    for(let k=0;k<scramble;k++){
+      const a=Math.floor(rnd()*bottles);
+      const t=Math.floor(rnd()*bottles);
+      if(a===t) continue;
+      if(!canPour(a,t)) continue;
+      const from=state.bottles[a], to=state.bottles[t];
+      if(!from.length || to.length>=cap) continue;
+      const col=topColor(from), tgt=topColor(to);
+      if(tgt!==null && tgt!==col) continue;
+      to.push(from.pop());
+    }
+  }
 
-    btnNext.addEventListener("click", () => {
-      setStatus("ready");
-      nextLevel();
-    });
+  async function fetchLLMRecipe() {
+    const { bankPrimary, bankConfidence } = inferBANK();
+    const sinTags = inferSinTags();
 
-    btnQuest.addEventListener("click", async () => {
-      const level = state.level;
-      if (!isDMLevel(level)) return;
+    const payload = { act: Math.ceil(level/5), questId, bankPrimary, bankConfidence, sinTags, seed: runSeed, level, modifier: pendingModifier };
 
-      // prevent double-click spam
-      if (state.lock) return;
-      state.lock = true;
+    statusOut.textContent = "distilling...";
+    const data = await postJSON("/api/level-recipe", payload);
+    statusOut.textContent = "ok";
+    recipeSrcOut.textContent = "LLM";
+    return data.recipe;
+  }
 
-      openDM();
-      setStatus("dm");
-      dmIntro.textContent = "…summoning the DM…";
-      dmMid.textContent = "";
-      dmVerdict.textContent = "";
+  function loadFillerRecipe() {
+    statusOut.textContent = "local filler";
+    recipeSrcOut.textContent = "FILLER";
+    return makeFillerRecipe();
+  }
 
-      const { primary, confidence } = inferBANK();
-      const sinTags = inferSinTags();
+  async function loadLevel() {
+    const shouldLLM = Boolean(pendingModifier) || (isDMLevel(level) && isMajorDM(dmAppearCount + 1));
 
-      // meta UI
-      bankOut.textContent = `${primary} (${Math.round(confidence*100)}%)`;
-      sinsOut.textContent = sinTags.length ? sinTags.join(", ") : "—";
-
-      const upcoming = state.dmAppearCount + 1;
-      const major = isMajorDM(upcoming);
-
-      try {
-        const payload = await singleFlight("quest-node", async () => {
-          // Adjust request shape as needed; safe defaults:
-          return postJSON("/api/quest-node", {
-            level,
-            bank_primary: primary,
-            bank_confidence: confidence,
-            sin_tags: sinTags,
-            is_major: major
-          });
-        });
-
-        // Support both {payload:{...}} and direct payload
-        const dmPayload = payload?.payload || payload;
-
-        renderDM(dmPayload);
-
-        // apply modifier only on major DMs (and affects NEXT level)
-        const mod = dmPayload?.modifier || dmPayload?.modifier_delta || null;
-        if (major && mod) {
-          setPendingModifier(mod);
+    let recipe;
+    if (shouldLLM) {
+      recipe = await singleFlight(`llm-recipe:${runSeed}:${questId}:${level}`, async () => {
+        try {
+          const r = await fetchLLMRecipe();
+          anchorRecipe = structuredClone(r);
+          return r;
+        } catch (e) {
+          if (e.status === 429) {
+            statusOut.textContent = "rate-limited";
+            showToast("Rate limited. Using deterministic filler.");
+          } else {
+            statusOut.textContent = "recipe error";
+            showToast("Recipe error. Using deterministic filler.");
+          }
+          console.warn(e, e.detailText);
+          return loadFillerRecipe();
         }
-
-        // increment DM appearance count + schedule next DM
-        state.dmAppearCount++;
-        scheduleNextDM(level);
-        renderAll();
-
-      } catch (err) {
-        dmIntro.textContent = "The DM choked on the incense. Try again.";
-        dmVerdict.textContent = err?.message || "DM error.";
-        dmCardLine1.textContent = dmIntro.textContent;
-        dmCardLine2.textContent = dmVerdict.textContent;
-      } finally {
-        state.lock = false;
-        setStatus("ready");
-      }
-    });
-
-    /**********************
-     * Boot
-     **********************/
-    function boot() {
-      loadRunState();
-      if (!state.nextDMAtLevel) scheduleNextDM(state.level);
-
-      state.activeModifier = null;
-      state.bottles = generateLocalLevel(state.level, state.activeModifier);
-
-      setStatus("ready");
-      renderAll();
+      });
+    } else {
+      recipe = loadFillerRecipe();
     }
-    boot();
-  </script>
+
+    const applied = applyModifier(recipe, pendingModifier);
+    if (applied.consumed) {
+      showToast("Modifier consumed");
+      setPendingModifier(null);
+    } else {
+      recipe.appliedModifier = recipe.appliedModifier || {
+        lockedBottlesDelta:0, emptyBottlesDelta:0, capacityDelta:0,
+        wildcardSlotsDelta:0, colorsDelta:0, bottleCountDelta:0,
+        ruleTag:"none", bonusObjective:""
+      };
+    }
+
+    buildBoardFromRecipe(recipe);
+    render();
+  }
+
+  function nextLevel(){
+    level++;
+    questId = Math.ceil(level/4);
+    sig.moves=0; sig.invalid=0; sig.moveTimes=[]; sig.lastMoveAt=0;
+    loadLevel();
+  }
+
+  function resetRun(){
+    sig.resets++;
+    runSeed = Math.floor(Math.random()*1e9);
+    localStorage.setItem("ma_runSeed", String(runSeed));
+
+    level=1; questId=1;
+    sig.moves=0; sig.invalid=0; sig.moveTimes=[]; sig.lastMoveAt=0;
+    setPendingModifier(null);
+    anchorRecipe=null;
+
+    dmAppearCount = 0;
+    localStorage.setItem("ma_dmAppearCount", "0");
+    nextDMAtLevel = 1 + randInt(DM_GAP_MIN, DM_GAP_MAX, hashSeed(runSeed, 111, 222));
+    localStorage.setItem("ma_nextDMAtLevel", String(nextDMAtLevel));
+
+    showToast("Run reset");
+    loadLevel();
+  }
+
+  document.getElementById("btnNext").addEventListener("click", ()=>nextLevel());
+  document.getElementById("btnReset").addEventListener("click", ()=>resetRun());
+
+  updateDMButton();
+  recipeSrcOut.textContent = "—";
+  loadLevel();
+</script>
 </body>
 </html>
