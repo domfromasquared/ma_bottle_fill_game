@@ -26,6 +26,7 @@
     .gameHeader { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
     .stats { display:flex; gap:10px; flex-wrap:wrap; }
     .grid { display:flex; flex-wrap:wrap; gap:16px; padding: 18px 16px; min-height: 300px; }
+
     .bottle {
       width: 84px; height: 220px;
       border-radius: 22px 22px 26px 26px;
@@ -63,6 +64,46 @@
       color:#aab6ca;
       font-size: 14px;
       line-height: 1.2;
+    }
+
+    /* ---------- Lab Legend (chemical meaning) ---------- */
+    .legend {
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      padding: 10px 16px 0 16px;
+    }
+    .legendItem{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      border:1px solid #243244;
+      border-radius: 999px;
+      padding: 8px 10px;
+      background:#0b121c;
+    }
+    .swatch{
+      width:14px;
+      height:14px;
+      border-radius: 999px;
+      border:1px solid rgba(255,255,255,.14);
+    }
+    .legendText{
+      display:flex;
+      flex-direction:column;
+      line-height:1.05;
+    }
+    .legendTop{
+      font-weight:900;
+      font-size:13px;
+    }
+    .legendSub{
+      font-size:12px;
+      color:#aab6ca;
+    }
+    .thesisPill{
+      border:1px dashed #2a3a52;
+      background: rgba(17,26,39,.55);
     }
   </style>
 </head>
@@ -120,6 +161,9 @@
         </div>
       </div>
 
+      <!-- 🧪 Chemical meaning lives here -->
+      <div id="legend" class="legend"></div>
+
       <div class="grid" id="grid"></div>
 
       <div class="controls">
@@ -134,6 +178,8 @@
   <div class="pourFX" id="pourFX"></div>
 
 <script type="module">
+  import { ELEMENTS, THESES, pickLoreLine } from "./element_schema.js";
+
   const DEFAULT_PROD = "https://ma-bottle-fill-api.onrender.com";
   const DEFAULT_LOCAL = "http://localhost:8787";
   const isLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1";
@@ -194,6 +240,16 @@
     return Math.floor(r * (max - min + 1)) + min;
   }
 
+  // Deterministic RNG wrapper compatible with pickLoreLine(kind, rng)
+  function makeRng(seed){
+    const f = mulberry32(seed >>> 0);
+    return {
+      f,
+      int(min,max){ return Math.floor(f() * (max - min + 1)) + min; },
+      pick(arr){ return arr[Math.floor(f() * arr.length)]; }
+    };
+  }
+
   // ---------- DOM ----------
   const statusOut = document.getElementById("statusOut");
   const questTitle = document.getElementById("questTitle");
@@ -214,6 +270,8 @@
   const btnReset = document.getElementById("btnReset");
 
   const grid = document.getElementById("grid");
+  const legendEl = document.getElementById("legend");
+
   const levelOut = document.getElementById("levelOut");
   const movesOut = document.getElementById("movesOut");
   const badOut = document.getElementById("badOut");
@@ -221,7 +279,9 @@
   const pourFX = document.getElementById("pourFX");
 
   // ---------- Game / Run State ----------
-  const PALETTE = ["#00D1FF","#FF4D6D","#FFD400","#7CFF6B","#A855F7","#FF8A00","#00FFA8","#2E5BFF","#FF3DF2","#C2FF00"];
+  // Active palette for this level: index -> {symbol,color}
+  let currentElements = [];
+  let currentPalette = []; // index -> hex
 
   let level = 1;
   let questId = 1;
@@ -264,6 +324,92 @@
     return tags.slice(0,3);
   }
 
+  // ---------- Element Schema / “Chemical Meaning” ----------
+  function pickThesisKey(rng, sinTags=[], bankPrimary="K"){
+    const tags = new Set(sinTags || []);
+    if (tags.has("hesitation")) return "UR_without_CL";
+    if (tags.has("indecision")) return "Traffic_without_ME";
+    if (tags.has("over_reset")) return "PA_without_PR";
+
+    if (bankPrimary === "A") return "UR_without_CL";
+    if (bankPrimary === "K") return "Traffic_without_ME";
+    if (bankPrimary === "N") return "PA_without_PR";
+    if (bankPrimary === "B") return "VI_without_ST";
+
+    const keys = Object.keys(THESES);
+    return rng.pick(keys);
+  }
+
+  function chooseElementsForThesis(thesisKey, colorsWanted, rng){
+    const thesis = THESES[thesisKey] || null;
+    const all = Object.keys(ELEMENTS);
+
+    const mustInclude = thesis?.must_include || [];
+    const mustExclude = new Set(thesis?.must_exclude || []);
+
+    const chosen = [];
+    for (const sym of mustInclude) {
+      if (ELEMENTS[sym] && !chosen.includes(sym)) chosen.push(sym);
+    }
+
+    const pool = all.filter(sym => ELEMENTS[sym] && !mustExclude.has(sym) && !chosen.includes(sym));
+    while (chosen.length < colorsWanted && pool.length) {
+      const idx = Math.floor(rng.f() * pool.length);
+      chosen.push(pool.splice(idx,1)[0]);
+    }
+
+    while (chosen.length < colorsWanted) {
+      chosen.push(all[chosen.length % all.length]);
+    }
+
+    return chosen.slice(0, colorsWanted);
+  }
+
+  function applyElementPalette(recipe){
+    // Map recipe.elements -> colors
+    const elems = (recipe.elements || []).slice(0, recipe.colors);
+    currentElements = elems;
+    currentPalette = elems.map(sym => (ELEMENTS[sym]?.color || "#ffffff"));
+  }
+
+  function renderLegend(recipe){
+    legendEl.innerHTML = "";
+
+    const thesisKey = recipe.thesisKey;
+    const thesis = thesisKey ? THESES[thesisKey] : null;
+    if (thesis) {
+      const pill = document.createElement("div");
+      pill.className = "legendItem thesisPill";
+      pill.innerHTML = `
+        <div class="legendText">
+          <div class="legendTop">Thesis: ${thesis.name}</div>
+          <div class="legendSub">Must include: ${(thesis.must_include||[]).join(", ") || "—"} · Must exclude: ${(thesis.must_exclude||[]).join(", ") || "—"}</div>
+        </div>
+      `;
+      legendEl.appendChild(pill);
+    }
+
+    for (let i=0; i<currentElements.length; i++){
+      const sym = currentElements[i];
+      const el = ELEMENTS[sym];
+      if (!el) continue;
+
+      const item = document.createElement("div");
+      item.className = "legendItem";
+      const teaches = el.teaches ? `teaches: ${el.teaches}` : "";
+      const punishes = el.punishes ? `punishes: ${el.punishes}` : "";
+      item.innerHTML = `
+        <div class="swatch" style="background:${el.color}"></div>
+        <div class="legendText">
+          <div class="legendTop">${el.symbol} — ${el.name}</div>
+          <div class="legendSub">${[teaches, punishes].filter(Boolean).join(" · ")}</div>
+        </div>
+      `;
+      legendEl.appendChild(item);
+    }
+  }
+
+  // ---------- Modifier (existing) ----------
   let pendingModifier = null;
   function formatMod(mod) {
     if (!mod) return "—";
@@ -349,10 +495,7 @@
   // ---------- DM Render (FIXED) ----------
   function renderDM(payload) {
     questTitle.textContent = payload.quest_title || "—";
-
-    // ✅ FIX: actually show dm_intro
     dmIntro.textContent = payload.dm_intro || "";
-
     dmMid.textContent = payload.dm_midpoint || "";
     dmVerdict.textContent = payload.dm_verdict || "";
   }
@@ -479,14 +622,16 @@
     if(sig.lastMoveAt) sig.moveTimes.push(now-sig.lastMoveAt);
     sig.lastMoveAt=now;
 
-    playPourFX(from,to,PALETTE[color%PALETTE.length], amount);
+    // ✅ chemical palette
+    playPourFX(from,to,currentPalette[color] || "#ffffff", amount);
     for(let i=0;i<amount;i++) b.push(a.pop());
 
     sig.moves++; movesOut.textContent=String(sig.moves);
     render();
 
     if(isSolved()){
-      showToast("Solved! Next level…");
+      const rng = makeRng(hashSeed(runSeed, level, 777));
+      showToast(pickLoreLine("win", rng));
       setTimeout(()=>nextLevel(), 650);
     }
     return true;
@@ -502,13 +647,14 @@
     return arr;
   }
 
-  // Minimal local filler recipe (kept from your current approach)
+  // Minimal local filler recipe (now schema-driven)
   let anchorRecipe = null;
   function makeFillerRecipe() {
     const { bankPrimary } = inferBANK();
     const sinTags = inferSinTags();
     const seed = hashSeed(runSeed, level, questId);
     const rnd = mulberry32(seed);
+    const rng = makeRng(seed);
 
     const targetDifficulty = clamp(1 + Math.floor(level / 3) + Math.floor(rnd()*2), 1, 10);
 
@@ -523,7 +669,8 @@
       emptyBottles: 2,
       lockedBottles: 0,
       wildcardSlots: 0,
-      elements: ["Au","Fe","Na","Cl","C"],
+      elements: ["CL","PA","PR","AU","TR"],
+      thesisKey: "Traffic_without_ME",
       sinTags: [],
       bonuses: [],
       constraints: [],
@@ -546,16 +693,22 @@
 
     base.sinTags = sinTags;
     base.title = `Filler: ${bankPrimary} Distillation`;
-    base.lore = `You want drama. The lab wants precision. Pour cleaner.`;
 
-    const pool = ["H","He","Li","Be","B","C","N","O","F","Ne","Na","Mg","Al","Si","P","S","Cl","Ar","K","Ca","Fe","Cu","Zn","Ag","Au"];
-    const start = Math.floor(rnd()* (pool.length - base.colors));
-    base.elements = pool.slice(start, start + base.colors);
+    // Thesis drives meaning
+    base.thesisKey = pickThesisKey(rng, sinTags, bankPrimary);
+    base.elements = chooseElementsForThesis(base.thesisKey, base.colors, rng);
+
+    // Lore from schema voice pack
+    base.lore = `${pickLoreLine("intro", rng)} Thesis: ${THESES[base.thesisKey]?.name || "Unknown Reaction"}.`;
 
     return base;
   }
 
   function buildBoardFromRecipe(recipe){
+    // ✅ apply palette + legend BEFORE board render
+    applyElementPalette(recipe);
+    renderLegend(recipe);
+
     const colors=recipe.colors, bottles=recipe.bottleCount, cap=recipe.capacity, empty=recipe.emptyBottles;
     const rnd = mulberry32(hashSeed(runSeed, level, 1337));
 
@@ -616,7 +769,7 @@
         const seg=document.createElement("div");
         seg.className="seg";
         const ci = b[s] ?? null;
-        seg.style.background = (ci===null) ? "transparent" : PALETTE[ci%PALETTE.length];
+        seg.style.background = (ci===null) ? "transparent" : (currentPalette[ci] || "#ffffff");
         bottle.appendChild(seg);
       }
 
