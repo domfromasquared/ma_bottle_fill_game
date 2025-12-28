@@ -104,46 +104,47 @@ function voiceLockOrFail(res) {
 }
 
 function getOutputText(resp) {
-  if (typeof resp?.output_text === "string" && resp.output_text.trim()) return resp.output_text;
-  const out1 = resp?.output?.[0]?.content?.[0]?.text;
-  if (typeof out1 === "string" && out1.trim()) return out1;
-  const items = (resp?.output || []).flatMap(o => o?.content || []);
-  for (const c of items) if (typeof c?.text === "string" && c.text.trim()) return c.text;
+  if (typeof resp?.output_text === "string") return resp.output_text;
+  // fallback: some SDK versions store in output array; keep robust
+  try {
+    const out = resp?.output || [];
+    for (const item of out) {
+      const content = item?.content || [];
+      for (const c of content) {
+        if (typeof c?.text === "string") return c.text;
+      }
+    }
+  } catch {}
   return "";
 }
 
-function safeJsonParse(raw, label="payload") {
-  try { return { ok:true, value: JSON.parse(raw) }; }
-  catch { return { ok:false, error:`${label} JSON.parse failed`, details:{ raw: String(raw).slice(0,1400) } }; }
+function safeJsonParse(s, label="json") {
+  try { return { ok:true, value: JSON.parse(s) }; }
+  catch (e) { return { ok:false, error:`Invalid JSON from ${label}`, details:{ message: e?.message || String(e), raw: s?.slice(0, 1200) } }; }
 }
 
 function violatesVoice(text) {
   const t = String(text || "").toLowerCase();
   const forbidden = [
-    "roi","revenue","profit","capital","invest","investment","banking","stocks","portfolio",
-    "synergy","stakeholder","kpi","north star","quarterly","arr","mrr","market","finance",
-    "value proposition","monetize","monetization","pricing","valuation","pipeline"
+    "bank account","routing number","interest rate","apr","credit score",
+    "roi","pipeline","lead gen","funnel","kpi","stakeholder","q4",
+    "synergy","enterprise","salesforce","revops","mrr","arr"
   ];
   return forbidden.some(w => t.includes(w));
 }
 
-function clamp(n, min, max) {
-  const x = Number(n);
-  if (!Number.isFinite(x)) return min;
-  return Math.max(min, Math.min(max, x));
-}
-
 function fewshotsBlock() {
-  if (!Array.isArray(MA_FEWSHOTS) || MA_FEWSHOTS.length === 0) return "";
-  const picks = MA_FEWSHOTS.slice(0, 3);
-  const lines = ["VOICE EXAMPLES (bad -> good). Copy the GOOD energy (don’t copy exact words):"];
-  for (let i=0;i<picks.length;i++){
-    lines.push(`Example ${i+1} BAD: ${picks[i].bad}`);
-    lines.push(`Example ${i+1} GOOD: ${picks[i].good}`);
+  if (!Array.isArray(MA_FEWSHOTS) || !MA_FEWSHOTS.length) return "";
+  const lines = [];
+  lines.push("FEWSHOTS:");
+  for (const ex of MA_FEWSHOTS) {
+    lines.push(`- Input: ${JSON.stringify(ex?.input || {})}`);
+    lines.push(`  Output: ${JSON.stringify(ex?.output || {})}`);
   }
   return lines.join("\n");
 }
 
+// ---------- Modifier defaults ----------
 const ZERO_MOD = {
   lockedBottlesDelta: 0,
   emptyBottlesDelta: 0,
@@ -219,6 +220,21 @@ const RECIPE_SCHEMA = {
   ],
 };
 
+// ---------- Normalization (backward compatible) ----------
+function normalizeContext(body) {
+  const c = { ...(body || {}) };
+
+  // accept snake_case too (older clients)
+  c.bankPrimary = c.bankPrimary ?? c.bank_primary;
+  c.bankConfidence = c.bankConfidence ?? c.bank_confidence;
+  c.questId = c.questId ?? c.quest_id;
+  c.sinTags = c.sinTags ?? c.sin_tags;
+  c.wantModifier = c.wantModifier ?? c.want_modifier;
+  c.modifier = c.modifier ?? c.modifier_delta;
+
+  return c;
+}
+
 // ---------- Routes ----------
 app.get("/health", (_req, res) => ok(res, { voiceLockLoaded: Boolean(MA_VOICE_LOCK), models:{MODEL_QUEST, MODEL_RECIPE} }));
 
@@ -228,7 +244,7 @@ app.post("/api/quest-node", async (req, res) => {
     const voiceLock = voiceLockOrFail(res);
     if (!voiceLock) return;
 
-    const context = req.body || {};
+    const context = normalizeContext(req.body);
     const required = ["act","questId","bankPrimary","bankConfidence","seed","level"];
     const missing = required.filter(k => context[k] === undefined || context[k] === null || context[k] === "");
     if (missing.length) return fail(res, 400, "Missing required fields", missing);
@@ -306,7 +322,7 @@ app.post("/api/level-recipe", async (req, res) => {
     const voiceLock = voiceLockOrFail(res);
     if (!voiceLock) return;
 
-    const context = req.body || {};
+    const context = normalizeContext(req.body);
     const required = ["act","questId","bankPrimary","bankConfidence","seed","level"];
     const missing = required.filter(k => context[k] === undefined || context[k] === null || context[k] === "");
     if (missing.length) return fail(res, 400, "Missing required fields", missing);
@@ -371,15 +387,15 @@ Return appliedModifier equal to these deltas (same object).
       return fail(res, 400, "LLM voice drift: forbidden-topic detected", ["Detected finance/corporate language in recipe text."]);
     }
 
+    // clamp safety
     recipe.capacity = clamp(recipe.capacity, 3, 6);
     recipe.colors = clamp(recipe.colors, 4, 10);
     recipe.bottleCount = clamp(recipe.bottleCount, 6, 14);
     recipe.emptyBottles = clamp(recipe.emptyBottles, 1, 6);
     recipe.lockedBottles = clamp(recipe.lockedBottles, 0, 3);
     recipe.wildcardSlots = clamp(recipe.wildcardSlots, 0, 2);
-    recipe.emptyBottles = Math.min(recipe.emptyBottles, Math.max(1, recipe.bottleCount - 1));
 
-    return ok(res, { recipe });
+    return ok(res, { payload: recipe });
   } catch (err) {
     console.error("❌ /api/level-recipe error:", err);
     if (err?.status === 429) res.set("Retry-After", "20");
@@ -387,10 +403,8 @@ Return appliedModifier equal to these deltas (same object).
   }
 });
 
+function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
+
 app.listen(PORT, () => {
-  console.log(`✅ API listening on port ${PORT}`);
-  console.log("API key loaded:", Boolean(OPENAI_API_KEY));
-  console.log("Models:", { MODEL_QUEST, MODEL_RECIPE });
-  console.log("Voice lock loaded:", Boolean(MA_VOICE_LOCK));
-  console.log(`Test: curl http://localhost:${PORT}/health`);
+  console.log(`✅ MA Bottle Fill API listening on :${PORT}`);
 });
