@@ -48,7 +48,52 @@
       pointer-events:none;
     }
     .bottle.selected { outline: 3px solid rgba(130, 210, 255,.45); box-shadow: 0 0 0 6px rgba(80,140,255,.12), inset 0 0 0 2px rgba(255,255,255,.04); }
-    .seg { width:100%; height: 22%; }
+
+    .seg {
+      width:100%;
+      height: 22%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* --------- SVG Pattern Overlay (Role-Based) ---------
+       NOTE: Paths verified from repo:
+       /assets/pattern_*.svg and /assets/elements/textures/pattern_*.svg
+    */
+    .seg::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      opacity:.28;
+      background-size:64px 64px;
+      background-repeat:repeat;
+      mix-blend-mode: screen;
+    }
+
+    /* Default role mappings */
+    .seg.role-volatile::after   { background-image: url("./assets/pattern_ripples.svg"); animation: drift 7s linear infinite; }
+    .seg.role-catalyst::after   { background-image: url("./assets/pattern_streaks.svg"); animation: drift 6s linear infinite; }
+    .seg.role-stabilizer::after { background-image: url("./assets/pattern_noise.svg"); opacity:.18; }
+    .seg.role-structural::after,
+    .seg.role-foundational::after { background-image: url("./assets/pattern_grid.svg"); opacity:.22; }
+    .seg.role-transmission::after,
+    .seg.role-conversion::after { background-image: url("./assets/elements/textures/pattern_chevrons.svg"); opacity:.22; }
+
+    /* Element-specific overrides (optional, improves readability on similar colors) */
+    .seg.el-EM::after { background-image: url("./assets/elements/textures/pattern_bubbles.svg"); opacity:.26; animation: drift 8s linear infinite; }
+    .seg.el-CO::after,
+    .seg.el-DI::after { background-image: url("./assets/pattern_hatch.svg"); opacity:.22; }
+
+    /* Motion is subtle; respect reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      .seg::after{ animation:none !important; }
+    }
+    @keyframes drift {
+      from { background-position: 0 0; }
+      to   { background-position: 64px 64px; }
+    }
+
     .controls { display:flex; gap:10px; padding: 0 16px 16px 16px; flex-wrap:wrap; align-items:center;}
     .toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background:#0b121c; border:1px solid #243244; border-radius: 999px; padding: 10px 14px; font-weight:800; opacity:0; transition: opacity .18s ease; pointer-events:none;}
     .toast.show { opacity:1; }
@@ -758,16 +803,13 @@
     // ---- Illegal reaction trap (UR_without_CL), gated to later levels ----
     base.stabilizer = null;
     if (base.thesisKey === "UR_without_CL" && level >= STABILIZER_UNLOCK_LEVEL) {
-      // Ensure UR exists
       if (!base.elements.includes("UR")) base.elements[0] = "UR";
 
-      // Add CL as a hidden palette entry (not distributed)
       if (!base.elements.includes("CL")) {
         base.elements.push("CL");
         base.colors += 1;
       }
 
-      // Add a host bottle for stabilizer (clamped later by board init if needed)
       base.bottleCount = clamp(base.bottleCount + 1, 6, 14);
 
       base.stabilizer = {
@@ -779,7 +821,6 @@
     }
 
     base.lore = `${pickLoreLine("intro", rng)} Thesis: ${THESES[base.thesisKey]?.name || "Unknown Reaction"}.`;
-
     return base;
   }
 
@@ -800,7 +841,6 @@
     const stabilizerSymbol = stabilizerEnabled ? recipe.stabilizer.symbol : null;
     const stabilizerColorIndex = stabilizerEnabled ? currentElements.indexOf(stabilizerSymbol) : -1;
 
-    // Build pool (exclude stabilizer color from distribution)
     const colorStacks=[];
     for(let c=0;c<colors;c++){
       if (stabilizerEnabled && c === stabilizerColorIndex) continue;
@@ -816,7 +856,6 @@
       }
     }
 
-    // Create Stabilizer Bottle (last bottle), locked + hidden
     if (stabilizerEnabled && stabilizerColorIndex >= 0) {
       const stabIdx = bottles - 1;
       const fill = clamp(recipe.stabilizer.fill ?? 2, 1, cap-1);
@@ -879,8 +918,20 @@
       for(let s=0;s<state.capacity;s++){
         const seg=document.createElement("div");
         seg.className="seg";
+
         const ci = b[s] ?? null;
-        seg.style.background = (ci===null) ? "transparent" : (currentPalette[ci] || "#ffffff");
+        if (ci === null) {
+          seg.style.background = "transparent";
+        } else {
+          seg.style.background = (currentPalette[ci] || "#ffffff");
+
+          // Pattern overlay classes (role + element symbol)
+          const sym = currentElements[ci];
+          const role = (ELEMENTS[sym]?.role || "").toLowerCase();
+          if (role) seg.classList.add(`role-${role}`);
+          if (sym) seg.classList.add(`el-${sym}`);
+        }
+
         bottle.appendChild(seg);
       }
 
