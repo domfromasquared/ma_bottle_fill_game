@@ -1,33 +1,28 @@
-export function makeToaster(toastEl){
+export function qs(id){
+  const el = document.getElementById(id);
+  if (!el) throw new Error(`Missing element #${id}`);
+  return el;
+}
+
+export function makeToaster(el){
   let t = null;
-  return function showToast(msg){
-    toastEl.textContent = msg;
-    toastEl.classList.add("show");
-    if (t) clearTimeout(t);
-    t = setTimeout(()=>toastEl.classList.remove("show"), 1500);
+  return function show(msg, ms=1400){
+    if (!msg) return;
+    el.textContent = String(msg);
+    el.classList.add("show");
+    clearTimeout(t);
+    t = setTimeout(()=> el.classList.remove("show"), ms);
   };
 }
 
-export function qs(id){ return document.getElementById(id); }
-
-export function bottleCenter(i){
-  const el = document.querySelector(`[data-bottle="${i}"]`);
-  if(!el) return {x:innerWidth/2,y:innerHeight/2};
-  const r = el.getBoundingClientRect();
-  return {x:r.left+r.width/2, y:r.top+r.height/4};
-}
-
-export function playPourFX(pourFX, from, to, color, amount){
-  const a=bottleCenter(from), b=bottleCenter(to);
-  pourFX.style.background=color;
-  pourFX.style.opacity="1";
-  pourFX.style.left=a.x+"px"; pourFX.style.top=a.y+"px";
-  const dx=b.x-a.x, dy=b.y-a.y;
-  const dur=Math.max(260, Math.min(580, 220+amount*90));
-  pourFX.animate([
-    { transform:"translate(-50%,-50%) scale(1)", opacity:0.9 },
-    { transform:`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.9)`, opacity:0.85 },
-    { transform:`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.7)`, opacity:0.0 }
-  ], { duration:dur, easing:"cubic-bezier(.2,.8,.2,1)" });
-  setTimeout(()=> pourFX.style.opacity="0", dur);
+export function playPourFX(pourFX, fromIdx, toIdx, color, amount){
+  // Very lightweight: just spark near center of screen; replace later if you want bottle-anchored coords.
+  const x = 50 + (Math.random()*10-5);
+  const y = 70 + (Math.random()*10-5);
+  pourFX.style.left = x + "%";
+  pourFX.style.top = y + "%";
+  pourFX.style.background = color || "#fff";
+  pourFX.style.opacity = "1";
+  pourFX.style.transform = "translate(-50%,-50%) scale(" + (1 + Math.min(2, amount)*0.25) + ")";
+  setTimeout(()=>{ pourFX.style.opacity="0"; }, 140);
 }
