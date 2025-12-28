@@ -231,6 +231,7 @@ function normalizeContext(body) {
   c.sinTags = c.sinTags ?? c.sin_tags;
   c.wantModifier = c.wantModifier ?? c.want_modifier;
   c.modifier = c.modifier ?? c.modifier_delta;
+  c.foreshadowOnly = c.foreshadowOnly ?? c.foreshadow_only;
 
   return c;
 }
@@ -267,6 +268,27 @@ CRITICAL OUTPUT RULES:
 
 MODIFIER RULE:
 - If wantModifier=false, you MUST output modifier as ALL ZEROS with ruleTag "none".
+
+FORESHADOW MODE (when context.foreshadowOnly=true):
+- DO NOT introduce new mechanics.
+- DO NOT mention "locks", "stabilizers", "hidden bottles", "unlock conditions", or anything that reveals gameplay rules.
+- You are ONLY planting a warning about consequences (metaphor + behavior) that will pay off later.
+- The warning MUST reference the *meaning* of urgency vs clarity (or missing stabilizing factors), but never explain how the game will enforce it.
+- Use BANK-adaptive framing based on context.bankPrimary:
+
+  If bankPrimary = "A" (Action):
+  - challenge + consequence framing, short and sharp, "you'll get stopped" energy.
+
+  If bankPrimary = "K" (Knowledge):
+  - systems + inevitability framing, "constraints emerge" energy.
+
+  If bankPrimary = "N" (Nurturing):
+  - safety + burnout framing, "panic costs you" energy.
+
+  If bankPrimary = "B" (Blueprint):
+  - structure + preparation framing, "you're skipping a step" energy.
+
+- Keep it confident and in-character. No spoilers.
 `.trim();
 
     const input = `
