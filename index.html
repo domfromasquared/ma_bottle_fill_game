@@ -3,243 +3,262 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-  <title>Marketing Alchemist — Bottle Fill (Quest DM)</title>
-
+  <title>Marketing Alchemist — Bottle Fill (Mobile Quest DM)</title>
   <style>
-    :root { color-scheme: dark; }
+    :root {
+      color-scheme: dark;
+      --bg: #0b0f14;
+      --card: linear-gradient(180deg,#0f1724,#0b121c);
+      --border: #243244;
+      --border2: #1e2a3c;
+      --text: #e6edf3;
+      --muted: #aab6ca;
 
-    /* ---------- Mobile-first stage ---------- */
-    html, body { height:100%; }
-    body {
-      margin:0;
-      background:#0b0f14;
-      color:#e6edf3;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      overflow:hidden; /* force "app" feel */
-      -webkit-font-smoothing: antialiased;
+      --railW: 56px;
+      --pad: 12px;
+      --gap: 10px;
+
+      --bBlue: #57b7ff;
+      --bRed:  #ff5a6a;
+      --bGreen:#41e08a;
+      --bYellow:#ffd85a;
     }
 
-    /* Safe-area padding for iPhone notches */
+    html, body {
+      margin:0; height:100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      overflow:hidden; /* mobile-app feel */
+    }
+
+    /* --- App frame (mobile vertical) --- */
     .app {
       height:100%;
-      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
       display:flex;
-      align-items:stretch;
-      justify-content:center;
+      flex-direction:row;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     }
 
-    /* Phone frame */
-    .phone {
-      width: min(430px, 100vw);
-      height: 100%;
-      max-height: 100vh;
+    /* BANK IDENTIFIER (left rail) */
+    .bankRail {
+      width: var(--railW);
+      border-right: 1px solid var(--border2);
+      background: rgba(0,0,0,.18);
       display:flex;
       flex-direction:column;
-      background: radial-gradient(1200px 800px at 50% -20%, rgba(60,140,255,.10), transparent 60%),
-                  linear-gradient(180deg,#0b0f14,#070a0f);
+      align-items:center;
+      justify-content:flex-start;
+      padding: 10px 6px;
+      gap: 10px;
       position:relative;
-      overflow:hidden;
+    }
+    .bankRail.expanded {
+      width: min(240px, 60vw);
+      align-items:flex-start;
+      padding: 10px 10px;
     }
 
-    /* Top bar */
-    .topbar{
-      flex: 0 0 auto;
-      padding: 10px 12px;
-      border-bottom: 1px solid rgba(255,255,255,.06);
+    .bankTapHint {
+      width: 100%;
+      border:1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(0,0,0,.22);
+      padding: 8px 8px;
+      font-weight: 900;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      font-size: 10px;
+      color: rgba(230,237,243,.65);
+      text-align:center;
+      user-select:none;
+    }
+
+    .bankLetters {
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+      align-items:center;
+      width: 100%;
+    }
+
+    .bankLetter {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.25);
+      color: rgba(230,237,243,.35);
+      font-weight: 1000;
+      font-size: 18px;
+      user-select:none;
+    }
+    .bankRail.expanded .bankLetter {
+      width: 52px; height: 52px; font-size: 20px;
+    }
+
+    .bankLetter.active {
+      color: #0b0f14;
+      border-color: rgba(255,255,255,.15);
+      box-shadow: 0 10px 26px rgba(0,0,0,.35);
+    }
+    .bankLetter.B.active { background: var(--bBlue); }
+    .bankLetter.A.active { background: var(--bRed); }
+    .bankLetter.N.active { background: var(--bGreen); }
+    .bankLetter.K.active { background: var(--bYellow); }
+
+    .bankExplain {
+      display:none;
+      width: 100%;
+      border:1px solid var(--border);
+      border-radius: 16px;
+      padding: 10px 10px;
+      background: rgba(0,0,0,.22);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.25;
+    }
+    .bankRail.expanded .bankExplain { display:block; }
+
+    /* --- Main stage --- */
+    .stage {
+      flex:1;
+      display:flex;
+      flex-direction:column;
+      gap: var(--gap);
+      padding: var(--pad);
+      min-width: 0;
+      height: 100%;
+    }
+
+    .topBar {
+      border:1px solid var(--border);
+      border-radius: 18px;
+      background: var(--card);
+      padding: 10px 10px;
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:10px;
-      background: linear-gradient(180deg, rgba(255,255,255,.03), transparent);
+      gap: 10px;
     }
-    .brand{
-      font-weight: 900;
-      letter-spacing:-0.4px;
+
+    .title {
+      font-weight: 1000;
+      letter-spacing:-.5px;
+      font-size: 18px;
       display:flex;
       align-items:center;
-      gap:10px;
-      font-size: 16px;
+      gap: 8px;
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
     }
-    .brand span{ opacity:.7; font-weight:800; }
 
-    .pill {
-      border:1px solid rgba(220,232,255,.14);
+    .apiPill {
+      border:1px solid var(--border);
       border-radius: 999px;
       padding: 8px 10px;
-      background: rgba(0,0,0,.25);
-      display:inline-flex;
+      background: rgba(0,0,0,.22);
+      display:flex;
       align-items:center;
-      gap:10px;
+      gap: 8px;
+      min-width: 0;
     }
-    .pill input {
-      width: 190px;
-      max-width: 44vw;
+    .apiPill span { opacity:.7; font-size: 12px; }
+    .apiPill input {
+      width: 46vw;
+      max-width: 260px;
+      min-width: 110px;
       background: transparent;
       border: none;
       outline: none;
-      color:#e6edf3;
+      color: var(--text);
       font: inherit;
+      font-size: 12px;
     }
 
     button {
       cursor:pointer;
-      border:1px solid rgba(220,232,255,.14);
+      border:1px solid var(--border);
       background:#111a27;
-      color:#e6edf3;
+      color: var(--text);
       border-radius: 14px;
-      padding: 10px 12px;
+      padding: 9px 12px;
       font-weight: 900;
+      white-space:nowrap;
     }
     button:disabled { opacity:.55; cursor:not-allowed; }
 
-    /* ---------- Main viewport with BANK rail + content ---------- */
-    .viewport{
-      flex: 1 1 auto;
-      display:flex;
-      min-height:0; /* allows inner scroll containers */
+    /* --- Layers container --- */
+    .layers {
       position:relative;
+      flex: 1;
+      min-height: 0;
+      border:1px solid var(--border);
+      border-radius: 18px;
+      background: var(--card);
+      overflow:hidden;
     }
 
-    /* BANK IDENTIFIER rail */
-    .bankRail{
-      flex: 0 0 54px;
-      border-right: 1px solid rgba(255,255,255,.06);
-      background: linear-gradient(180deg, rgba(255,255,255,.02), transparent);
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:center;
-      gap:10px;
-      padding: 10px 6px;
-      user-select:none;
-      touch-action: manipulation;
-      z-index: 5;
-    }
-    .bankRail .letter{
-      width: 40px; height: 40px;
-      border-radius: 12px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-weight: 1000;
-      color: rgba(230,237,243,.35);
-      border: 1px solid rgba(220,232,255,.10);
-      background: rgba(0,0,0,.25);
-      letter-spacing: 0.5px;
-    }
-    .bankRail .letter.active { color: #0b0f14; }
-    .bankRail .letter.b { background: rgba(0, 209, 255, .95); border-color: rgba(0,209,255,.35); }
-    .bankRail .letter.a { background: rgba(255, 77, 109, .95); border-color: rgba(255,77,109,.35); }
-    .bankRail .letter.n { background: rgba(124, 255, 107, .95); border-color: rgba(124,255,107,.35); }
-    .bankRail .letter.k { background: rgba(255, 212, 0, .95); border-color: rgba(255,212,0,.35); }
-
-    .bankHint{
+    /* BOTTLES GRID (bottom layer) */
+    .gridWrap {
       position:absolute;
-      left: 54px;
-      top: 56px;
-      width: min(320px, calc(100vw - 70px));
-      border:1px solid rgba(220,232,255,.14);
-      background: rgba(9, 14, 22, .92);
-      border-radius: 16px;
-      padding: 10px 12px;
-      font-size: 13px;
-      color: rgba(230,237,243,.85);
-      transform: translateX(-12px);
-      opacity:0;
-      pointer-events:none;
-      transition: opacity .18s ease, transform .18s ease;
-      z-index: 30;
-    }
-    .bankHint.show{
-      opacity:1;
-      pointer-events:auto;
-      transform: translateX(0);
-    }
-    .bankHint b{ color:#e6edf3; }
-
-    /* ---------- Game stack (your layers) ---------- */
-    .gameStack{
-      flex: 1 1 auto;
-      min-height:0;
+      inset: 0;
       display:flex;
       flex-direction:column;
-      position:relative;
+      justify-content:flex-end;
+      padding: 10px 10px 12px 10px;
+      gap: 10px;
     }
 
-    /* Upper “status strip” */
-    .hudStrip{
-      flex: 0 0 auto;
-      padding: 10px 12px;
+    /* Stats row (kept, but mobile friendly) */
+    .statsRow {
       display:flex;
+      gap: 8px;
       flex-wrap:wrap;
-      gap:8px;
       align-items:center;
       justify-content:space-between;
-      border-bottom: 1px solid rgba(255,255,255,.06);
-      background: linear-gradient(180deg, rgba(255,255,255,.02), transparent);
     }
-    .hudLeft{
+    .stats {
       display:flex;
+      gap: 8px;
       flex-wrap:wrap;
-      gap:8px;
       align-items:center;
     }
-    .meta{
+    .meta {
       display:inline-flex;
       align-items:center;
-      gap:8px;
-      border:1px solid rgba(220,232,255,.14);
+      gap: 8px;
+      border:1px solid var(--border);
       border-radius: 999px;
-      padding: 8px 10px;
-      background: rgba(0,0,0,.25);
+      padding: 7px 9px;
+      background: rgba(0,0,0,.22);
       font-size: 12px;
     }
-    .mono{
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    }
-    .small{ opacity:.75; font-size: 12px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .small { font-size: 11px; color: var(--muted); }
 
-    /* BOTTLES GRID zone (main play area) */
-    .bottlesZone{
-      flex: 1 1 auto;
-      min-height:0;
-      padding: 12px;
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-    }
-    .zoneTitle{
-      font-weight: 1000;
-      letter-spacing:-0.4px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      font-size: 14px;
-      opacity: .95;
-    }
-
-    /* Grid container for bottles */
-    .grid {
-      flex: 1 1 auto;
-      min-height:0;
+    /* The actual bottle grid element id="grid" (required by JS) */
+    #grid {
       display:grid;
-      grid-template-columns: repeat(5, 1fr); /* target 5 across */
+      grid-template-columns: repeat(5, 1fr);
+      grid-auto-rows: auto;
       gap: 10px;
-      align-content:start;
+      align-content:end;
       justify-items:center;
-      padding: 6px 2px 2px 2px;
-      overflow:auto;
-      -webkit-overflow-scrolling: touch;
+      width: 100%;
+      padding: 4px 2px 0 2px;
+      /* take the space below modifiers and speech when those are visible */
+      min-height: 52vh;
     }
 
-    /* Bottle visuals — responsive to fit 5x3 comfortably */
+    /* Bottle sizing: fit 5 across on mobile */
     .bottle {
-      width: clamp(56px, 15vw, 78px);
-      height: clamp(160px, 26vh, 220px);
+      width: clamp(52px, calc((100vw - var(--railW) - (var(--pad)*2) - 56px)/5), 74px);
+      height: clamp(150px, calc((100vw - var(--railW) - (var(--pad)*2) - 56px)/5) * 2.45, 220px);
       border-radius: 22px 22px 26px 26px;
       border: 2px solid rgba(220,232,255,.14);
       background: rgba(0,0,0,.25);
@@ -265,974 +284,926 @@
     }
     .seg { width:100%; height: 22%; }
 
-    /* MODIFIERS zone */
-    .modsZone{
-      flex: 0 0 auto;
-      padding: 10px 12px 12px 12px;
-      border-top: 1px solid rgba(255,255,255,.06);
-      background: linear-gradient(0deg, rgba(255,255,255,.03), transparent);
-    }
-    .modsRow{
-      display:grid;
-      grid-template-columns: repeat(3, 1fr);
+    /* MODIFIERS (layer above grid, anchored low) */
+    .modLayer {
+      position:absolute;
+      left: 10px; right: 10px;
+      bottom: 12px;
+      display:flex;
       gap: 10px;
-      margin-top: 8px;
+      justify-content:space-between;
+      pointer-events:auto;
     }
-    .modSlot{
-      height: 54px;
+    .modSlot {
+      flex: 1;
+      border:1px solid var(--border);
       border-radius: 16px;
-      border: 1px solid rgba(220,232,255,.14);
       background: rgba(0,0,0,.22);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-weight: 1000;
-      opacity:.85;
-      user-select:none;
-    }
-    .modSlot .plus{
-      width: 30px; height: 30px;
-      border-radius: 999px;
-      border: 1px solid rgba(220,232,255,.18);
-      display:flex; align-items:center; justify-content:center;
-      background: rgba(255,255,255,.04);
-      font-size: 18px;
-      line-height: 1;
-    }
-    .modsNote{
-      margin-top: 8px;
-      font-size: 12px;
-      opacity: .75;
-    }
-
-    /* ---------- DM overlay layer (CHARACTER + SPEECH BUBBLE) ---------- */
-    .dmOverlay{
-      position:absolute;
-      inset:0;
-      display:none;
-      z-index: 40;
-    }
-    .dmOverlay.show{ display:block; }
-
-    .dmBackdrop{
-      position:absolute;
-      inset:0;
-      background: rgba(0,0,0,.55);
-      backdrop-filter: blur(2px);
-    }
-
-    /* Character panel slides in from left */
-    .dmCharacter{
-      position:absolute;
-      left:-260px;
-      bottom: 84px; /* above modifiers zone */
-      width: 240px;
-      height: 240px;
-      border-radius: 22px;
-      border: 1px solid rgba(220,232,255,.14);
-      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(0,0,0,.25));
-      box-shadow: 0 20px 60px rgba(0,0,0,.45);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-weight: 1000;
-      letter-spacing:-0.3px;
-      overflow:hidden;
-      transform: translateZ(0);
-      animation: dmIn .42s cubic-bezier(.2,.9,.2,1) forwards;
-    }
-    @keyframes dmIn{
-      0% { transform: translateX(0); }
-      100% { transform: translateX(290px); }
-    }
-    .dmCharacter .shake{
-      animation: shake .22s ease-in-out 2;
-    }
-    @keyframes shake{
-      0%,100%{ transform: translateX(0); }
-      50%{ transform: translateX(4px); }
-    }
-
-    .dmClose{
-      position:absolute;
-      left: 260px;
-      bottom: 320px;
-      width: 38px;
-      height: 38px;
-      border-radius: 12px;
-      border: 1px solid rgba(220,232,255,.18);
-      background: rgba(10,16,26,.9);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-weight: 1000;
-      cursor:pointer;
-      user-select:none;
-    }
-
-    /* Speech bubble panel */
-    .dmBubble{
-      position:absolute;
-      left: 66px;
-      top: 70px;
-      right: 12px;
-      bottom: 180px; /* leave room for modifiers */
-      border-radius: 22px;
-      border: 1px solid rgba(220,232,255,.14);
-      background: rgba(9,14,22,.92);
-      box-shadow: 0 20px 70px rgba(0,0,0,.45);
-      overflow:hidden;
-      display:flex;
-      flex-direction:column;
-    }
-    .dmBubbleHeader{
-      flex: 0 0 auto;
-      padding: 12px 14px;
-      border-bottom: 1px solid rgba(255,255,255,.06);
+      padding: 10px;
+      min-height: 56px;
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:10px;
+      gap: 10px;
     }
-    .dmBubbleHeader .h{
+    .modName { font-weight: 900; font-size: 12px; opacity:.85; }
+    .modBtn {
+      width: 36px; height: 36px;
+      border-radius: 14px;
       font-weight: 1000;
-      letter-spacing:-0.4px;
-    }
-    .dmBubbleBody{
-      flex: 1 1 auto;
-      padding: 12px 14px;
-      overflow:auto;
-      -webkit-overflow-scrolling: touch;
-    }
-    .dmBubbleBody h2{
-      margin: 0 0 10px 0;
-      font-size: 22px;
-      letter-spacing:-0.4px;
-    }
-    .dmBubbleBody p{
-      margin: 0 0 10px 0;
-      font-size: 16px;
-      line-height: 1.25;
-      color:#d7deea;
+      display:grid;
+      place-items:center;
+      padding:0;
     }
 
-    /* Toast + pour FX (from stable build) */
+    /* Reserve vertical space so grid doesn't collide with modifiers */
+    .gridSpacer {
+      height: 78px;
+      width: 100%;
+    }
+
+    /* SPEECH BUBBLE (overlay mid/high) */
+    .speechLayer {
+      position:absolute;
+      left: 10px; right: 10px;
+      top: 10px;
+      border:1px solid var(--border);
+      border-radius: 18px;
+      background: rgba(0,0,0,.25);
+      padding: 12px 12px;
+      box-shadow: 0 18px 50px rgba(0,0,0,.35);
+      display:none; /* shown when DM is active */
+    }
+    .speechLayer.show { display:block; }
+
+    .speechTitle {
+      margin: 0 0 6px 0;
+      font-size: 20px;
+      font-weight: 1000;
+      letter-spacing:-.4px;
+    }
+    .speechText {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.25;
+      color: #d7deea;
+      overflow-wrap:anywhere;
+    }
+    .speechMeta {
+      margin-top: 10px;
+      display:flex;
+      flex-wrap:wrap;
+      gap: 8px;
+      align-items:center;
+    }
+
+    /* CHARACTER (slides in from left during quest nodes) */
+    .dmLayer {
+      position:absolute;
+      left: -70vw;
+      bottom: 90px;
+      width: min(58vw, 260px);
+      height: min(44vh, 320px);
+      display:flex;
+      align-items:flex-end;
+      justify-content:flex-start;
+      pointer-events:none;
+      transition: transform .34s ease;
+      transform: translateX(0);
+    }
+    .dmLayer.show {
+      transform: translateX(calc(70vw - 18px));
+    }
+    .dmCard {
+      width: 100%;
+      height: 100%;
+      border-radius: 18px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.25);
+      overflow:hidden;
+      box-shadow: 0 22px 60px rgba(0,0,0,.45);
+      position:relative;
+      pointer-events:auto;
+    }
+    .dmClose {
+      position:absolute;
+      top: 8px;
+      right: 8px;
+      width: 34px;
+      height: 34px;
+      border-radius: 14px;
+      display:grid;
+      place-items:center;
+      font-weight: 1000;
+      background: rgba(17,26,39,.9);
+      border:1px solid var(--border);
+      cursor:pointer;
+      pointer-events:auto;
+    }
+    .dmImg {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display:block;
+      opacity:.95;
+    }
+    .dmPlaceholder {
+      width:100%; height:100%;
+      display:grid;
+      place-items:center;
+      font-weight:1000;
+      color: rgba(230,237,243,.65);
+      background: radial-gradient(circle at 30% 30%, rgba(87,183,255,.10), transparent 40%),
+                  radial-gradient(circle at 70% 60%, rgba(255,90,106,.10), transparent 45%),
+                  rgba(0,0,0,.25);
+    }
+
+    /* Toast + Pour FX (from stable build) */
     .toast {
       position: fixed;
       left: 50%;
       bottom: 22px;
       transform: translateX(-50%);
       background:#0b121c;
-      border:1px solid rgba(220,232,255,.14);
+      border:1px solid var(--border);
       border-radius: 999px;
       padding: 10px 14px;
-      font-weight:1000;
+      font-weight:900;
       opacity:0;
       transition: opacity .18s ease;
       pointer-events:none;
-      z-index: 100;
+      z-index: 50;
     }
     .toast.show { opacity:1; }
-
     .pourFX {
       position: fixed;
-      width: 10px;
-      height: 10px;
+      width: 10px; height: 10px;
       border-radius: 999px;
       pointer-events:none;
       opacity:0;
       transform: translate(-50%, -50%);
       filter: blur(.2px);
-      z-index: 90;
+      z-index: 60;
     }
 
-    /* When DM overlay is open, pause game interactions */
-    .paused .grid { pointer-events:none; filter: saturate(.85) brightness(.9); }
-    .paused .modsZone { pointer-events:none; opacity:.9; }
-
-    /* Slightly tighter on very small phones */
-    @media (max-height: 720px){
-      .dmBubble { bottom: 170px; }
-      .dmCharacter { width: 220px; height: 220px; }
+    /* Helper: keep layers readable on tiny screens */
+    @media (max-height: 720px) {
+      .dmLayer { bottom: 78px; height: min(38vh, 280px); }
+      .speechTitle { font-size: 18px; }
+      .speechText { font-size: 13px; }
+      .modSlot { min-height: 52px; }
+      .gridSpacer { height: 72px; }
     }
   </style>
 </head>
-
 <body>
   <div class="app">
-    <div class="phone" id="phone">
-      <!-- TOP BAR -->
-      <div class="topbar">
-        <div class="brand">🧪 The Marketing Alchemist <span>(Quest DM)</span></div>
-        <div style="display:flex; gap:8px; align-items:center;">
-          <div class="pill">
-            <span style="opacity:.7; font-size:12px;">API:</span>
+    <!-- BANK IDENTIFIER -->
+    <aside class="bankRail" id="bankRail" aria-label="BANK Identifier">
+      <div class="bankTapHint">BANK</div>
+
+      <div class="bankLetters" aria-hidden="false">
+        <div class="bankLetter B" id="bankLetterB">B</div>
+        <div class="bankLetter A" id="bankLetterA">A</div>
+        <div class="bankLetter N" id="bankLetterN">N</div>
+        <div class="bankLetter K" id="bankLetterK">K</div>
+      </div>
+
+      <div class="bankExplain" id="bankExplain">
+        <div style="font-weight:900; margin-bottom:6px;">What BANK means (not a banker, genius)</div>
+        <div><b>B</b> = Blueprint (clarity, steps, structure)</div>
+        <div><b>A</b> = Action (speed, wins, momentum)</div>
+        <div><b>N</b> = Nurturing (support, safety, belonging)</div>
+        <div><b>K</b> = Knowledge (proof, logic, mastery)</div>
+        <div style="margin-top:8px; opacity:.85;">Tap again to collapse.</div>
+      </div>
+    </aside>
+
+    <!-- MAIN STAGE -->
+    <main class="stage">
+      <div class="topBar">
+        <div class="title">🧪 The Marketing Alchemist</div>
+
+        <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+          <div class="apiPill" title="API base URL">
+            <span>API</span>
             <input id="apiBase" class="mono" />
           </div>
-          <!-- IMPORTANT: keep this ID for index2 JS -->
-          <button id="btnQuest">DM</button>
+          <button id="btnQuest" title="Force a DM visit (debug)">DM</button>
         </div>
       </div>
 
-      <!-- VIEWPORT -->
-      <div class="viewport">
-        <!-- BANK IDENTIFIER -->
-        <div class="bankRail" id="bankRail" title="Tap to expand BANK legend">
-          <div class="letter" data-letter="B">B</div>
-          <div class="letter" data-letter="A">A</div>
-          <div class="letter" data-letter="N">N</div>
-          <div class="letter" data-letter="K">K</div>
-        </div>
+      <div class="layers" id="layers">
+        <!-- SPEECH BUBBLE -->
+        <section class="speechLayer" id="speechLayer" aria-label="Speech Bubble">
+          <h2 class="speechTitle" id="questTitle">—</h2>
+          <p class="speechText" id="dmIntro"></p>
+          <p class="speechText" id="dmMid"></p>
+          <p class="speechText" id="dmVerdict"></p>
 
-        <div class="bankHint" id="bankHint">
-          <div style="font-weight:1000; margin-bottom:6px;">BANK = Player Motivation (not “banker”)</div>
-          <div><b>B</b> = Blueprint (structure, clarity, steps)</div>
-          <div><b>A</b> = Action (speed, decisiveness, risk)</div>
-          <div><b>N</b> = Nurturing (support, reassurance, ease)</div>
-          <div><b>K</b> = Knowledge (logic, accuracy, mastery)</div>
-          <div style="margin-top:8px; opacity:.75;">Tap again to hide.</div>
-        </div>
+          <div class="speechMeta">
+            <div class="meta">BANK: <span id="bankOut" class="mono">—</span></div>
+            <div class="meta">SinTags: <span id="sinsOut" class="mono">—</span></div>
+            <div class="meta">DM#: <span id="dmCountOut" class="mono">0</span></div>
+            <div class="meta">Next: <span id="nextDmOut" class="mono">—</span></div>
+            <div class="meta">Modifier: <span id="modOut" class="mono">—</span></div>
+            <div class="meta">Recipe: <span id="recipeSrcOut" class="mono">—</span></div>
+            <div class="meta">Status: <span id="statusOut" class="mono">ready</span></div>
+          </div>
+        </section>
 
-        <!-- GAME STACK -->
-        <div class="gameStack" id="gameStack">
-          <!-- HUD STRIP -->
-          <div class="hudStrip">
-            <div class="hudLeft">
-              <div class="meta">Level: <span id="levelOut" class="mono">1</span></div>
-              <div class="meta">Moves: <span id="movesOut" class="mono">0</span></div>
-              <div class="meta">Invalid: <span id="badOut" class="mono">0</span></div>
-              <div class="meta">Resets: <span id="resetOut" class="mono">0</span></div>
+        <!-- CHARACTER (slides in) -->
+        <section class="dmLayer" id="dmLayer" aria-label="Character">
+          <div class="dmCard">
+            <div class="dmClose" id="dmClose" title="Close DM">✕</div>
+            <!-- Swap this src later to your DM PNG -->
+            <div class="dmPlaceholder" id="dmPlaceholder">CHARACTER</div>
+            <img class="dmImg" id="dmImg" alt="Marketing Alchemist (DM)" style="display:none;" />
+          </div>
+        </section>
+
+        <!-- BOTTLES GRID bottom layer -->
+        <section class="gridWrap" aria-label="Bottle Grid">
+          <div class="statsRow">
+            <div class="stats">
+              <div class="meta">Level <span id="levelOut" class="mono">1</span></div>
+              <div class="meta">Moves <span id="movesOut" class="mono">0</span></div>
+              <div class="meta">Bad <span id="badOut" class="mono">0</span></div>
+              <div class="meta">Resets <span id="resetOut" class="mono">0</span></div>
+              <div class="meta">Cfg <span id="cfgOut" class="mono">—</span></div>
             </div>
-
-            <div class="hudLeft">
-              <div class="meta small">Cfg: <span id="cfgOut" class="mono">—</span></div>
-              <div class="meta small">Status: <span id="statusOut" class="mono">ready</span></div>
-            </div>
+            <div class="small">Tap bottle → tap target.</div>
           </div>
 
-          <!-- BOTTLES GRID -->
-          <div class="bottlesZone">
-            <div class="zoneTitle">
-              <div>BOTTLES GRID</div>
-              <div style="display:flex; gap:8px;">
-                <button id="btnNext">Next</button>
-                <button id="btnReset">Reset</button>
-              </div>
-            </div>
+          <div id="grid"></div>
 
-            <!-- IMPORTANT: keep this ID for index2 JS -->
-            <div class="grid" id="grid"></div>
+          <div class="gridSpacer" aria-hidden="true"></div>
+
+          <div class="statsRow" style="justify-content:flex-start; gap:10px;">
+            <button id="btnNext">Next</button>
+            <button id="btnReset">Reset</button>
+            <div class="small" style="opacity:.9;">DM visits are seeded + persisted per run.</div>
           </div>
+        </section>
 
-          <!-- MODIFIERS -->
-          <div class="modsZone">
-            <div class="zoneTitle" style="opacity:.9;">
-              <div>MODIFIERS</div>
-              <div class="small">(+ opens shop later — not implemented yet)</div>
+        <!-- MODIFIERS layer above grid -->
+        <section class="modLayer" aria-label="Modifiers">
+          <div class="modSlot">
+            <div>
+              <div class="modName">Modifier 1</div>
+              <div class="small">Coming soon</div>
             </div>
-
-            <div class="modsRow">
-              <div class="modSlot"><div class="plus">+</div></div>
-              <div class="modSlot"><div class="plus">+</div></div>
-              <div class="modSlot"><div class="plus">+</div></div>
-            </div>
-
-            <div class="modsNote">
-              DM appears randomly every <b>3–6</b> levels. Modifiers only brew on every <b>5th DM appearance</b>.
-              <span class="mono">Recipe:</span> <span id="recipeSrcOut" class="mono">—</span>
-              &nbsp;•&nbsp;<span class="mono">Modifier:</span> <span id="modOut" class="mono">—</span>
-            </div>
-
-            <!-- keep these IDs alive for index2 DM metadata -->
-            <div style="display:none;">
-              <span id="dmCountOut">0</span>
-              <span id="nextDmOut">—</span>
-              <span id="bankOut">—</span>
-              <span id="sinsOut">—</span>
-            </div>
+            <button class="modBtn" type="button" aria-label="Open modifier shop">+</button>
           </div>
-
-          <!-- DM OVERLAY (CHARACTER + SPEECH BUBBLE) -->
-          <div class="dmOverlay" id="dmOverlay" aria-hidden="true">
-            <div class="dmBackdrop" id="dmBackdrop"></div>
-
-            <!-- Character placeholder (swap to PNG later) -->
-            <div class="dmCharacter" id="dmCharacter">
-              <div class="shake" id="dmShake">CHARACTER</div>
+          <div class="modSlot">
+            <div>
+              <div class="modName">Modifier 2</div>
+              <div class="small">Coming soon</div>
             </div>
-            <div class="dmClose" id="dmClose">✕</div>
-
-            <div class="dmBubble" role="dialog" aria-label="Quest DM">
-              <div class="dmBubbleHeader">
-                <div class="h">SPEECH BUBBLE</div>
-                <div class="small mono">BANK: <span id="bankInline">—</span></div>
-              </div>
-
-              <div class="dmBubbleBody">
-                <h2 id="questTitle">—</h2>
-                <p id="dmIntro" class="small">DM appears randomly every <b>3–6</b> levels. Modifiers only brew on every <b>5th DM appearance</b>.</p>
-                <p id="dmMid" class="small"></p>
-                <p id="dmVerdict" class="small"></p>
-
-                <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px;">
-                  <div class="meta">SinTags: <span id="sinsInline" class="mono">—</span></div>
-                  <div class="meta">Next DM: <span id="nextDmInline" class="mono">—</span></div>
-                  <div class="meta">DM#: <span id="dmCountInline" class="mono">0</span></div>
-                </div>
-              </div>
-            </div>
+            <button class="modBtn" type="button" aria-label="Open modifier shop">+</button>
           </div>
-
-        </div><!-- /gameStack -->
-      </div><!-- /viewport -->
-    </div><!-- /phone -->
-  </div><!-- /app -->
+          <div class="modSlot">
+            <div>
+              <div class="modName">Modifier 3</div>
+              <div class="small">Coming soon</div>
+            </div>
+            <button class="modBtn" type="button" aria-label="Open modifier shop">+</button>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
 
   <div class="toast" id="toast"></div>
   <div class="pourFX" id="pourFX"></div>
 
-  <!-- ------------------------------------------------------------------
-       KEEPING INDEX2'S FUNCTIONALITY:
-       This script is based on your stable “index2.html” logic, with only
-       tiny additions to:
-        - control DM overlay open/close
-        - highlight BANK rail letter
-       ------------------------------------------------------------------ -->
+  <!-- =========================
+       STABLE FUNCTIONAL SCRIPT
+       (from index2.html)
+       ========================= -->
   <script type="module">
-    const DEFAULT_PROD = "https://ma-bottle-fill-api.onrender.com";
-    const DEFAULT_LOCAL = "http://localhost:8787";
-    const isLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1";
-    const apiBaseEl = document.getElementById("apiBase");
-    apiBaseEl.value = isLocal ? DEFAULT_LOCAL : DEFAULT_PROD;
+const DEFAULT_PROD = "https://ma-bottle-fill-api.onrender.com";
+  const DEFAULT_LOCAL = "http://localhost:8787";
+  const isLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+  const apiBaseEl = document.getElementById("apiBase");
+  apiBaseEl.value = isLocal ? DEFAULT_LOCAL : DEFAULT_PROD;
 
-    const phone = document.getElementById("phone");
-    const gameStack = document.getElementById("gameStack");
+  const inflight = new Map();
+  function singleFlight(key, fn) {
+    if (inflight.has(key)) return inflight.get(key);
+    const p = (async () => { try { return await fn(); } finally { inflight.delete(key); } })();
+    inflight.set(key, p);
+    return p;
+  }
 
-    // DM overlay controls
-    const dmOverlay = document.getElementById("dmOverlay");
-    const dmClose = document.getElementById("dmClose");
-    const dmBackdrop = document.getElementById("dmBackdrop");
-    const bankInline = document.getElementById("bankInline");
-    const sinsInline = document.getElementById("sinsInline");
-    const nextDmInline = document.getElementById("nextDmInline");
-    const dmCountInline = document.getElementById("dmCountInline");
+  const statusOut = document.getElementById("statusOut");
+  const questTitle = document.getElementById("questTitle");
+  const dmIntro = document.getElementById("dmIntro");
+  const dmMid = document.getElementById("dmMid");
+  const dmVerdict = document.getElementById("dmVerdict");
+  const bankOut = document.getElementById("bankOut");
+  const sinsOut = document.getElementById("sinsOut");
+  const modOut = document.getElementById("modOut");
+  const cfgOut = document.getElementById("cfgOut");
+  const recipeSrcOut = document.getElementById("recipeSrcOut");
+  const dmCountOut = document.getElementById("dmCountOut");
+  const nextDmOut = document.getElementById("nextDmOut");
 
-    function openDMOverlay() {
-      dmOverlay.classList.add("show");
-      dmOverlay.setAttribute("aria-hidden","false");
-      gameStack.classList.add("paused");
+  const toast = document.getElementById("toast");
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add("show");
+    setTimeout(()=>toast.classList.remove("show"), 1400);
+  }
+
+  function mulberry32(a) {
+    return function() {
+      let t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     }
-    function closeDMOverlay() {
-      dmOverlay.classList.remove("show");
-      dmOverlay.setAttribute("aria-hidden","true");
-      gameStack.classList.remove("paused");
+  }
+  function hashSeed(a,b,c){
+    let x = (a|0) ^ ((b|0)*0x9E3779B1) ^ ((c|0)*0x85EBCA77);
+    x = Math.imul(x ^ (x>>>16), 0x7feb352d);
+    x = Math.imul(x ^ (x>>>15), 0x846ca68b);
+    x = x ^ (x>>>16);
+    return x >>> 0;
+  }
+  const clamp = (n,min,max)=> Math.max(min, Math.min(max, n));
+  function randInt(min, max, seed) {
+    const r = mulberry32(seed)();
+    return Math.floor(r * (max - min + 1)) + min;
+  }
+
+  let level = 1;
+  let questId = 1;
+
+  const sig = { moves:0, invalid:0, resets:0, moveTimes:[], lastMoveAt:0 };
+  const avg = (arr)=> arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+
+  function inferBANK() {
+    const pace = avg(sig.moveTimes.slice(-12));
+    const invalidRate = sig.moves ? (sig.invalid / sig.moves) : 0;
+    const resetRate = sig.resets ? (sig.resets / Math.max(1, level)) : 0;
+
+    const score = { B:0, A:0, N:0, K:0 };
+    score.B += pace > 1400 ? 1.2 : 0;
+    score.B += invalidRate < 0.10 ? 1.0 : 0;
+
+    score.A += pace && pace < 900 ? 1.2 : 0;
+    score.A += invalidRate < 0.22 ? 0.5 : 0;
+
+    score.N += resetRate > 0.30 ? 1.0 : 0;
+    score.N += invalidRate > 0.18 ? 0.6 : 0;
+
+    score.K += invalidRate > 0.12 ? 0.7 : 0;
+    score.K += resetRate < 0.25 ? 0.7 : 0;
+
+    const entries = Object.entries(score).sort((a,b)=>b[1]-a[1]);
+    const [bankPrimary, top] = entries[0];
+    const second = entries[1][1];
+    const conf = Math.max(0.25, Math.min(0.92, 0.35 + (top-second)*0.55));
+    return { bankPrimary, bankConfidence: Number(conf.toFixed(2)) };
+  }
+
+  function inferSinTags() {
+    const tags = [];
+    if (sig.resets >= 2 && sig.resets > level/2) tags.push("over_reset");
+    const pace = avg(sig.moveTimes.slice(-12));
+    if (pace > 1500) tags.push("hesitation");
+    if ((sig.moves && sig.invalid/sig.moves > 0.18)) tags.push("indecision");
+    if (!tags.length) tags.push("steady_hand");
+    return tags.slice(0,3);
+  }
+
+  let pendingModifier = null;
+  function formatMod(mod) {
+    if (!mod) return "—";
+    const parts = [];
+    const map = [
+      ["bottleCountDelta","bottles"],
+      ["colorsDelta","colors"],
+      ["capacityDelta","cap"],
+      ["emptyBottlesDelta","empty"],
+      ["lockedBottlesDelta","locks"],
+      ["wildcardSlotsDelta","wild"],
+    ];
+    for (const [k,label] of map) {
+      const v = mod[k] ?? 0;
+      if (v) parts.push(`${label}${v>0?"+":""}${v}`);
     }
-    dmClose.addEventListener("click", closeDMOverlay);
-    dmBackdrop.addEventListener("click", closeDMOverlay);
-
-    // BANK rail expand/collapse
-    const bankRail = document.getElementById("bankRail");
-    const bankHint = document.getElementById("bankHint");
-    bankRail.addEventListener("click", () => bankHint.classList.toggle("show"));
-
-    function setActiveBankLetter(letter) {
-      const els = bankRail.querySelectorAll(".letter");
-      els.forEach(el => {
-        el.classList.remove("active","b","a","n","k");
-        const L = el.dataset.letter;
-        if (L === letter) {
-          el.classList.add("active");
-          if (L === "B") el.classList.add("b");
-          if (L === "A") el.classList.add("a");
-          if (L === "N") el.classList.add("n");
-          if (L === "K") el.classList.add("k");
-        }
-      });
-    }
-
-    // ----- single-flight helper (from index2) -----
-    const inflight = new Map();
-    function singleFlight(key, fn) {
-      if (inflight.has(key)) return inflight.get(key);
-      const p = (async () => { try { return await fn(); } finally { inflight.delete(key); } })();
-      inflight.set(key, p);
-      return p;
-    }
-
-    // outputs
-    const statusOut = document.getElementById("statusOut");
-    const questTitle = document.getElementById("questTitle");
-    const dmIntro = document.getElementById("dmIntro");
-    const dmMid = document.getElementById("dmMid");
-    const dmVerdict = document.getElementById("dmVerdict");
-
-    // keep original IDs alive (some hidden)
-    const bankOut = document.getElementById("bankOut");
-    const sinsOut = document.getElementById("sinsOut");
-    const modOut = document.getElementById("modOut");
-    const cfgOut = document.getElementById("cfgOut");
-    const recipeSrcOut = document.getElementById("recipeSrcOut");
-    const dmCountOut = document.getElementById("dmCountOut");
-    const nextDmOut = document.getElementById("nextDmOut");
-
-    const toast = document.getElementById("toast");
-    function showToast(msg) {
-      toast.textContent = msg;
-      toast.classList.add("show");
-      setTimeout(()=>toast.classList.remove("show"), 1400);
-    }
-
-    function mulberry32(a) {
-      return function() {
-        let t = a += 0x6D2B79F5;
-        t = Math.imul(t ^ (t >>> 15), t | 1);
-        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-      }
-    }
-    function hashSeed(a,b,c){
-      let x = (a|0) ^ ((b|0)*0x9E3779B1) ^ ((c|0)*0x85EBCA77);
-      x = Math.imul(x ^ (x>>>16), 0x7feb352d);
-      x = Math.imul(x ^ (x>>>15), 0x846ca68b);
-      x = x ^ (x>>>16);
-      return x >>> 0;
-    }
-    const clamp = (n,min,max)=> Math.max(min, Math.min(max, n));
-    function randInt(min, max, seed) {
-      const r = mulberry32(seed)();
-      return Math.floor(r * (max - min + 1)) + min;
-    }
-
-    let level = 1;
-    let questId = 1;
-
-    const sig = { moves:0, invalid:0, resets:0, moveTimes:[], lastMoveAt:0 };
-    const avg = (arr)=> arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
-
-    function inferBANK() {
-      const pace = avg(sig.moveTimes.slice(-12));
-      const invalidRate = sig.moves ? (sig.invalid / sig.moves) : 0;
-      const resetRate = sig.resets ? (sig.resets / Math.max(1, level)) : 0;
-
-      const score = { B:0, A:0, N:0, K:0 };
-      score.B += pace > 1400 ? 1.2 : 0;
-      score.B += invalidRate < 0.10 ? 1.0 : 0;
-
-      score.A += pace && pace < 900 ? 1.2 : 0;
-      score.A += invalidRate < 0.22 ? 0.5 : 0;
-
-      score.N += resetRate > 0.30 ? 1.0 : 0;
-      score.N += invalidRate > 0.18 ? 0.6 : 0;
-
-      score.K += invalidRate > 0.12 ? 0.7 : 0;
-      score.K += resetRate < 0.25 ? 0.7 : 0;
-
-      const entries = Object.entries(score).sort((a,b)=>b[1]-a[1]);
-      const [bankPrimary, top] = entries[0];
-      const second = entries[1][1];
-      const conf = Math.max(0.25, Math.min(0.92, 0.35 + (top-second)*0.55));
-      return { bankPrimary, bankConfidence: Number(conf.toFixed(2)) };
-    }
-
-    function inferSinTags() {
-      const tags = [];
-      if (sig.resets >= 2 && sig.resets > level/2) tags.push("over_reset");
-      const pace = avg(sig.moveTimes.slice(-12));
-      if (pace > 1500) tags.push("hesitation");
-      if ((sig.moves && sig.invalid/sig.moves > 0.18)) tags.push("indecision");
-      if (!tags.length) tags.push("steady_hand");
-      return tags.slice(0,3);
-    }
-
-    let pendingModifier = null;
-    function formatMod(mod) {
-      if (!mod) return "—";
-      const parts = [];
-      const map = [
-        ["bottleCountDelta","bottles"],
-        ["colorsDelta","colors"],
-        ["capacityDelta","cap"],
-        ["emptyBottlesDelta","empty"],
-        ["lockedBottlesDelta","locks"],
-        ["wildcardSlotsDelta","wild"],
-      ];
-      for (const [k,label] of map) {
-        const v = mod[k] ?? 0;
-        if (v) parts.push(`${label}${v>0?"+":""}${v}`);
-      }
-      const tag = mod.ruleTag && mod.ruleTag !== "none" ? mod.ruleTag : "";
-      return (parts.length ? parts.join(" ") : "no-delta") + (tag ? ` | ${tag}` : "");
-    }
-    function setPendingModifier(mod) {
-      pendingModifier = mod;
-      modOut.textContent = formatMod(mod);
-    }
-
-    const DM_GAP_MIN = 3;
-    const DM_GAP_MAX = 6;
-    const DM_MAJOR_EVERY = 5;
-
-    function loadOrInitRunState() {
-      let runSeed = Number(localStorage.getItem("ma_runSeed") || "0");
-      if (!runSeed) {
-        runSeed = Math.floor(Math.random() * 1e9);
-        localStorage.setItem("ma_runSeed", String(runSeed));
-      }
-
-      let dmAppearCount = Number(localStorage.getItem("ma_dmAppearCount") || "0");
-      let nextDMAtLevel = Number(localStorage.getItem("ma_nextDMAtLevel") || "0");
-
-      if (!nextDMAtLevel) {
-        nextDMAtLevel = 1 + randInt(DM_GAP_MIN, DM_GAP_MAX, hashSeed(runSeed, 111, 222));
-        localStorage.setItem("ma_nextDMAtLevel", String(nextDMAtLevel));
-      }
-
-      return { runSeed, dmAppearCount, nextDMAtLevel };
-    }
-
-    let { runSeed, dmAppearCount, nextDMAtLevel } = loadOrInitRunState();
-
-    function isDMLevel(lvl) { return lvl === nextDMAtLevel; }
-    function isMajorDM(upcomingCount) { return (upcomingCount % DM_MAJOR_EVERY) === 0; }
-
-    function scheduleNextDM(currentLevel) {
-      const gap = randInt(DM_GAP_MIN, DM_GAP_MAX, hashSeed(runSeed, dmAppearCount * 97, currentLevel * 131));
-      nextDMAtLevel = currentLevel + gap;
-      localStorage.setItem("ma_nextDMAtLevel", String(nextDMAtLevel));
-    }
-
-    async function postJSON(path, body) {
-      const base = apiBaseEl.value.trim().replace(/\/+$/, "");
-      const url = base + path;
-      const r = await fetch(url, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) });
-      if (!r.ok) {
-        let detailText = "";
-        try { detailText = await r.text(); } catch {}
-        const retryAfter = r.headers.get("Retry-After");
-        const err = new Error(`${r.status} ${r.statusText}${retryAfter ? ` (Retry-After: ${retryAfter}s)` : ""}`);
-        err.status = r.status;
-        err.retryAfter = retryAfter ? Number(retryAfter) : null;
-        err.detailText = detailText;
-        throw err;
-      }
-      return await r.json();
-    }
-
-    const btnQuest = document.getElementById("btnQuest");
-
-    function updateDMButton() {
-      dmCountOut.textContent = String(dmAppearCount);
-      nextDmOut.textContent = `L${nextDMAtLevel}`;
-      dmCountInline.textContent = String(dmAppearCount);
-      nextDmInline.textContent = `L${nextDMAtLevel}`;
-
-      if (isDMLevel(level)) {
-        const upcoming = dmAppearCount + 1;
-        const major = isMajorDM(upcoming);
-        btnQuest.disabled = false;
-        btnQuest.textContent = major ? "Major Ritual" : "DM Speaks";
-        dmIntro.innerHTML = major
-          ? "A <b>major ritual</b> is available now. Brew a modifier that affects the <b>NEXT</b> level."
-          : "Minor DM visit. Story + directive only. <b>No modifier</b> brewed this time.";
-      } else {
-        btnQuest.disabled = true;
-        btnQuest.textContent = `DM @ L${nextDMAtLevel}`;
-        dmIntro.innerHTML = `DM appears randomly every <b>${DM_GAP_MIN}–${DM_GAP_MAX}</b> levels. Next appearance: <b>level ${nextDMAtLevel}</b>. Modifiers only brew on every <b>${DM_MAJOR_EVERY}th</b> DM appearance.`;
-      }
-    }
-
-    function renderDM(payload) {
-      questTitle.textContent = payload.quest_title || "—";
-      dmMid.textContent = payload.dm_midpoint || "";
-      dmVerdict.textContent = payload.dm_verdict || "";
-    }
-
-    btnQuest.addEventListener("click", async () => {
-      if (!isDMLevel(level)) return;
-
-      const { bankPrimary, bankConfidence } = inferBANK();
-      const sinTags = inferSinTags();
-      bankOut.textContent = `${bankPrimary} (${bankConfidence})`;
-      sinsOut.textContent = sinTags.join(", ");
-      bankInline.textContent = `${bankPrimary} (${bankConfidence})`;
-      sinsInline.textContent = sinTags.join(", ");
-
-      setActiveBankLetter(bankPrimary);
-
-      const upcoming = dmAppearCount + 1;
-      const wantModifier = isMajorDM(upcoming);
-
-      statusOut.textContent = wantModifier ? "brewing..." : "speaking...";
-
-      const payload = {
-        act: Math.ceil(level/5),
-        questId,
-        bankPrimary,
-        bankConfidence,
-        sinTags,
-        seed: runSeed,
-        level,
-        wantModifier
-      };
-
-      try {
-        const key = `quest-node:${runSeed}:${questId}:${level}:${upcoming}:${wantModifier}`;
-        const data = await singleFlight(key, () => postJSON("/api/quest-node", payload));
-        const q = data.payload;
-
-        renderDM(q);
-
-        if (wantModifier) {
-          setPendingModifier(q.modifier);
-          showToast("Modifier brewed for next level");
-        } else {
-          setPendingModifier(null);
-          showToast("DM visit (no modifier)");
-        }
-
-        dmAppearCount = upcoming;
-        localStorage.setItem("ma_dmAppearCount", String(dmAppearCount));
-        scheduleNextDM(level);
-        updateDMButton();
-
-        statusOut.textContent = "ok";
-
-        // Show DM overlay and pause the game
-        openDMOverlay();
-      } catch (e) {
-        if (e.status === 429) {
-          statusOut.textContent = "rate-limited";
-          showToast("Rate limited. Try again soon.");
-        } else {
-          statusOut.textContent = "dm error";
-          showToast("DM error (check server).");
-        }
-        console.warn(e, e.detailText);
-      }
-    });
-
-    const grid = document.getElementById("grid");
-    const levelOut = document.getElementById("levelOut");
-    const movesOut = document.getElementById("movesOut");
-    const badOut = document.getElementById("badOut");
-    const resetOut = document.getElementById("resetOut");
-    const pourFX = document.getElementById("pourFX");
-
-    const PALETTE = ["#00D1FF","#FF4D6D","#FFD400","#7CFF6B","#A855F7","#FF8A00","#00FFA8","#2E5BFF","#FF3DF2","#C2FF00"];
-    const state = { bottles:[], capacity:4, selected:-1 };
-
-    function isSolved() {
-      return state.bottles.every(b => {
-        if (b.length === 0) return true;
-        if (b.length !== state.capacity) return false;
-        return b.every(x => x === b[0]);
-      });
-    }
-    const topColor = (b)=> b.length ? b[b.length-1] : null;
-    function topRunCount(b){
-      if (!b.length) return 0;
-      const c = topColor(b);
-      let n=0; for(let i=b.length-1;i>=0;i--){ if (b[i]===c) n++; else break; }
-      return n;
-    }
-    function canPour(from,to){
-      if (from===to) return false;
-      const a=state.bottles[from], b=state.bottles[to];
-      if (!a.length) return false;
-      if (b.length>=state.capacity) return false;
-      const color=topColor(a), target=topColor(b);
-      return (target===null || target===color);
-    }
-
-    function bottleCenter(i){
-      const el=document.querySelector(`[data-bottle="${i}"]`);
-      if(!el) return {x:innerWidth/2,y:innerHeight/2};
-      const r=el.getBoundingClientRect();
-      return {x:r.left+r.width/2, y:r.top+r.height/4};
-    }
-    function playPourFX(from,to,color,amount){
-      const a=bottleCenter(from), b=bottleCenter(to);
-      pourFX.style.background=color;
-      pourFX.style.opacity="1";
-      pourFX.style.left=a.x+"px"; pourFX.style.top=a.y+"px";
-      const dx=b.x-a.x, dy=b.y-a.y;
-      const dur=Math.max(260, Math.min(580, 220+amount*90));
-      pourFX.animate([
-        { transform:"translate(-50%,-50%) scale(1)", opacity:0.9 },
-        { transform:`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.9)`, opacity:0.85 },
-        { transform:`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.7)`, opacity:0.0 }
-      ], { duration:dur, easing:"cubic-bezier(.2,.8,.2,1)" });
-      setTimeout(()=> pourFX.style.opacity="0", dur);
-    }
-    function doPour(from,to){
-      if(!canPour(from,to)){
-        sig.invalid++; badOut.textContent=String(sig.invalid);
-        showToast("Invalid pour");
-        return false;
-      }
-      const a=state.bottles[from], b=state.bottles[to];
-      const color=topColor(a);
-      const run=topRunCount(a);
-      const space=state.capacity-b.length;
-      const amount=Math.min(run,space);
-
-      const now=performance.now();
-      if(sig.lastMoveAt) sig.moveTimes.push(now-sig.lastMoveAt);
-      sig.lastMoveAt=now;
-
-      playPourFX(from,to,PALETTE[color%PALETTE.length], amount);
-      for(let i=0;i<amount;i++) b.push(a.pop());
-
-      sig.moves++; movesOut.textContent=String(sig.moves);
-      render();
-
-      if(isSolved()){
-        showToast("Solved! Next level…");
-        setTimeout(()=>nextLevel(), 650);
-      }
-      return true;
-    }
-    const countEmpty = ()=> state.bottles.filter(b=>b.length===0).length;
-
-    function render(){
-      grid.innerHTML="";
-      state.bottles.forEach((b,i)=>{
-        const bottle=document.createElement("div");
-        bottle.className="bottle"+(state.selected===i?" selected":"");
-        bottle.dataset.bottle=String(i);
-
-        for(let s=0;s<state.capacity;s++){
-          const seg=document.createElement("div");
-          seg.className="seg";
-          const ci = b[s] ?? null;
-          seg.style.background = (ci===null) ? "transparent" : PALETTE[ci%PALETTE.length];
-          bottle.appendChild(seg);
-        }
-
-        bottle.addEventListener("click", ()=>{
-          if(gameStack.classList.contains("paused")) return;
-
-          if(state.selected===-1){ state.selected=i; render(); return; }
-          if(state.selected===i){ state.selected=-1; render(); return; }
-          const success=doPour(state.selected,i);
-          state.selected=-1;
-          if(!success) render();
-        });
-
-        grid.appendChild(bottle);
-      });
-
-      levelOut.textContent=String(level);
-      movesOut.textContent=String(sig.moves);
-      badOut.textContent=String(sig.invalid);
-      resetOut.textContent=String(sig.resets);
-      cfgOut.textContent=`b${state.bottles.length}/c${state.capacity}/e${countEmpty()}`;
-      updateDMButton();
-    }
-
-    function shuffle(arr, rnd=Math.random){
-      for(let i=arr.length-1;i>0;i--){
-        const j=Math.floor(rnd()*(i+1));
-        [arr[i],arr[j]]=[arr[j],arr[i]];
-      }
-      return arr;
-    }
-
-    function applyModifier(recipe, mod) {
-      if (!mod) return { recipe, consumed:false };
-      recipe.bottleCount = clamp(recipe.bottleCount + (mod.bottleCountDelta||0), 6, 14);
-      recipe.colors      = clamp(recipe.colors + (mod.colorsDelta||0), 4, 10);
-      recipe.capacity    = clamp(recipe.capacity + (mod.capacityDelta||0), 3, 6);
-      recipe.emptyBottles= clamp(recipe.emptyBottles + (mod.emptyBottlesDelta||0), 1, 6);
-      recipe.lockedBottles = clamp(recipe.lockedBottles + (mod.lockedBottlesDelta||0), 0, 3);
-      recipe.wildcardSlots = clamp(recipe.wildcardSlots + (mod.wildcardSlotsDelta||0), 0, 2);
-      recipe.emptyBottles = Math.min(recipe.emptyBottles, Math.max(1, recipe.bottleCount - 1));
-      recipe.appliedModifier = mod;
-      return { recipe, consumed:true };
-    }
-
-    let anchorRecipe = null;
-    function makeFillerRecipe() {
-      const { bankPrimary } = inferBANK();
-      const sinTags = inferSinTags();
-      const seed = hashSeed(runSeed, level, questId);
-      const rnd = mulberry32(seed);
-
-      const targetDifficulty = clamp(1 + Math.floor(level / 3) + Math.floor(rnd()*2), 1, 10);
-
-      const base = anchorRecipe ? structuredClone(anchorRecipe) : {
-        version: "local-filler",
-        title: "Filler Brew",
-        lore: "A controlled run. No theatrics. Just results.",
-        difficulty: targetDifficulty,
-        colors: 5,
-        bottleCount: 10,
-        capacity: 4,
-        emptyBottles: 2,
-        lockedBottles: 0,
-        wildcardSlots: 0,
-        elements: ["Au","Fe","Na","Cl","C"],
-        sinTags: [],
-        bonuses: [],
-        constraints: [],
-        appliedModifier: {
-          lockedBottlesDelta:0, emptyBottlesDelta:0, capacityDelta:0,
-          wildcardSlotsDelta:0, colorsDelta:0, bottleCountDelta:0,
-          ruleTag:"none", bonusObjective:""
-        }
-      };
-
-      const wobble = (v, min, max, step=1) => clamp(v + (rnd()<0.33?-step:(rnd()>0.66?step:0)), min, max);
-
-      base.version = "local-filler";
-      base.difficulty = targetDifficulty;
-      base.colors = wobble(clamp(4 + Math.floor(level/4), 4, 10), 4, 10, 1);
-      base.capacity = wobble(4 + (level>=18?1:0) + (level>=32?1:0), 3, 6, 1);
-      base.emptyBottles = clamp(2 + (rnd()<0.2?1:0) - (rnd()>0.9?1:0), 1, 6);
-      base.bottleCount = clamp(base.colors + base.emptyBottles + 3 + Math.floor(rnd()*2), 6, 14);
-      base.lockedBottles = clamp((level>=20?1:0) + (rnd()<0.08?1:0), 0, 3);
-      base.wildcardSlots = clamp((level>=25 && rnd()<0.15)?1:0, 0, 2);
-
-      base.sinTags = sinTags;
-      base.title = `Filler: ${bankPrimary} Distillation`;
-      base.lore = `You want drama. The lab wants precision. Pour cleaner.`;
-
-      const pool = ["H","He","Li","Be","B","C","N","O","F","Ne","Na","Mg","Al","Si","P","S","Cl","Ar","K","Ca","Fe","Cu","Zn","Ag","Au"];
-      const start = Math.floor(rnd()* (pool.length - base.colors));
-      base.elements = pool.slice(start, start + base.colors);
-
-      return base;
-    }
-
-    function buildBoardFromRecipe(recipe){
-      const colors=recipe.colors, bottles=recipe.bottleCount, cap=recipe.capacity, empty=recipe.emptyBottles;
-      const rnd = mulberry32(hashSeed(runSeed, level, 1337));
-
-      const colorStacks=[];
-      for(let c=0;c<colors;c++) colorStacks.push(Array.from({length:cap}, ()=>c));
-
-      const pool=shuffle(colorStacks.flat(), rnd);
-      const board=Array.from({length:bottles}, ()=>[]);
-      const fillCount=bottles-empty;
-      let idx=0;
-      for(let b=0;b<fillCount;b++){
-        for(let s=0;s<cap;s++){
-          if(idx<pool.length) board[b].push(pool[idx++]);
-        }
-      }
-
-      state.capacity=cap;
-      state.bottles=board;
-      state.selected=-1;
-
-      const scramble = Math.max(40, Math.min(260, recipe.difficulty*24 + 60));
-      for(let k=0;k<scramble;k++){
-        const a=Math.floor(rnd()*bottles);
-        const t=Math.floor(rnd()*bottles);
-        if(a===t) continue;
-        if(!canPour(a,t)) continue;
-        const from=state.bottles[a], to=state.bottles[t];
-        if(!from.length || to.length>=cap) continue;
-        const col=topColor(from), tgt=topColor(to);
-        if(tgt!==null && tgt!==col) continue;
-        to.push(from.pop());
-      }
-    }
-
-    async function fetchLLMRecipe() {
-      const { bankPrimary, bankConfidence } = inferBANK();
-      const sinTags = inferSinTags();
-
-      const payload = { act: Math.ceil(level/5), questId, bankPrimary, bankConfidence, sinTags, seed: runSeed, level, modifier: pendingModifier };
-
-      statusOut.textContent = "distilling...";
-      const data = await postJSON("/api/level-recipe", payload);
-      statusOut.textContent = "ok";
-      recipeSrcOut.textContent = "LLM";
-      return data.recipe;
-    }
-
-    function loadFillerRecipe() {
-      statusOut.textContent = "local filler";
-      recipeSrcOut.textContent = "FILLER";
-      return makeFillerRecipe();
-    }
-
-    async function loadLevel() {
-      const shouldLLM = Boolean(pendingModifier) || (isDMLevel(level) && isMajorDM(dmAppearCount + 1));
-
-      let recipe;
-      if (shouldLLM) {
-        recipe = await singleFlight(`llm-recipe:${runSeed}:${questId}:${level}`, async () => {
-          try {
-            const r = await fetchLLMRecipe();
-            anchorRecipe = structuredClone(r);
-            return r;
-          } catch (e) {
-            if (e.status === 429) {
-              statusOut.textContent = "rate-limited";
-              showToast("Rate limited. Using deterministic filler.");
-            } else {
-              statusOut.textContent = "recipe error";
-              showToast("Recipe error. Using deterministic filler.");
-            }
-            console.warn(e, e.detailText);
-            return loadFillerRecipe();
-          }
-        });
-      } else {
-        recipe = loadFillerRecipe();
-      }
-
-      const applied = applyModifier(recipe, pendingModifier);
-      if (applied.consumed) {
-        showToast("Modifier consumed");
-        setPendingModifier(null);
-      } else {
-        recipe.appliedModifier = recipe.appliedModifier || {
-          lockedBottlesDelta:0, emptyBottlesDelta:0, capacityDelta:0,
-          wildcardSlotsDelta:0, colorsDelta:0, bottleCountDelta:0,
-          ruleTag:"none", bonusObjective:""
-        };
-      }
-
-      buildBoardFromRecipe(recipe);
-      render();
-    }
-
-    function nextLevel(){
-      level++;
-      questId = Math.ceil(level/4);
-      sig.moves=0; sig.invalid=0; sig.moveTimes=[]; sig.lastMoveAt=0;
-      loadLevel();
-    }
-
-    function resetRun(){
-      sig.resets++;
-      runSeed = Math.floor(Math.random()*1e9);
+    const tag = mod.ruleTag && mod.ruleTag !== "none" ? mod.ruleTag : "";
+    return (parts.length ? parts.join(" ") : "no-delta") + (tag ? ` | ${tag}` : "");
+  }
+  function setPendingModifier(mod) {
+    pendingModifier = mod;
+    modOut.textContent = formatMod(mod);
+  }
+
+  const DM_GAP_MIN = 3;
+  const DM_GAP_MAX = 6;
+  const DM_MAJOR_EVERY = 5;
+
+  function loadOrInitRunState() {
+    let runSeed = Number(localStorage.getItem("ma_runSeed") || "0");
+    if (!runSeed) {
+      runSeed = Math.floor(Math.random() * 1e9);
       localStorage.setItem("ma_runSeed", String(runSeed));
+    }
 
-      level=1; questId=1;
-      sig.moves=0; sig.invalid=0; sig.moveTimes=[]; sig.lastMoveAt=0;
-      setPendingModifier(null);
-      anchorRecipe=null;
+    let dmAppearCount = Number(localStorage.getItem("ma_dmAppearCount") || "0");
+    let nextDMAtLevel = Number(localStorage.getItem("ma_nextDMAtLevel") || "0");
 
-      dmAppearCount = 0;
-      localStorage.setItem("ma_dmAppearCount", "0");
+    if (!nextDMAtLevel) {
       nextDMAtLevel = 1 + randInt(DM_GAP_MIN, DM_GAP_MAX, hashSeed(runSeed, 111, 222));
       localStorage.setItem("ma_nextDMAtLevel", String(nextDMAtLevel));
-
-      setActiveBankLetter(null);
-      showToast("Run reset");
-      loadLevel();
     }
 
-    document.getElementById("btnNext").addEventListener("click", ()=>nextLevel());
-    document.getElementById("btnReset").addEventListener("click", ()=>resetRun());
+    return { runSeed, dmAppearCount, nextDMAtLevel };
+  }
 
+  let { runSeed, dmAppearCount, nextDMAtLevel } = loadOrInitRunState();
+
+  function isDMLevel(lvl) { return lvl === nextDMAtLevel; }
+  function isMajorDM(upcomingCount) { return (upcomingCount % DM_MAJOR_EVERY) === 0; }
+
+  function scheduleNextDM(currentLevel) {
+    const gap = randInt(DM_GAP_MIN, DM_GAP_MAX, hashSeed(runSeed, dmAppearCount * 97, currentLevel * 131));
+    nextDMAtLevel = currentLevel + gap;
+    localStorage.setItem("ma_nextDMAtLevel", String(nextDMAtLevel));
+  }
+
+  async function postJSON(path, body) {
+    const base = apiBaseEl.value.trim().replace(/\/+$/, "");
+    const url = base + path;
+    const r = await fetch(url, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) });
+    if (!r.ok) {
+      let detailText = "";
+      try { detailText = await r.text(); } catch {}
+      const retryAfter = r.headers.get("Retry-After");
+      const err = new Error(`${r.status} ${r.statusText}${retryAfter ? ` (Retry-After: ${retryAfter}s)` : ""}`);
+      err.status = r.status;
+      err.retryAfter = retryAfter ? Number(retryAfter) : null;
+      err.detailText = detailText;
+      throw err;
+    }
+    return await r.json();
+  }
+
+  const btnQuest = document.getElementById("btnQuest");
+
+  function updateDMButton() {
+    dmCountOut.textContent = String(dmAppearCount);
+    nextDmOut.textContent = `L${nextDMAtLevel}`;
+
+    if (isDMLevel(level)) {
+      const upcoming = dmAppearCount + 1;
+      const major = isMajorDM(upcoming);
+      btnQuest.disabled = false;
+      btnQuest.textContent = major ? "Major Ritual (Brew Modifier)" : "DM Speaks (No Modifier)";
+      dmIntro.textContent = major
+        ? "A major ritual is available now. Brew a modifier that affects the NEXT level."
+        : "Minor DM visit. Story + directive only. No modifier brewed this time.";
+    } else {
+      btnQuest.disabled = true;
+      btnQuest.textContent = `DM @ L${nextDMAtLevel}`;
+      dmIntro.textContent = `DM appears randomly every ${DM_GAP_MIN}–${DM_GAP_MAX} levels. Next appearance: level ${nextDMAtLevel}. Modifiers only brew on every ${DM_MAJOR_EVERY}th DM appearance.`;
+    }
+  }
+
+  function renderDM(payload) {
+    questTitle.textContent = payload.quest_title || "—";
+    dmMid.textContent = payload.dm_midpoint || "";
+    dmVerdict.textContent = payload.dm_verdict || "";
+  }
+
+  btnQuest.addEventListener("click", async () => {
+    if (!isDMLevel(level)) return;
+
+    const { bankPrimary, bankConfidence } = inferBANK();
+    const sinTags = inferSinTags();
+    bankOut.textContent = `${bankPrimary} (${bankConfidence})`;
+    sinsOut.textContent = sinTags.join(", ");
+
+    const upcoming = dmAppearCount + 1;
+    const wantModifier = isMajorDM(upcoming);
+
+    statusOut.textContent = wantModifier ? "brewing..." : "speaking...";
+
+    const payload = {
+      act: Math.ceil(level/5),
+      questId,
+      bankPrimary,
+      bankConfidence,
+      sinTags,
+      seed: runSeed,
+      level,
+      wantModifier
+    };
+
+    try {
+      const key = `quest-node:${runSeed}:${questId}:${level}:${upcoming}:${wantModifier}`;
+      const data = await singleFlight(key, () => postJSON("/api/quest-node", payload));
+      const q = data.payload;
+
+      renderDM(q);
+
+      if (wantModifier) {
+        setPendingModifier(q.modifier);
+        showToast("Modifier brewed for next level");
+      } else {
+        setPendingModifier(null);
+        showToast("DM visit (no modifier)");
+      }
+
+      dmAppearCount = upcoming;
+      localStorage.setItem("ma_dmAppearCount", String(dmAppearCount));
+      scheduleNextDM(level);
+      updateDMButton();
+
+      statusOut.textContent = "ok";
+    } catch (e) {
+      if (e.status === 429) {
+        statusOut.textContent = "rate-limited";
+        showToast("Rate limited. Try again soon.");
+      } else {
+        statusOut.textContent = "dm error";
+        showToast("DM error (check server).");
+      }
+      console.warn(e, e.detailText);
+    }
+  });
+
+  const grid = document.getElementById("grid");
+  const levelOut = document.getElementById("levelOut");
+  const movesOut = document.getElementById("movesOut");
+  const badOut = document.getElementById("badOut");
+  const resetOut = document.getElementById("resetOut");
+  const pourFX = document.getElementById("pourFX");
+
+  const PALETTE = ["#00D1FF","#FF4D6D","#FFD400","#7CFF6B","#A855F7","#FF8A00","#00FFA8","#2E5BFF","#FF3DF2","#C2FF00"];
+  const state = { bottles:[], capacity:4, selected:-1 };
+
+  function isSolved() {
+    return state.bottles.every(b => {
+      if (b.length === 0) return true;
+      if (b.length !== state.capacity) return false;
+      return b.every(x => x === b[0]);
+    });
+  }
+  const topColor = (b)=> b.length ? b[b.length-1] : null;
+  function topRunCount(b){
+    if (!b.length) return 0;
+    const c = topColor(b);
+    let n=0; for(let i=b.length-1;i>=0;i--){ if (b[i]===c) n++; else break; }
+    return n;
+  }
+  function canPour(from,to){
+    if (from===to) return false;
+    const a=state.bottles[from], b=state.bottles[to];
+    if (!a.length) return false;
+    if (b.length>=state.capacity) return false;
+    const color=topColor(a), target=topColor(b);
+    return (target===null || target===color);
+  }
+
+  function bottleCenter(i){
+    const el=document.querySelector(`[data-bottle="${i}"]`);
+    if(!el) return {x:innerWidth/2,y:innerHeight/2};
+    const r=el.getBoundingClientRect();
+    return {x:r.left+r.width/2, y:r.top+r.height/4};
+  }
+  function playPourFX(from,to,color,amount){
+    const a=bottleCenter(from), b=bottleCenter(to);
+    pourFX.style.background=color;
+    pourFX.style.opacity="1";
+    pourFX.style.left=a.x+"px"; pourFX.style.top=a.y+"px";
+    const dx=b.x-a.x, dy=b.y-a.y;
+    const dur=Math.max(260, Math.min(580, 220+amount*90));
+    pourFX.animate([
+      { transform:"translate(-50%,-50%) scale(1)", opacity:0.9 },
+      { transform:`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.9)`, opacity:0.85 },
+      { transform:`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.7)`, opacity:0.0 }
+    ], { duration:dur, easing:"cubic-bezier(.2,.8,.2,1)" });
+    setTimeout(()=> pourFX.style.opacity="0", dur);
+  }
+  function doPour(from,to){
+    if(!canPour(from,to)){
+      sig.invalid++; badOut.textContent=String(sig.invalid);
+      showToast("Invalid pour");
+      return false;
+    }
+    const a=state.bottles[from], b=state.bottles[to];
+    const color=topColor(a);
+    const run=topRunCount(a);
+    const space=state.capacity-b.length;
+    const amount=Math.min(run,space);
+
+    const now=performance.now();
+    if(sig.lastMoveAt) sig.moveTimes.push(now-sig.lastMoveAt);
+    sig.lastMoveAt=now;
+
+    playPourFX(from,to,PALETTE[color%PALETTE.length], amount);
+    for(let i=0;i<amount;i++) b.push(a.pop());
+
+    sig.moves++; movesOut.textContent=String(sig.moves);
+    render();
+
+    if(isSolved()){
+      showToast("Solved! Next level…");
+      setTimeout(()=>nextLevel(), 650);
+    }
+    return true;
+  }
+  const countEmpty = ()=> state.bottles.filter(b=>b.length===0).length;
+
+  function render(){
+    grid.innerHTML="";
+    state.bottles.forEach((b,i)=>{
+      const bottle=document.createElement("div");
+      bottle.className="bottle"+(state.selected===i?" selected":"");
+      bottle.dataset.bottle=String(i);
+
+      for(let s=0;s<state.capacity;s++){
+        const seg=document.createElement("div");
+        seg.className="seg";
+        const ci = b[s] ?? null;
+        seg.style.background = (ci===null) ? "transparent" : PALETTE[ci%PALETTE.length];
+        bottle.appendChild(seg);
+      }
+
+      bottle.addEventListener("click", ()=>{
+        if(state.selected===-1){ state.selected=i; render(); return; }
+        if(state.selected===i){ state.selected=-1; render(); return; }
+        const success=doPour(state.selected,i);
+        state.selected=-1;
+        if(!success) render();
+      });
+
+      grid.appendChild(bottle);
+    });
+
+    levelOut.textContent=String(level);
+    movesOut.textContent=String(sig.moves);
+    badOut.textContent=String(sig.invalid);
+    resetOut.textContent=String(sig.resets);
+    cfgOut.textContent=`b${state.bottles.length}/c${state.capacity}/e${countEmpty()}`;
     updateDMButton();
-    recipeSrcOut.textContent = "—";
+  }
+
+  function shuffle(arr, rnd=Math.random){
+    for(let i=arr.length-1;i>0;i--){
+      const j=Math.floor(rnd()*(i+1));
+      [arr[i],arr[j]]=[arr[j],arr[i]];
+    }
+    return arr;
+  }
+
+  function applyModifier(recipe, mod) {
+    if (!mod) return { recipe, consumed:false };
+    recipe.bottleCount = clamp(recipe.bottleCount + (mod.bottleCountDelta||0), 6, 14);
+    recipe.colors      = clamp(recipe.colors + (mod.colorsDelta||0), 4, 10);
+    recipe.capacity    = clamp(recipe.capacity + (mod.capacityDelta||0), 3, 6);
+    recipe.emptyBottles= clamp(recipe.emptyBottles + (mod.emptyBottlesDelta||0), 1, 6);
+    recipe.lockedBottles = clamp(recipe.lockedBottles + (mod.lockedBottlesDelta||0), 0, 3);
+    recipe.wildcardSlots = clamp(recipe.wildcardSlots + (mod.wildcardSlotsDelta||0), 0, 2);
+    recipe.emptyBottles = Math.min(recipe.emptyBottles, Math.max(1, recipe.bottleCount - 1));
+    recipe.appliedModifier = mod;
+    return { recipe, consumed:true };
+  }
+
+  let anchorRecipe = null;
+  function makeFillerRecipe() {
+    const { bankPrimary } = inferBANK();
+    const sinTags = inferSinTags();
+    const seed = hashSeed(runSeed, level, questId);
+    const rnd = mulberry32(seed);
+
+    const targetDifficulty = clamp(1 + Math.floor(level / 3) + Math.floor(rnd()*2), 1, 10);
+
+    const base = anchorRecipe ? structuredClone(anchorRecipe) : {
+      version: "local-filler",
+      title: "Filler Brew",
+      lore: "A controlled run. No theatrics. Just results.",
+      difficulty: targetDifficulty,
+      colors: 5,
+      bottleCount: 10,
+      capacity: 4,
+      emptyBottles: 2,
+      lockedBottles: 0,
+      wildcardSlots: 0,
+      elements: ["Au","Fe","Na","Cl","C"],
+      sinTags: [],
+      bonuses: [],
+      constraints: [],
+      appliedModifier: {
+        lockedBottlesDelta:0, emptyBottlesDelta:0, capacityDelta:0,
+        wildcardSlotsDelta:0, colorsDelta:0, bottleCountDelta:0,
+        ruleTag:"none", bonusObjective:""
+      }
+    };
+
+    const wobble = (v, min, max, step=1) => clamp(v + (rnd()<0.33?-step:(rnd()>0.66?step:0)), min, max);
+
+    base.version = "local-filler";
+    base.difficulty = targetDifficulty;
+    base.colors = wobble(clamp(4 + Math.floor(level/4), 4, 10), 4, 10, 1);
+    base.capacity = wobble(4 + (level>=18?1:0) + (level>=32?1:0), 3, 6, 1);
+    base.emptyBottles = clamp(2 + (rnd()<0.2?1:0) - (rnd()>0.9?1:0), 1, 6);
+    base.bottleCount = clamp(base.colors + base.emptyBottles + 3 + Math.floor(rnd()*2), 6, 14);
+    base.lockedBottles = clamp((level>=20?1:0) + (rnd()<0.08?1:0), 0, 3);
+    base.wildcardSlots = clamp((level>=25 && rnd()<0.15)?1:0, 0, 2);
+
+    base.sinTags = sinTags;
+    base.title = `Filler: ${bankPrimary} Distillation`;
+    base.lore = `You want drama. The lab wants precision. Pour cleaner.`;
+
+    const pool = ["H","He","Li","Be","B","C","N","O","F","Ne","Na","Mg","Al","Si","P","S","Cl","Ar","K","Ca","Fe","Cu","Zn","Ag","Au"];
+    const start = Math.floor(rnd()* (pool.length - base.colors));
+    base.elements = pool.slice(start, start + base.colors);
+
+    return base;
+  }
+
+  function buildBoardFromRecipe(recipe){
+    const colors=recipe.colors, bottles=recipe.bottleCount, cap=recipe.capacity, empty=recipe.emptyBottles;
+    const rnd = mulberry32(hashSeed(runSeed, level, 1337));
+
+    const colorStacks=[];
+    for(let c=0;c<colors;c++) colorStacks.push(Array.from({length:cap}, ()=>c));
+
+    const pool=shuffle(colorStacks.flat(), rnd);
+    const board=Array.from({length:bottles}, ()=>[]);
+    const fillCount=bottles-empty;
+    let idx=0;
+    for(let b=0;b<fillCount;b++){
+      for(let s=0;s<cap;s++){
+        if(idx<pool.length) board[b].push(pool[idx++]);
+      }
+    }
+
+    state.capacity=cap;
+    state.bottles=board;
+    state.selected=-1;
+
+    const scramble = Math.max(40, Math.min(260, recipe.difficulty*24 + 60));
+    for(let k=0;k<scramble;k++){
+      const a=Math.floor(rnd()*bottles);
+      const t=Math.floor(rnd()*bottles);
+      if(a===t) continue;
+      if(!canPour(a,t)) continue;
+      const from=state.bottles[a], to=state.bottles[t];
+      if(!from.length || to.length>=cap) continue;
+      const col=topColor(from), tgt=topColor(to);
+      if(tgt!==null && tgt!==col) continue;
+      to.push(from.pop());
+    }
+  }
+
+  async function fetchLLMRecipe() {
+    const { bankPrimary, bankConfidence } = inferBANK();
+    const sinTags = inferSinTags();
+
+    const payload = { act: Math.ceil(level/5), questId, bankPrimary, bankConfidence, sinTags, seed: runSeed, level, modifier: pendingModifier };
+
+    statusOut.textContent = "distilling...";
+    const data = await postJSON("/api/level-recipe", payload);
+    statusOut.textContent = "ok";
+    recipeSrcOut.textContent = "LLM";
+    return data.recipe;
+  }
+
+  function loadFillerRecipe() {
+    statusOut.textContent = "local filler";
+    recipeSrcOut.textContent = "FILLER";
+    return makeFillerRecipe();
+  }
+
+  async function loadLevel() {
+    const shouldLLM = Boolean(pendingModifier) || (isDMLevel(level) && isMajorDM(dmAppearCount + 1));
+
+    let recipe;
+    if (shouldLLM) {
+      recipe = await singleFlight(`llm-recipe:${runSeed}:${questId}:${level}`, async () => {
+        try {
+          const r = await fetchLLMRecipe();
+          anchorRecipe = structuredClone(r);
+          return r;
+        } catch (e) {
+          if (e.status === 429) {
+            statusOut.textContent = "rate-limited";
+            showToast("Rate limited. Using deterministic filler.");
+          } else {
+            statusOut.textContent = "recipe error";
+            showToast("Recipe error. Using deterministic filler.");
+          }
+          console.warn(e, e.detailText);
+          return loadFillerRecipe();
+        }
+      });
+    } else {
+      recipe = loadFillerRecipe();
+    }
+
+    const applied = applyModifier(recipe, pendingModifier);
+    if (applied.consumed) {
+      showToast("Modifier consumed");
+      setPendingModifier(null);
+    } else {
+      recipe.appliedModifier = recipe.appliedModifier || {
+        lockedBottlesDelta:0, emptyBottlesDelta:0, capacityDelta:0,
+        wildcardSlotsDelta:0, colorsDelta:0, bottleCountDelta:0,
+        ruleTag:"none", bonusObjective:""
+      };
+    }
+
+    buildBoardFromRecipe(recipe);
+    render();
+  }
+
+  function nextLevel(){
+    level++;
+    questId = Math.ceil(level/4);
+    sig.moves=0; sig.invalid=0; sig.moveTimes=[]; sig.lastMoveAt=0;
     loadLevel();
+  }
+
+  function resetRun(){
+    sig.resets++;
+    runSeed = Math.floor(Math.random()*1e9);
+    localStorage.setItem("ma_runSeed", String(runSeed));
+
+    level=1; questId=1;
+    sig.moves=0; sig.invalid=0; sig.moveTimes=[]; sig.lastMoveAt=0;
+    setPendingModifier(null);
+    anchorRecipe=null;
+
+    dmAppearCount = 0;
+    localStorage.setItem("ma_dmAppearCount", "0");
+    nextDMAtLevel = 1 + randInt(DM_GAP_MIN, DM_GAP_MAX, hashSeed(runSeed, 111, 222));
+    localStorage.setItem("ma_nextDMAtLevel", String(nextDMAtLevel));
+
+    showToast("Run reset");
+    loadLevel();
+  }
+
+  document.getElementById("btnNext").addEventListener("click", ()=>nextLevel());
+  document.getElementById("btnReset").addEventListener("click", ()=>resetRun());
+
+  updateDMButton();
+  recipeSrcOut.textContent = "—";
+  loadLevel();
+  </script>
+
+  <!-- Minimal glue to drive the new UI layers without breaking the stable logic -->
+  <script type="module">
+    // BANK rail expand/collapse
+    const rail = document.getElementById("bankRail");
+    rail.addEventListener("click", () => rail.classList.toggle("expanded"), { passive:true });
+
+    // When stable script writes BANK output, reflect it on the rail (B/A/N/K highlight)
+    const bankOut = document.getElementById("bankOut");
+    const applyBankHighlight = () => {
+      const val = (bankOut?.textContent || "—").trim();
+      // val looks like "B (0.48)" or "B (0.48) / K (0.31)" etc; take first char
+      const letter = val && val !== "—" ? val[0].toUpperCase() : null;
+      for (const L of ["B","A","N","K"]) {
+        const el = document.getElementById("bankLetter"+L);
+        if (!el) continue;
+        el.classList.toggle("active", letter === L);
+      }
+    };
+    const mo = new MutationObserver(applyBankHighlight);
+    if (bankOut) mo.observe(bankOut, { childList:true, subtree:true, characterData:true });
+    applyBankHighlight();
+
+    // DM show/hide layers based on quest title/status changes
+    const speech = document.getElementById("speechLayer");
+    const dmLayer = document.getElementById("dmLayer");
+    const statusOut = document.getElementById("statusOut");
+    const questTitle = document.getElementById("questTitle");
+
+    function syncDmVisibility() {
+      const status = (statusOut?.textContent || "").toLowerCase();
+      const title = (questTitle?.textContent || "").trim();
+      const dmActive = title && title !== "—" && !status.includes("ready");
+      speech?.classList.toggle("show", dmActive);
+      dmLayer?.classList.toggle("show", dmActive);
+    }
+    const mo2 = new MutationObserver(syncDmVisibility);
+    if (statusOut) mo2.observe(statusOut, { childList:true, subtree:true, characterData:true });
+    if (questTitle) mo2.observe(questTitle, { childList:true, subtree:true, characterData:true });
+    syncDmVisibility();
+
+    // Allow closing DM overlay (pauses are handled by stable script's own rules; this only hides UI)
+    const closeBtn = document.getElementById("dmClose");
+    closeBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      speech?.classList.remove("show");
+      dmLayer?.classList.remove("show");
+    }, { passive:false });
   </script>
 </body>
 </html>
