@@ -105,6 +105,29 @@
       border:1px dashed #2a3a52;
       background: rgba(17,26,39,.55);
     }
+
+    /* ---------- Stabilizer Bottle (locked/hidden) ---------- */
+    .bottle.locked {
+      opacity: .55;
+      filter: saturate(.7);
+      outline: 2px dashed rgba(200,220,255,.18);
+    }
+    .bottle.locked::after{
+      content:"🔒 STABILIZER";
+      position:absolute;
+      left:50%;
+      top:50%;
+      transform: translate(-50%, -50%);
+      font-weight: 900;
+      font-size: 12px;
+      letter-spacing: .5px;
+      color: rgba(230,237,243,.9);
+      background: rgba(11,18,28,.85);
+      border: 1px solid rgba(36,50,68,.9);
+      padding: 6px 10px;
+      border-radius: 999px;
+    }
+    .bottle.hiddenSegs .seg { background: transparent !important; }
   </style>
 </head>
 
@@ -126,10 +149,10 @@
       <div class="content">
         <h2 id="questTitle">—</h2>
 
-        <!-- ✅ DM dialogue lives here -->
+        <!-- DM dialogue -->
         <p id="dmIntro"></p>
 
-        <!-- ✅ Scheduling / system copy lives here (no more overwriting dmIntro) -->
+        <!-- Scheduling / system copy -->
         <p id="dmStatus" class="dmStatus"></p>
 
         <p id="dmMid" class="small"></p>
@@ -161,9 +184,7 @@
         </div>
       </div>
 
-      <!-- 🧪 Chemical meaning lives here -->
       <div id="legend" class="legend"></div>
-
       <div class="grid" id="grid"></div>
 
       <div class="controls">
@@ -179,6 +200,10 @@
 
 <script type="module">
   import { ELEMENTS, THESES, pickLoreLine } from "./element_schema.js";
+
+  // ---------------- Progression gates ----------------
+  const FORESHADOW_START_LEVEL = 10;
+  const STABILIZER_UNLOCK_LEVEL = 15;
 
   const DEFAULT_PROD = "https://ma-bottle-fill-api.onrender.com";
   const DEFAULT_LOCAL = "http://localhost:8787";
@@ -240,7 +265,6 @@
     return Math.floor(r * (max - min + 1)) + min;
   }
 
-  // Deterministic RNG wrapper compatible with pickLoreLine(kind, rng)
   function makeRng(seed){
     const f = mulberry32(seed >>> 0);
     return {
@@ -279,9 +303,8 @@
   const pourFX = document.getElementById("pourFX");
 
   // ---------- Game / Run State ----------
-  // Active palette for this level: index -> {symbol,color}
   let currentElements = [];
-  let currentPalette = []; // index -> hex
+  let currentPalette = [];
 
   let level = 1;
   let questId = 1;
@@ -324,7 +347,7 @@
     return tags.slice(0,3);
   }
 
-  // ---------- Element Schema / “Chemical Meaning” ----------
+  // ---------- Thesis selection + palette ----------
   function pickThesisKey(rng, sinTags=[], bankPrimary="K"){
     const tags = new Set(sinTags || []);
     if (tags.has("hesitation")) return "UR_without_CL";
@@ -366,7 +389,6 @@
   }
 
   function applyElementPalette(recipe){
-    // Map recipe.elements -> colors
     const elems = (recipe.elements || []).slice(0, recipe.colors);
     currentElements = elems;
     currentPalette = elems.map(sym => (ELEMENTS[sym]?.color || "#ffffff"));
@@ -409,7 +431,7 @@
     }
   }
 
-  // ---------- Modifier (existing) ----------
+  // ---------- Modifier (existing UI) ----------
   let pendingModifier = null;
   function formatMod(mod) {
     if (!mod) return "—";
@@ -478,7 +500,6 @@
       btnQuest.disabled = false;
       btnQuest.textContent = major ? "Major Ritual (Brew Modifier)" : "DM Speaks (No Modifier)";
 
-      // ✅ IMPORTANT: schedule text goes to dmStatus, NOT dmIntro
       dmStatus.textContent = major
         ? "A major ritual is available now. Brew a modifier that affects the NEXT level."
         : "Minor DM visit. Story + directive only. No modifier brewed this time.";
@@ -492,7 +513,6 @@
     }
   }
 
-  // ---------- DM Render (FIXED) ----------
   function renderDM(payload) {
     questTitle.textContent = payload.quest_title || "—";
     dmIntro.textContent = payload.dm_intro || "";
@@ -500,7 +520,7 @@
     dmVerdict.textContent = payload.dm_verdict || "";
   }
 
-  // ---------- DM Click ----------
+  // ---------- DM Click (adds foreshadowOnly) ----------
   btnQuest.addEventListener("click", async () => {
     if (!isDMLevel(level)) return;
 
@@ -513,6 +533,10 @@
     const upcoming = dmAppearCount + 1;
     const wantModifier = isMajorDM(upcoming);
 
+    const foreshadowOnly =
+      level >= FORESHADOW_START_LEVEL &&
+      level < STABILIZER_UNLOCK_LEVEL;
+
     statusOut.textContent = wantModifier ? "brewing..." : "speaking...";
 
     const payload = {
@@ -523,11 +547,12 @@
       sinTags,
       seed: runSeed,
       level,
-      wantModifier
+      wantModifier,
+      foreshadowOnly
     };
 
     try {
-      const key = `quest-node:${runSeed}:${questId}:${level}:${upcoming}:${wantModifier}`;
+      const key = `quest-node:${runSeed}:${questId}:${level}:${upcoming}:${wantModifier}:${foreshadowOnly}`;
       const data = await singleFlight(key, () => postJSON("/api/quest-node", payload));
       const q = data.payload;
 
@@ -559,8 +584,15 @@
     }
   });
 
-  // ---------- Bottle Game (unchanged mechanics, kept stable) ----------
-  const state = { bottles:[], capacity:4, selected:-1 };
+  // ---------- Bottle Game + Stabilizer ----------
+  const state = {
+    bottles:[],
+    capacity:4,
+    selected:-1,
+    locked:[],
+    hiddenSegs:[],
+    stabilizer: null // { idx, unlock, symbol, unlocked:false }
+  };
 
   function isSolved() {
     return state.bottles.every(b => {
@@ -578,6 +610,7 @@
   }
   function canPour(from,to){
     if (from===to) return false;
+    if (state.locked[from] || state.locked[to]) return false;
     const a=state.bottles[from], b=state.bottles[to];
     if (!a.length) return false;
     if (b.length>=state.capacity) return false;
@@ -606,6 +639,29 @@
     setTimeout(()=> pourFX.style.opacity="0", dur);
   }
 
+  function checkStabilizerUnlock(){
+    if (!state.stabilizer || state.stabilizer.unlocked) return;
+    if (state.stabilizer.unlock !== "UR_full") return;
+
+    const urIndex = currentElements.indexOf("UR");
+    if (urIndex < 0) return;
+
+    const cap = state.capacity;
+    const hasFullUR = state.bottles.some(b =>
+      b.length === cap && b.every(x => x === urIndex)
+    );
+
+    if (hasFullUR) {
+      const idx = state.stabilizer.idx;
+      state.locked[idx] = false;
+      state.hiddenSegs[idx] = false;
+      state.stabilizer.unlocked = true;
+
+      showToast("Clarity unlocked. Now stop panicking.");
+      render();
+    }
+  }
+
   function doPour(from,to){
     if(!canPour(from,to)){
       sig.invalid++; badOut.textContent=String(sig.invalid);
@@ -622,12 +678,12 @@
     if(sig.lastMoveAt) sig.moveTimes.push(now-sig.lastMoveAt);
     sig.lastMoveAt=now;
 
-    // ✅ chemical palette
     playPourFX(from,to,currentPalette[color] || "#ffffff", amount);
     for(let i=0;i<amount;i++) b.push(a.pop());
 
     sig.moves++; movesOut.textContent=String(sig.moves);
     render();
+    checkStabilizerUnlock();
 
     if(isSolved()){
       const rng = makeRng(hashSeed(runSeed, level, 777));
@@ -647,7 +703,7 @@
     return arr;
   }
 
-  // Minimal local filler recipe (now schema-driven)
+  // ---------- Local filler recipe (schema-driven + gated stabilizer trap) ----------
   let anchorRecipe = null;
   function makeFillerRecipe() {
     const { bankPrimary } = inferBANK();
@@ -671,6 +727,7 @@
       wildcardSlots: 0,
       elements: ["CL","PA","PR","AU","TR"],
       thesisKey: "Traffic_without_ME",
+      stabilizer: null,
       sinTags: [],
       bonuses: [],
       constraints: [],
@@ -688,41 +745,86 @@
     base.capacity = wobble(4 + (level>=18?1:0) + (level>=32?1:0), 3, 6, 1);
     base.emptyBottles = clamp(2 + (rnd()<0.2?1:0) - (rnd()>0.9?1:0), 1, 6);
     base.bottleCount = clamp(base.colors + base.emptyBottles + 3 + Math.floor(rnd()*2), 6, 14);
+
     base.lockedBottles = clamp((level>=20?1:0) + (rnd()<0.08?1:0), 0, 3);
     base.wildcardSlots = clamp((level>=25 && rnd()<0.15)?1:0, 0, 2);
 
     base.sinTags = sinTags;
     base.title = `Filler: ${bankPrimary} Distillation`;
 
-    // Thesis drives meaning
     base.thesisKey = pickThesisKey(rng, sinTags, bankPrimary);
     base.elements = chooseElementsForThesis(base.thesisKey, base.colors, rng);
 
-    // Lore from schema voice pack
+    // ---- Illegal reaction trap (UR_without_CL), gated to later levels ----
+    base.stabilizer = null;
+    if (base.thesisKey === "UR_without_CL" && level >= STABILIZER_UNLOCK_LEVEL) {
+      // Ensure UR exists
+      if (!base.elements.includes("UR")) base.elements[0] = "UR";
+
+      // Add CL as a hidden palette entry (not distributed)
+      if (!base.elements.includes("CL")) {
+        base.elements.push("CL");
+        base.colors += 1;
+      }
+
+      // Add a host bottle for stabilizer (clamped later by board init if needed)
+      base.bottleCount = clamp(base.bottleCount + 1, 6, 14);
+
+      base.stabilizer = {
+        enabled: true,
+        symbol: "CL",
+        fill: 2,
+        unlock: "UR_full"
+      };
+    }
+
     base.lore = `${pickLoreLine("intro", rng)} Thesis: ${THESES[base.thesisKey]?.name || "Unknown Reaction"}.`;
 
     return base;
   }
 
   function buildBoardFromRecipe(recipe){
-    // ✅ apply palette + legend BEFORE board render
     applyElementPalette(recipe);
     renderLegend(recipe);
 
     const colors=recipe.colors, bottles=recipe.bottleCount, cap=recipe.capacity, empty=recipe.emptyBottles;
     const rnd = mulberry32(hashSeed(runSeed, level, 1337));
 
-    const colorStacks=[];
-    for(let c=0;c<colors;c++) colorStacks.push(Array.from({length:cap}, ()=>c));
+    state.locked = Array(bottles).fill(false);
+    state.hiddenSegs = Array(bottles).fill(false);
+    state.stabilizer = null;
 
-    const pool=shuffle(colorStacks.flat(), rnd);
     const board=Array.from({length:bottles}, ()=>[]);
+
+    const stabilizerEnabled = !!(recipe.stabilizer && recipe.stabilizer.enabled);
+    const stabilizerSymbol = stabilizerEnabled ? recipe.stabilizer.symbol : null;
+    const stabilizerColorIndex = stabilizerEnabled ? currentElements.indexOf(stabilizerSymbol) : -1;
+
+    // Build pool (exclude stabilizer color from distribution)
+    const colorStacks=[];
+    for(let c=0;c<colors;c++){
+      if (stabilizerEnabled && c === stabilizerColorIndex) continue;
+      colorStacks.push(Array.from({length:cap}, ()=>c));
+    }
+    const pool=shuffle(colorStacks.flat(), rnd);
+
     const fillCount=bottles-empty;
     let idx=0;
     for(let b=0;b<fillCount;b++){
       for(let s=0;s<cap;s++){
         if(idx<pool.length) board[b].push(pool[idx++]);
       }
+    }
+
+    // Create Stabilizer Bottle (last bottle), locked + hidden
+    if (stabilizerEnabled && stabilizerColorIndex >= 0) {
+      const stabIdx = bottles - 1;
+      const fill = clamp(recipe.stabilizer.fill ?? 2, 1, cap-1);
+      board[stabIdx] = Array.from({length: fill}, ()=> stabilizerColorIndex);
+
+      state.locked[stabIdx] = true;
+      state.hiddenSegs[stabIdx] = true;
+      state.stabilizer = { idx: stabIdx, unlock: recipe.stabilizer.unlock, symbol: stabilizerSymbol, unlocked:false };
     }
 
     state.capacity=cap;
@@ -762,7 +864,16 @@
     grid.innerHTML="";
     state.bottles.forEach((b,i)=>{
       const bottle=document.createElement("div");
-      bottle.className="bottle"+(state.selected===i?" selected":"");
+
+      const locked = !!state.locked[i];
+      const hidden = !!state.hiddenSegs[i];
+
+      bottle.className =
+        "bottle" +
+        (state.selected===i ? " selected" : "") +
+        (locked ? " locked" : "") +
+        (hidden ? " hiddenSegs" : "");
+
       bottle.dataset.bottle=String(i);
 
       for(let s=0;s<state.capacity;s++){
@@ -774,6 +885,10 @@
       }
 
       bottle.addEventListener("click", ()=>{
+        if (state.locked[i]) {
+          showToast("Stabilizer is sealed. Earn it.");
+          return;
+        }
         if(state.selected===-1){ state.selected=i; render(); return; }
         if(state.selected===i){ state.selected=-1; render(); return; }
         const success=doPour(state.selected,i);
@@ -800,7 +915,7 @@
   });
 
   // Boot
-  dmIntro.textContent = ""; // dialogue slot starts empty
+  dmIntro.textContent = "";
   updateDMButton();
   nextLevel();
 </script>
