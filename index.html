@@ -72,27 +72,27 @@
     }
 
     /* Default role mappings */
-    .seg.role-volatile::after   { background-image: url("./assets/pattern_ripples.svg"); animation: drift 7s linear infinite; }
-    .seg.role-catalyst::after   { background-image: url("./assets/pattern_streaks.svg"); animation: drift 6s linear infinite; }
-    .seg.role-stabilizer::after { background-image: url("./assets/pattern_noise.svg"); opacity:.18; }
-    .seg.role-structural::after,
-    .seg.role-foundational::after { background-image: url("./assets/pattern_grid.svg"); opacity:.22; }
-    .seg.role-transmission::after,
-    .seg.role-conversion::after { background-image: url("./assets/elements/textures/pattern_chevrons.svg"); opacity:.22; }
+.seg.role-volatile::after   { background-image: url("./assets/elements/textures/pattern_ripples.svg"); animation: drift 7s linear infinite; }
+.seg.role-catalyst::after   { background-image: url("./assets/elements/textures/pattern_streaks.svg"); animation: drift 6s linear infinite; }
+.seg.role-stabilizer::after { background-image: url("./assets/elements/textures/pattern_noise.svg"); opacity:.18; }
+.seg.role-structural::after,
+.seg.role-foundational::after { background-image: url("./assets/elements/textures/pattern_grid.svg"); opacity:.22; }
+.seg.role-transmission::after,
+.seg.role-conversion::after { background-image: url("./assets/elements/textures/pattern_chevrons.svg"); opacity:.22; }
 
-    /* Element-specific overrides (optional, improves readability on similar colors) */
-    .seg.el-EM::after { background-image: url("./assets/elements/textures/pattern_bubbles.svg"); opacity:.26; animation: drift 8s linear infinite; }
-    .seg.el-CO::after,
-    .seg.el-DI::after { background-image: url("./assets/pattern_hatch.svg"); opacity:.22; }
+/* Element-specific overrides (optional, improves readability on similar colors) */
+.seg.el-EM::after { background-image: url("./assets/elements/textures/pattern_bubbles.svg"); opacity:.26; animation: drift 8s linear infinite; }
+.seg.el-CO::after,
+.seg.el-DI::after { background-image: url("./assets/elements/textures/pattern_hatch.svg"); opacity:.22; }
 
-    /* Motion is subtle; respect reduced motion */
-    @media (prefers-reduced-motion: reduce) {
-      .seg::after{ animation:none !important; }
-    }
-    @keyframes drift {
-      from { background-position: 0 0; }
-      to   { background-position: 64px 64px; }
-    }
+/* Motion is subtle; respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .seg::after{ animation:none !important; }
+}
+@keyframes drift {
+  from { background-position: 0 0; }
+  to   { background-position: 64px 64px; }
+}
 
     .controls { display:flex; gap:10px; padding: 0 16px 16px 16px; flex-wrap:wrap; align-items:center;}
     .toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background:#0b121c; border:1px solid #243244; border-radius: 999px; padding: 10px 14px; font-weight:800; opacity:0; transition: opacity .18s ease; pointer-events:none;}
