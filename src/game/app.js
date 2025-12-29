@@ -41,7 +41,22 @@ function pad3(n){
   return String(x).padStart(3, "0");
 }
 
+/* ---------------- Player identity (name) ---------------- */
+const PLAYER_NAME_KEY = "ma_playerName";
+const PLAYER_NAME_MAX = 14;
+
+function getPlayerName(){
+  return (localStorage.getItem(PLAYER_NAME_KEY) || "").trim();
+}
+function setPlayerName(name){
+  const clean = String(name || "").trim().slice(0, PLAYER_NAME_MAX);
+  localStorage.setItem(PLAYER_NAME_KEY, clean);
+  return clean;
+}
+
+/* ---------------- DOM ---------------- */
 const statusOut = qs("statusOut");
+
 const grid = qs("grid");
 const pourFX = qs("pourFX");
 const showToast = makeToaster(qs("toast"));
@@ -54,6 +69,7 @@ const infoLevel = qs("infoLevel");
 const infoMoves = qs("infoMoves");
 const infoInvalid = qs("infoInvalid");
 const infoThesis = qs("infoThesis");
+const infoPlayer = qs("infoPlayer");
 
 const thesisLabel = qs("thesisLabel");
 const thesisSub = qs("thesisSub");
@@ -62,6 +78,7 @@ const glossaryBtn = qs("glossaryBtn");
 const glossary = qs("glossary");
 const glossaryList = qs("glossaryList");
 
+// DM overlays
 const dmCharacter = qs("dmCharacter");
 const dmClose = qs("dmClose");
 const speech = qs("speech");
@@ -69,7 +86,8 @@ const questTitle = qs("questTitle");
 const speechText = qs("speechText");
 const speechSmall = qs("speechSmall");
 
-const SPEECH_THEME_KEY = "ma_speechTheme";
+// Speech theme (dark/light)
+const SPEECH_THEME_KEY = "ma_speechTheme"; // "dark" | "light"
 function getSpeechTheme(){
   const v = (localStorage.getItem(SPEECH_THEME_KEY) || "").toLowerCase();
   return (v === "light" || v === "dark") ? v : "dark";
@@ -83,20 +101,25 @@ function toggleSpeechTheme(){
   setSpeechTheme(getSpeechTheme() === "dark" ? "light" : "dark");
 }
 
+// BANK rail
 const bankRail = qs("bankRail");
 const bankExpanded = qs("bankExpanded");
 
+// Mod slots (placeholder)
 const modSlot1 = qs("modSlot1");
 const modSlot2 = qs("modSlot2");
 const modSlot3 = qs("modSlot3");
 
+// Local api base preference
 const API_BASE_KEY = "ma_apiBase";
 apiBaseEl.value = localStorage.getItem(API_BASE_KEY) || (isLocal ? DEFAULT_LOCAL : DEFAULT_PROD);
 
+// Run/Progress storage keys
 const RUN_SEED_KEY = "ma_runSeed";
 const DM_COUNT_KEY = "ma_dmAppearCount";
 const NEXT_DM_KEY = "ma_nextDMAtLevel";
 
+// DM Scheduling
 const DM_GAP_MIN = 3;
 const DM_GAP_MAX = 6;
 const DM_MAJOR_EVERY = 5;
@@ -126,6 +149,7 @@ function scheduleNextDM(currentLevel){
   setNum(NEXT_DM_KEY, nextDMAtLevel);
 }
 
+/* ---------------- DM Sprite Helpers ---------------- */
 function ensureDMImg(){
   let img = dmCharacter.querySelector("img");
   if (!img){
@@ -156,6 +180,7 @@ function setDMAvatar({ mood, frame, seedKey }){
   img.src = `assets/dm/${m}/MA_${pad3(f)}.png`;
 }
 
+/* ---------------- Telemetry (BANK inference) ---------------- */
 const sig = { moves:0, invalid:0, resets:0, moveTimes:[], lastMoveAt:0 };
 const avg = (arr)=> arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
 
@@ -208,6 +233,7 @@ function setBankRail(bankPrimary){
   if (on) on.classList.add("on");
 }
 
+/* ---------------- Thesis selection + palette ---------------- */
 let currentElements = [];
 let currentPalette = [];
 
@@ -264,6 +290,7 @@ const state = {
   stabilizer: null
 };
 
+// Thesis overlay renderer
 function renderThesisBar(thesisKey){
   const thesis = thesisKey ? THESES[thesisKey] : null;
   if (!thesis){
@@ -278,9 +305,11 @@ function renderThesisBar(thesisKey){
   infoThesis.textContent = thesis.name;
 }
 
+// Glossary renderer (all elements)
 function renderGlossary(){
   glossaryList.innerHTML = "";
   const syms = Object.keys(ELEMENTS).sort();
+
   for (const sym of syms){
     const el = ELEMENTS[sym];
     if (!el) continue;
@@ -302,9 +331,11 @@ function renderGlossary(){
   }
 }
 
+// ---------------- Modifier (placeholder) ----------------
 let pendingModifier = null;
 function setPendingModifier(mod){ pendingModifier = mod || null; }
 
+/* ---------------- Bottle Game State ---------------- */
 const topColor = (b)=> b.length ? b[b.length-1] : null;
 function topRunCount(b){
   if (!b.length) return 0;
@@ -332,6 +363,106 @@ function canPour(from,to){
   return (target===null || target===color);
 }
 
+/* ---------------- Deadlock detection ---------------- */
+function hasAnyPlayableMove(){
+  for (let from = 0; from < state.bottles.length; from++){
+    if (state.locked[from]) continue;
+    if (!state.bottles[from]?.length) continue;
+
+    for (let to = 0; to < state.bottles.length; to++){
+      if (from === to) continue;
+      if (canPour(from, to)) return true;
+    }
+  }
+  return false;
+}
+
+function dmReactionForBANK(bankPrimary){
+  switch (bankPrimary){
+    case "A":
+      return {
+        mood: "annoyed",
+        title: "Out of moves.",
+        body: "Action without aim.\nYou brute-forced the ritual and slammed into a wall.\n\nRetry. Fewer clicks. More intent."
+      };
+    case "B":
+      return {
+        mood: "disappointed",
+        title: "Protocol failure.",
+        body: "Blueprint ignored.\nYou tried to solve chaos without structure.\n\nRetry. Plan two pours ahead. Minimum."
+      };
+    case "N":
+      return {
+        mood: "encouraging",
+        title: "No moves left.",
+        body: "Breathe.\n\nYou’re close — but you protected the wrong stacks.\n\nRetry. Calm hands. Clean pours."
+      };
+    case "K":
+    default:
+      return {
+        mood: "amused",
+        title: "No legal pours remain.",
+        body: "Ah. Classic.\n\nYou’ve constructed a perfectly unsolvable state.\n\nRetry — and respect the constraints before you pour."
+      };
+  }
+}
+
+let introActive = false; // used for first intro + deadlock gate
+
+function showOutOfMovesDM(){
+  const { bankPrimary } = inferBANK();
+  setBankRail(bankPrimary);
+
+  const react = dmReactionForBANK(bankPrimary);
+
+  showDMOverlay();
+  setSpeechTheme("dark");
+  setDMAvatar({ mood: react.mood, seedKey: 5050 });
+
+  questTitle.textContent = react.title;
+
+  // Gate gameplay: must Retry
+  introActive = true;
+  dmClose.style.display = "none";
+
+  speechText.innerHTML = `
+    <div style="white-space:pre-wrap; margin-bottom:12px;">${react.body}</div>
+
+    <div style="display:flex; gap:10px; align-items:center; margin-top:10px;">
+      <button id="retryLevelBtn" type="button"
+        style="
+          flex:1;
+          border-radius:14px;
+          padding:12px 14px;
+          border:1px solid rgba(220,232,255,.18);
+          background: rgba(17,26,39,.80);
+          color:#e6edf3;
+          font-weight:1000;
+          cursor:pointer;
+        "
+      >Retry Level</button>
+    </div>
+    <div style="font-size:12px; color: rgba(230,237,243,.65); margin-top:8px;">
+      Resetting keeps the same level seed.
+    </div>
+  `;
+
+  speechSmall.textContent = `BANK: ${bankPrimary}`;
+
+  const btn = document.getElementById("retryLevelBtn");
+  btn?.addEventListener("click", ()=>{
+    sig.resets++;
+    introActive = false;
+    dmClose.style.display = "";
+
+    hideDMOverlay();
+
+    // same deterministic level (same runSeed + same level)
+    startLevel();
+  });
+}
+
+/* ---------------- Stabilizer unlock (unchanged) ---------------- */
 function checkStabilizerUnlock(){
   if (!state.stabilizer || state.stabilizer.unlocked) return;
   if (state.stabilizer.unlock !== "UR_full") return;
@@ -349,11 +480,13 @@ function checkStabilizerUnlock(){
     state.locked[idx] = false;
     state.hiddenSegs[idx] = false;
     state.stabilizer.unlocked = true;
+
     showToast("Clarity unlocked. Now stop panicking.");
     render();
   }
 }
 
+// invalid pour punish tracking (per-level)
 let levelInvalid = 0;
 let punishedThisLevel = false;
 
@@ -361,6 +494,7 @@ function syncInfoPanel(){
   infoLevel.textContent = String(level);
   infoMoves.textContent = String(sig.moves);
   infoInvalid.textContent = String(sig.invalid);
+  infoPlayer.textContent = getPlayerName() || "—";
 }
 
 function doPour(from,to){
@@ -371,10 +505,12 @@ function doPour(from,to){
 
     if (!punishedThisLevel && levelInvalid >= INVALID_POUR_PUNISH_THRESHOLD){
       punishedThisLevel = true;
+
       const a = state.bottles[from] || [];
       const ci = a.length ? topColor(a) : null;
       const sym = (ci !== null && ci !== undefined) ? currentElements[ci] : null;
       const el = sym ? ELEMENTS[sym] : null;
+
       const punishTag = el?.punishes || "sloppiness";
       showToast(`${el?.symbol || sym || "??"} punishes: ${punishTag}`);
       pushSinTag(punishTag);
@@ -401,11 +537,20 @@ function doPour(from,to){
   if (isSolved()){
     showToast("Solved. Next level.");
     nextLevel();
+    return true;
   }
+
   render();
+
+  // NEW: deadlock -> DM reacts and forces retry
+  if (!isSolved() && !hasAnyPlayableMove()){
+    showOutOfMovesDM();
+  }
+
   return true;
 }
 
+/* ---------------- Level generation ---------------- */
 let questId = 1;
 let lastRecipe = null;
 
@@ -555,6 +700,8 @@ function render(){
 }
 
 function onBottleTap(i){
+  if (introActive) return;
+
   const now = performance.now();
   if (sig.lastMoveAt) sig.moveTimes.push(now - sig.lastMoveAt);
   sig.lastMoveAt = now;
@@ -577,6 +724,7 @@ function nextLevel(){
   startLevel();
 }
 
+/* ---------------- DM overlay + quest call ---------------- */
 function showDMOverlay(){
   dmCharacter.classList.add("show");
   dmCharacter.setAttribute("aria-hidden","false");
@@ -590,7 +738,109 @@ function hideDMOverlay(){
   speech.setAttribute("aria-hidden","true");
 }
 
+/**
+ * DM cancellation token:
+ * - Increment dmToken to invalidate any in-flight DM response
+ */
 let dmToken = 0;
+
+/* ---------------- First load DM intro (name gate) ---------------- */
+function runFirstLoadIntro(){
+  if (getPlayerName()) return false;
+
+  introActive = true;
+
+  showDMOverlay();
+  setSpeechTheme("dark");
+  setDMAvatar({ mood: "impressed", seedKey: 20251229 });
+
+  questTitle.textContent = "Welcome to The Balance Protocol";
+
+  speechText.innerHTML = `
+    <div style="margin-bottom:10px;">
+      <b>I am The Marketing Alchemist.</b><br>
+      You’ve stepped into <b>The Balance Protocol</b> — a system meant to keep power, process, and progress in equilibrium.
+      <br><br>
+      But something’s off. The balance has been disrupted — and it’s already leaking into everything you touch.
+      <br><br>
+      <b>You’ll fix it.</b> One bottle at a time. One thesis at a time.
+    </div>
+
+    <div style="margin-top:10px;">
+      <div style="font-weight:900; margin-bottom:6px;">What should I call you?</div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input
+          id="playerNameInput"
+          type="text"
+          maxlength="${PLAYER_NAME_MAX}"
+          placeholder="Name (max ${PLAYER_NAME_MAX})"
+          style="
+            flex:1;
+            border-radius:12px;
+            padding:10px 12px;
+            border:1px solid rgba(220,232,255,.18);
+            background: rgba(17,26,39,.55);
+            color: #e6edf3;
+            outline:none;
+            font-weight:800;
+          "
+        />
+        <button
+          id="playerNameBtn"
+          type="button"
+          style="
+            border-radius:12px;
+            padding:10px 12px;
+            border:1px solid rgba(220,232,255,.18);
+            background: rgba(17,26,39,.75);
+            color:#e6edf3;
+            font-weight:1000;
+            cursor:pointer;
+          "
+        >Enter</button>
+      </div>
+      <div style="font-size:12px; color: rgba(230,237,243,.65); margin-top:6px;">
+        14 characters max. This is what I’ll call you.
+      </div>
+    </div>
+  `;
+
+  speechSmall.textContent = "Name required to begin.";
+
+  // Prevent closing until named
+  dmClose.style.display = "none";
+
+  const input = document.getElementById("playerNameInput");
+  const btn = document.getElementById("playerNameBtn");
+
+  const submit = () => {
+    const name = (input?.value || "").trim();
+    if (!name){
+      showToast("Give me a name. Don’t stall.");
+      return;
+    }
+
+    const saved = setPlayerName(name);
+    syncInfoPanel();
+
+    introActive = false;
+    dmClose.style.display = "";
+
+    questTitle.textContent = `Good. ${saved}.`;
+    speechText.textContent =
+      `Now listen carefully, ${saved}.\n\nThe Balance Protocol doesn’t reward “busy.” It rewards alignment.\n\nStart sorting. Fix the system.`;
+    speechSmall.textContent = "Tap ✕ to begin.";
+  };
+
+  btn?.addEventListener("click", submit);
+  input?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submit();
+  });
+
+  setTimeout(() => input?.focus(), 200);
+
+  return true;
+}
 
 async function runDMIfAvailable(){
   if (!isDMLevel(level)) return;
@@ -606,7 +856,9 @@ async function runDMIfAvailable(){
 
   setSpeechTheme(wantModifier ? "light" : "dark");
 
-  const foreshadowOnly = level >= FORESHADOW_START_LEVEL && level < STABILIZER_UNLOCK_LEVEL;
+  const foreshadowOnly =
+    level >= FORESHADOW_START_LEVEL &&
+    level < STABILIZER_UNLOCK_LEVEL;
 
   statusOut.textContent = wantModifier ? "brewing..." : "speaking...";
 
@@ -626,14 +878,17 @@ async function runDMIfAvailable(){
     seed: runSeed,
     level,
     wantModifier,
-    foreshadowOnly
+    foreshadowOnly,
+
+    // NEW: allow LLM to address the player
+    playerName: getPlayerName()
   };
 
   try{
     const key = `quest-node:${runSeed}:${questId}:${level}:${upcoming}:${wantModifier}:${foreshadowOnly}`;
     const data = await singleFlight(key, () => postJSON(apiBaseEl.value, "/api/quest-node", payload));
 
-    if (myToken !== dmToken) return;
+    if (myToken !== dmToken) return; // cancelled
 
     const q = data.payload;
 
@@ -645,7 +900,12 @@ async function runDMIfAvailable(){
 
     questTitle.textContent = q.quest_title || (wantModifier ? "Major Ritual" : "DM Speaks");
 
-    const parts = [q.dm_intro || "", q.dm_midpoint || "", q.dm_verdict || ""].filter(Boolean);
+    const parts = [
+      q.dm_intro || "",
+      q.dm_midpoint || "",
+      q.dm_verdict || ""
+    ].filter(Boolean);
+
     speechText.textContent = parts.join("\n\n") || "…";
     speechSmall.textContent = `Next DM scheduled · major every ${DM_MAJOR_EVERY}`;
 
@@ -664,7 +924,7 @@ async function runDMIfAvailable(){
     statusOut.textContent = "ok";
     questId++;
   } catch(e){
-    if (myToken !== dmToken) return;
+    if (myToken !== dmToken) return; // cancelled
 
     statusOut.textContent = (e?.status === 429) ? "rate-limited" : "dm error";
     speechText.textContent = (e?.status === 429)
@@ -674,6 +934,7 @@ async function runDMIfAvailable(){
   }
 }
 
+/* ---------------- Level boot ---------------- */
 function startLevel(){
   levelInvalid = 0;
   punishedThisLevel = false;
@@ -693,15 +954,24 @@ function startLevel(){
 
   render();
 
-  if (isDMLevel(level)){
-    runDMIfAvailable();
-  } else {
-    hideDMOverlay();
+  // If intro is running, do not run quest-node DM
+  if (!introActive){
+    if (isDMLevel(level)){
+      runDMIfAvailable();
+    } else {
+      hideDMOverlay();
+    }
+  }
+
+  // Safety: if puzzle spawns deadlocked (rare), DM forces retry
+  if (!introActive && !isSolved() && !hasAnyPlayableMove()){
+    showOutOfMovesDM();
   }
 
   statusOut.textContent = "ready";
 }
 
+/* ---------------- UI events ---------------- */
 devBtn.addEventListener("click", ()=> settings.showModal());
 apiBaseEl.addEventListener("change", ()=>{
   localStorage.setItem(API_BASE_KEY, apiBaseEl.value.trim());
@@ -713,30 +983,41 @@ bankRail.addEventListener("click", ()=>{
 });
 
 dmClose.addEventListener("click", ()=>{
-  dmToken++;
+  dmToken++;         // invalidate pending DM response
   hideDMOverlay();
 });
 
+// Manual theme toggle (dev)
 questTitle.addEventListener("dblclick", toggleSpeechTheme);
 
+// Glossary
 glossaryBtn.addEventListener("click", ()=>{
   renderGlossary();
   glossary.showModal();
 });
 
+// Modifiers placeholders
 function modTap(){ showToast("Modifier shop (later)."); }
 modSlot1.addEventListener("click", modTap);
 modSlot2.addEventListener("click", modTap);
 modSlot3.addEventListener("click", modTap);
 
+/* ---------------- Boot ---------------- */
 (function boot(){
   setSpeechTheme(getSpeechTheme());
+
   hideDMOverlay();
   startLevel();
 
-  const seen = localStorage.getItem("ma_seenMobileUI");
-  if (!seen){
-    localStorage.setItem("ma_seenMobileUI","1");
-    showToast(pickLoreLine?.("open") || "Tap bottle → tap target.");
+  // Run grand entrance AFTER first render
+  const introRan = runFirstLoadIntro();
+
+  // Only show tutorial toast if intro didn't run
+  if (!introRan){
+    const seen = localStorage.getItem("ma_seenMobileUI");
+    if (!seen){
+      localStorage.setItem("ma_seenMobileUI","1");
+      showToast(pickLoreLine?.("open") || "Tap bottle → tap target.");
+    }
   }
 })();
