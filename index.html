@@ -2,11 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <!-- iPhone safe-area support -->
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>Marketing Alchemist — Bottle Fill</title>
 
-  <!-- DM speech font (DM-only styling happens in CSS) -->
+  <!-- DM speech font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=UnifrakturCook:wght@700&display=swap" rel="stylesheet">
@@ -16,27 +15,32 @@
 
 <body>
   <main class="screen" id="screen">
+
     <!-- BANK IDENTIFIER (left rail) -->
     <button class="bankRail" id="bankRail" aria-label="BANK Identifier">
-      <div class="bankLetters">
+      <!-- Collapsed: just letters -->
+      <div class="bankLetters" aria-hidden="false">
         <span data-bank="B">B</span>
         <span data-bank="A">A</span>
         <span data-bank="N">N</span>
         <span data-bank="K">K</span>
       </div>
+
+      <!-- Expanded: meanings on LEFT, letters on RIGHT (no vertical expansion) -->
       <div class="bankExpanded" id="bankExpanded" aria-hidden="true">
-        <div><b>B</b> — Blueprint (structure, steps)</div>
-        <div><b>A</b> — Action (speed, results)</div>
-        <div><b>N</b> — Nurturing (support, trust)</div>
-        <div><b>K</b> — Knowledge (data, logic)</div>
+        <div class="bankRow"><span>Blueprint (structure, steps)</span><b>B</b></div>
+        <div class="bankRow"><span>Action (speed, results)</span><b>A</b></div>
+        <div class="bankRow"><span>Nurturing (support, trust)</span><b>N</b></div>
+        <div class="bankRow"><span>Knowledge (data, logic)</span><b>K</b></div>
       </div>
     </button>
 
     <!-- floating settings button (top-right) -->
     <button class="settingsFab" id="devBtn" aria-label="Settings">⚙️</button>
 
-    <!-- BOTTLES GRID (base layer) -->
+    <!-- BOTTLES GRID -->
     <section class="playfield" aria-label="Bottles Grid">
+
       <!-- Thesis Bar (top overlay) -->
       <div class="thesisBar" id="thesisBar">
         <div class="thesisLeft">
@@ -96,7 +100,7 @@
       </form>
     </dialog>
 
-    <!-- settings drawer (simple) -->
+    <!-- SETTINGS -->
     <dialog class="settings" id="settings">
       <form method="dialog">
         <header>
@@ -104,7 +108,7 @@
           <button class="x" value="cancel" aria-label="Close">✕</button>
         </header>
 
-        <!-- INFO PANEL (moved from HUD) -->
+        <!-- INFO PANEL -->
         <section class="infoPanel">
           <div class="infoRow"><span>Game</span><b>Bottle Fill</b></div>
           <div class="infoRow"><span>Level</span><b id="infoLevel">—</b></div>
