@@ -46,6 +46,61 @@ function consumeSinTag(){
   return next;
 }
 
+// ---------------- DM PNG (mood folders) ----------------
+const DM_MOODS = [
+  "amused",
+  "annoyed",
+  "disappointed",
+  "encouraging",
+  "frustrated",
+  "furious",
+  "impressed",
+  "proud",
+  "satisfied",
+];
+
+function normMood(m){
+  const s = String(m || "").trim().toLowerCase();
+  if (DM_MOODS.includes(s)) return s;
+  return "encouraging";
+}
+function pad3(n){
+  const x = Math.max(0, Math.min(999, Number(n) || 0));
+  return String(x).padStart(3, "0");
+}
+function ensureDMImg(){
+  // dmCharacter is an overlay div; we inject an <img> if none exists.
+  let img = dmCharacter.querySelector("img");
+  if (!img){
+    img = document.createElement("img");
+    img.alt = "Marketing Alchemist";
+    img.decoding = "async";
+    img.loading = "eager";
+    img.draggable = false;
+    img.style.width = "100%";
+    img.style.height = "100%";
+    img.style.objectFit = "contain";
+    img.style.pointerEvents = "none";
+    dmCharacter.appendChild(img);
+  }
+  return img;
+}
+function setDMAvatar({ mood, frame, seedKey }){
+  const img = ensureDMImg();
+  const m = normMood(mood);
+
+  let f = Number.isInteger(frame) ? frame : null;
+  if (f === null){
+    // deterministic-ish fallback: runSeed + level + questId
+    const r = makeRng(hashSeed(runSeed, level, questId, seedKey || 777));
+    f = r.int(0, 5); // 0..5
+  } else {
+    f = Math.max(0, Math.min(5, f));
+  }
+
+  img.src = `assets/dm/${m}/MA_${pad3(f)}.png`;
+}
+
 // ---------------- DOM ----------------
 const statusOut = qs("statusOut");
 
@@ -123,6 +178,8 @@ function scheduleNextDM(currentLevel){
 // ---------------- Telemetry (BANK inference) ----------------
 const sig = { moves:0, invalid:0, resets:0, moveTimes:[], lastMoveAt:0 };
 const avg = (arr)=> arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+
+let level = 1; // (declared early so inferBANK can read it safely)
 
 function inferBANK(){
   const pace = avg(sig.moveTimes.slice(-12));
@@ -221,6 +278,15 @@ function applyElementPalette(recipe){
   currentPalette = elems.map(sym => (ELEMENTS[sym]?.color || "#ffffff"));
 }
 
+const state = {
+  bottles:[],
+  capacity:4,
+  selected:-1,
+  locked:[],
+  hiddenSegs:[],
+  stabilizer: null
+};
+
 function renderLegend(recipe){
   legendEl.innerHTML = "";
 
@@ -266,15 +332,6 @@ let pendingModifier = null;
 function setPendingModifier(mod){ pendingModifier = mod || null; }
 
 // ---------------- Bottle Game State ----------------
-const state = {
-  bottles:[],
-  capacity:4,
-  selected:-1,
-  locked:[],
-  hiddenSegs:[],
-  stabilizer: null
-};
-
 const topColor = (b)=> b.length ? b[b.length-1] : null;
 function topRunCount(b){
   if (!b.length) return 0;
@@ -375,7 +432,6 @@ function doPour(from,to){
 }
 
 // ---------------- Level generation ----------------
-let level = 1;
 let questId = 1;
 let lastRecipe = null;
 
@@ -579,7 +635,10 @@ async function runDMIfAvailable(){
 
   statusOut.textContent = wantModifier ? "brewing..." : "speaking...";
 
+  // show overlay immediately with a safe default DM image
   showDMOverlay();
+  setDMAvatar({ mood: wantModifier ? "proud" : "encouraging", seedKey: 123 });
+
   questTitle.textContent = wantModifier ? "Major Ritual" : "DM Speaks";
   speechText.textContent = "…";
   speechSmall.textContent = `BANK ${bankPrimary} (${Math.round(bankConfidence*100)}%) · sinTags: ${sinTags.join(", ")}`;
@@ -600,6 +659,13 @@ async function runDMIfAvailable(){
     const key = `quest-node:${runSeed}:${questId}:${level}:${upcoming}:${wantModifier}:${foreshadowOnly}`;
     const data = await singleFlight(key, () => postJSON(apiBaseEl.value, "/api/quest-node", payload));
     const q = data.payload;
+
+    // DM art (based on LLM mood)
+    setDMAvatar({
+      mood: q.dm_mood || (wantModifier ? "proud" : "encouraging"),
+      frame: Number.isInteger(q.dm_frame) ? q.dm_frame : null,
+      seedKey: 999,
+    });
 
     // Render into bubble
     questTitle.textContent = q.quest_title || (wantModifier ? "Major Ritual" : "DM Speaks");
