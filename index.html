@@ -32,23 +32,20 @@
       </div>
     </button>
 
+    <!-- floating settings button (top-right) -->
+    <button class="settingsFab" id="devBtn" aria-label="Settings">⚙️</button>
+
     <!-- BOTTLES GRID (base layer) -->
     <section class="playfield" aria-label="Bottles Grid">
-      <div class="hud">
-        <div class="hudLeft">
-          <div class="hudTitle">Bottle Fill</div>
-          <div class="hudMeta" id="hudMeta">
-            <span>Lvl <b id="levelOut">1</b></span>
-            <span>Moves <b id="movesOut">0</b></span>
-            <span>Invalid <b id="badOut">0</b></span>
-          </div>
+      <!-- Thesis Bar (top overlay) -->
+      <div class="thesisBar" id="thesisBar">
+        <div class="thesisLeft">
+          <div class="thesisLabel" id="thesisLabel">Thesis: —</div>
+          <div class="thesisSub" id="thesisSub">—</div>
         </div>
-
-        <!-- tiny, optional dev tap target -->
-        <button class="devBtn" id="devBtn" aria-label="Settings">⚙️</button>
+        <button class="thesisBtn" id="glossaryBtn" aria-label="Open Glossary">Glossary</button>
       </div>
 
-      <div id="legend" class="legend"></div>
       <div class="grid" id="grid"></div>
     </section>
 
@@ -62,7 +59,6 @@
     <!-- CHARACTER (bottom-left overlay) -->
     <aside class="dmCharacter" id="dmCharacter" aria-hidden="true">
       <button class="dmClose" id="dmClose" aria-label="Close DM">✕</button>
-      <!-- Placeholder: swap src to your DM PNG path when ready -->
       <div class="dmAvatar" id="dmAvatar" title="DM"></div>
     </aside>
 
@@ -79,6 +75,27 @@
     <div class="toast" id="toast"></div>
     <div class="pourFX" id="pourFX"></div>
 
+    <!-- GLOSSARY (pauses game) -->
+    <dialog class="glossary" id="glossary">
+      <form method="dialog">
+        <header>
+          <div><b>Glossary</b></div>
+          <button class="x" value="cancel" aria-label="Close">✕</button>
+        </header>
+
+        <div class="glossaryBody">
+          <div class="glossaryNote" id="glossaryNote">
+            All elements and their roles, teachings, and punishments.
+          </div>
+          <div class="glossaryList" id="glossaryList"></div>
+        </div>
+
+        <menu>
+          <button value="cancel">Close</button>
+        </menu>
+      </form>
+    </dialog>
+
     <!-- settings drawer (simple) -->
     <dialog class="settings" id="settings">
       <form method="dialog">
@@ -86,6 +103,15 @@
           <div><b>Settings</b></div>
           <button class="x" value="cancel" aria-label="Close">✕</button>
         </header>
+
+        <!-- INFO PANEL (moved from HUD) -->
+        <section class="infoPanel">
+          <div class="infoRow"><span>Game</span><b>Bottle Fill</b></div>
+          <div class="infoRow"><span>Level</span><b id="infoLevel">—</b></div>
+          <div class="infoRow"><span>Moves</span><b id="infoMoves">—</b></div>
+          <div class="infoRow"><span>Invalid</span><b id="infoInvalid">—</b></div>
+          <div class="infoRow"><span>Thesis</span><b id="infoThesis">—</b></div>
+        </section>
 
         <label class="row">
           <span>API Base</span>
