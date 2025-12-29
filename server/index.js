@@ -176,6 +176,18 @@ const MODIFIER_SCHEMA = {
   ],
 };
 
+const DM_MOODS = [
+  "amused",
+  "annoyed",
+  "disappointed",
+  "encouraging",
+  "frustrated",
+  "furious",
+  "impressed",
+  "proud",
+  "satisfied",
+];
+
 const QUEST_SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -185,34 +197,14 @@ const QUEST_SCHEMA = {
     dm_midpoint: { type: "string" },
     dm_verdict: { type: "string" },
 
-    // NEW: drives which DM image folder we use
-    dm_mood: {
-      type: "string",
-      enum: [
-        "amused",
-        "annoyed",
-        "disappointed",
-        "encouraging",
-        "frustrated",
-        "furious",
-        "impressed",
-        "proud",
-        "satisfied",
-      ],
-    },
+    // NEW: DM art control for client
+    dm_mood: { type: "string", enum: DM_MOODS },
+    dm_frame: { type: "integer", minimum: 0, maximum: 5 },
 
     used_voice_ids: { type: "array", items: { type: "string" } },
     modifier: MODIFIER_SCHEMA,
   },
-  required: [
-    "quest_title",
-    "dm_intro",
-    "dm_midpoint",
-    "dm_verdict",
-    "dm_mood",
-    "used_voice_ids",
-    "modifier",
-  ],
+  required: ["quest_title","dm_intro","dm_midpoint","dm_verdict","dm_mood","dm_frame","used_voice_ids","modifier"],
 };
 
 const RECIPE_SCHEMA = {
@@ -290,6 +282,14 @@ CRITICAL OUTPUT RULES:
 - dm_verdict: 1 sentence. MUST include signature token: ${DM_SIGNATURE}
 - Use 1–2 required catchphrases per response.
 - HARD BAN: finance/corporate jargon. BANK is personality framework only.
+
+DM ART CONTROL (required):
+- dm_mood MUST be one of: ${DM_MOODS.join(", ")}
+- dm_frame MUST be an integer 0–5
+- Pick mood based on your emotional stance toward the player's current behavior:
+  - encouraging/impressed/proud/satisfied for good outcomes
+  - amused for playful roast
+  - annoyed/frustrated/disappointed/furious when they waste moves / ignore direction
 
 MODIFIER RULE:
 - If wantModifier=false, you MUST output modifier as ALL ZEROS with ruleTag "none".
