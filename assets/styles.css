@@ -17,6 +17,13 @@
   --line: rgba(220,232,255,.12);
   --text: #e6edf3;
   --muted: #aab6ca;
+
+    /* DM speech bubble plates (PNG) */
+  --speech-plate-dark: url("./dmspeaks/speech_bubble_dark.png");
+  --speech-plate-light: url("./dmspeaks/speech_bubble_light.png");
+
+  /* DM-only font */
+  --dm-font: "UnifrakturCook", serif;
 }
 
 *{ box-sizing:border-box; }
@@ -395,37 +402,72 @@ body{
   position:absolute;
   right: calc(var(--sar) + var(--pad));
   bottom: calc(var(--sab) + var(--pad) + var(--modsH) + 8px);
+
   width: min(62vw, 420px);
-  height: var(--speechH);
+
+  /* Use your PNG aspect ratio (780×440 = 39/22) */
+  aspect-ratio: 39 / 22;
+  height: auto;
+
+  /* PNG plate */
+  background-image: var(--speech-plate-dark);
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center bottom;
+
+  /* Your bubble radius can stay */
   border-radius: 22px;
-  border: 1px solid var(--line);
-  background: rgba(11,18,28,.78);
+
+  /* If your PNG already has the border, keep this off */
+  border: 0;
+
   overflow:hidden;
   display:none;
+
+  /* Prevent giant speeches from swallowing the screen */
+  max-height: 45vh;
 }
 
 .speech.show{ display:block; }
 
+/* Theme is controlled by JS: speech.dataset.theme = "dark" | "light" */
+.speech[data-theme="dark"]  { background-image: var(--speech-plate-dark); }
+.speech[data-theme="light"] { background-image: var(--speech-plate-light); }
+
+/* Inner content layout */
 .speechInner{
-  padding: 12px 14px;
+  /* Safe padding to match your 390×220 design grid */
+  padding: 24px;
   display:flex;
   flex-direction:column;
-  gap:8px;
+  gap:10px;
   height:100%;
 }
 
+/* DM-only font (ONLY when speech is visible) */
+.speech.show .speechTitle,
+.speech.show .speechText{
+  font-family: var(--dm-font);
+  font-weight: 700;
+  letter-spacing: .2px;
+}
+
+/* Keep meta readable in system font */
 .speechTitle{
   font-weight: 1000;
-  font-size: 16px;
-  letter-spacing:.2px;
+  font-size: 18px;
 }
+
 .speechText{
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.25;
   color: var(--text);
   overflow:auto;
+  white-space: pre-wrap; /* supports the \n\n joins in JS */
 }
+
 .speechSmall{
+  font-family: inherit;
   font-size: 12px;
   color: var(--muted);
 }
