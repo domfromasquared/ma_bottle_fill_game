@@ -995,30 +995,6 @@ function startLevel(){
   statusOut.textContent = "ready";
 }
 
-/* ---------------- Input handlers ---------------- */
-function onBottleTap(i){
-  if (introIsActive()) return;
-
-  const now = performance.now();
-  if (sig.lastMoveAt) sig.moveTimes.push(now - sig.lastMoveAt);
-  sig.lastMoveAt = now;
-
-  if (state.selected < 0){
-    state.selected = i;
-    render();
-    return;
-  }
-
-  const from = state.selected;
-  const to = i;
-  state.selected = -1;
-  doPour(from,to);
-}
-
-function renderGridHandlers(){
-  // handlers are attached during render() creation
-}
-
 /* ---------------- Boot ---------------- */
 devBtn.addEventListener("click", ()=> settings.showModal());
 apiBaseEl.addEventListener("change", ()=>{
