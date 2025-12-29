@@ -127,6 +127,23 @@ const questTitle = qs("questTitle");
 const speechText = qs("speechText");
 const speechSmall = qs("speechSmall");
 
+// ---------------- Speech theme (dark/light) ----------------
+// CSS reads this via: .speech[data-theme="dark|light"] { background-image: ... }
+const SPEECH_THEME_KEY = "ma_speechTheme"; // "dark" | "light"
+
+function getSpeechTheme(){
+  const v = (localStorage.getItem(SPEECH_THEME_KEY) || "").toLowerCase();
+  return (v === "light" || v === "dark") ? v : "dark";
+}
+function setSpeechTheme(theme){
+  const t = (String(theme || "").toLowerCase() === "light") ? "light" : "dark";
+  speech.dataset.theme = t;
+  localStorage.setItem(SPEECH_THEME_KEY, t);
+}
+function toggleSpeechTheme(){
+  setSpeechTheme(getSpeechTheme() === "dark" ? "light" : "dark");
+}
+
 // BANK rail
 const bankRail = qs("bankRail");
 const bankExpanded = qs("bankExpanded");
@@ -629,6 +646,9 @@ async function runDMIfAvailable(){
   const upcoming = dmAppearCount + 1;
   const wantModifier = isMajorDM(upcoming);
 
+  // Auto-theme: major ritual => light plate, normal DM => dark plate
+  setSpeechTheme(wantModifier ? "light" : "dark");
+
   const foreshadowOnly =
     level >= FORESHADOW_START_LEVEL &&
     level < STABILIZER_UNLOCK_LEVEL;
@@ -750,6 +770,9 @@ dmClose.addEventListener("click", ()=>{
   hideDMOverlay();
 });
 
+// Manual theme toggle for testing: double-click the quest title (desktop) / rapid double tap (some mobile browsers)
+questTitle.addEventListener("dblclick", toggleSpeechTheme);
+
 // Modifiers shop placeholders
 function modTap(){
   showToast("Modifier shop (later).");
@@ -760,6 +783,9 @@ modSlot3.addEventListener("click", modTap);
 
 // ---------------- Boot ----------------
 (function boot(){
+  // Ensure persisted speech theme is applied even before first DM shows
+  setSpeechTheme(getSpeechTheme());
+
   // ambient line in bubble only if DM is open; otherwise no overlay
   hideDMOverlay();
   startLevel();
