@@ -3,14 +3,17 @@
 //
 // Endpoints:
 //   GET  /health
-//   POST /api/quest-node   (supports wantModifier: boolean)
+//   POST /api/quest-node
 //   POST /api/level-recipe
+//   POST /api/name-roast  ✅ (mounted from routes/nameRoast.js)
 
 import express from "express";
 import cors from "cors";
 import OpenAI from "openai";
 import fs from "fs";
 import path from "path";
+
+import nameRoastRoute from "./routes/nameRoast.js"; // ✅
 
 const app = express();
 app.use(express.json({ limit: "1mb" }));
@@ -23,7 +26,7 @@ const MODEL_RECIPE = process.env.MODEL_RECIPE || "gpt-4o-mini";
 
 const DM_SIGNATURE = "[SIG:MA_V1]";
 
-// ---------- Load voice canon ----------
+/* ---------- Load voice canon ---------- */
 const VOICE_DIR = path.join(process.cwd(), "voice");
 const VOICE_LOCK_PATH = path.join(VOICE_DIR, "ma_voice_lock.v1.txt");
 const FEWSHOTS_PATH = path.join(VOICE_DIR, "ma_fewshots.v1.json");
@@ -38,7 +41,7 @@ function readJsonIfExists(p) {
 const MA_VOICE_LOCK = readTextIfExists(VOICE_LOCK_PATH);
 const MA_FEWSHOTS = readJsonIfExists(FEWSHOTS_PATH);
 
-// ---------- CORS ----------
+/* ---------- CORS ---------- */
 app.use(cors({
   origin: [
     "https://domfromasquared.github.io",
@@ -51,7 +54,10 @@ app.use(cors({
   allowedHeaders: ["Content-Type","Authorization"],
 }));
 
-// ---------- Basic rate limit ----------
+/* ✅ Mount name-roast route */
+app.use("/api", nameRoastRoute);
+
+/* ---------- Basic rate limit ---------- */
 const RL = new Map();
 app.use((req, res, next) => {
   const ip = (req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").toString().split(",")[0].trim();
@@ -71,7 +77,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// ---------- Single-flight ----------
+/* ---------- Single-flight ---------- */
 const INFLIGHT = new Map();
 async function singleFlight(key, fn) {
   if (INFLIGHT.has(key)) return INFLIGHT.get(key);
@@ -80,10 +86,10 @@ async function singleFlight(key, fn) {
   return p;
 }
 
-// ---------- OpenAI ----------
+/* ---------- OpenAI ---------- */
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
 
-// ---------- Helpers ----------
+/* ---------- Helpers ---------- */
 function ok(res, data={}) { res.json({ ok:true, ...data }); }
 function fail(res, status, error, details=null) { res.status(status).json({ ok:false, error, details }); }
 
@@ -105,7 +111,6 @@ function voiceLockOrFail(res) {
 
 function getOutputText(resp) {
   if (typeof resp?.output_text === "string") return resp.output_text;
-  // fallback: some SDK versions store in output array; keep robust
   try {
     const out = resp?.output || [];
     for (const item of out) {
@@ -144,7 +149,7 @@ function fewshotsBlock() {
   return lines.join("\n");
 }
 
-// ---------- Modifier defaults ----------
+/* ---------- Modifier defaults ---------- */
 const ZERO_MOD = {
   lockedBottlesDelta: 0,
   emptyBottlesDelta: 0,
@@ -156,37 +161,28 @@ const ZERO_MOD = {
   bonusObjective: ""
 };
 
-// ---------- Schemas ----------
+const DM_MOODS = [
+  "amused","annoyed","disappointed","encouraging","frustrated","furious","impressed","proud","satisfied",
+];
+
 const MODIFIER_SCHEMA = {
   type: "object",
   additionalProperties: false,
   properties: {
     lockedBottlesDelta: { type: "integer", minimum: -1, maximum: 2 },
-    emptyBottlesDelta: { type: "integer", minimum: -2, maximum: 3 },
-    capacityDelta: { type: "integer", minimum: -1, maximum: 2 },
+    emptyBottlesDelta:  { type: "integer", minimum: -2, maximum: 3 },
+    capacityDelta:      { type: "integer", minimum: -1, maximum: 2 },
     wildcardSlotsDelta: { type: "integer", minimum: -1, maximum: 2 },
-    colorsDelta: { type: "integer", minimum: -1, maximum: 2 },
-    bottleCountDelta: { type: "integer", minimum: -2, maximum: 3 },
-    ruleTag: { type: "string" },
-    bonusObjective: { type: "string" },
+    colorsDelta:        { type: "integer", minimum: -1, maximum: 2 },
+    bottleCountDelta:   { type: "integer", minimum: -2, maximum: 3 },
+    ruleTag:            { type: "string" },
+    bonusObjective:     { type: "string" },
   },
   required: [
     "lockedBottlesDelta","emptyBottlesDelta","capacityDelta","wildcardSlotsDelta",
     "colorsDelta","bottleCountDelta","ruleTag","bonusObjective"
   ],
 };
-
-const DM_MOODS = [
-  "amused",
-  "annoyed",
-  "disappointed",
-  "encouraging",
-  "frustrated",
-  "furious",
-  "impressed",
-  "proud",
-  "satisfied",
-];
 
 const QUEST_SCHEMA = {
   type: "object",
@@ -197,7 +193,6 @@ const QUEST_SCHEMA = {
     dm_midpoint: { type: "string" },
     dm_verdict: { type: "string" },
 
-    // NEW: DM art control for client
     dm_mood: { type: "string", enum: DM_MOODS },
     dm_frame: { type: "integer", minimum: 0, maximum: 5 },
 
@@ -237,11 +232,8 @@ const RECIPE_SCHEMA = {
   ],
 };
 
-// ---------- Normalization (backward compatible) ----------
 function normalizeContext(body) {
   const c = { ...(body || {}) };
-
-  // accept snake_case too (older clients)
   c.bankPrimary = c.bankPrimary ?? c.bank_primary;
   c.bankConfidence = c.bankConfidence ?? c.bank_confidence;
   c.questId = c.questId ?? c.quest_id;
@@ -249,12 +241,13 @@ function normalizeContext(body) {
   c.wantModifier = c.wantModifier ?? c.want_modifier;
   c.modifier = c.modifier ?? c.modifier_delta;
   c.foreshadowOnly = c.foreshadowOnly ?? c.foreshadow_only;
-
   return c;
 }
 
-// ---------- Routes ----------
-app.get("/health", (_req, res) => ok(res, { voiceLockLoaded: Boolean(MA_VOICE_LOCK), models:{MODEL_QUEST, MODEL_RECIPE} }));
+/* ---------- Routes ---------- */
+app.get("/health", (_req, res) =>
+  ok(res, { voiceLockLoaded: Boolean(MA_VOICE_LOCK), models:{ MODEL_QUEST, MODEL_RECIPE } })
+);
 
 app.post("/api/quest-node", async (req, res) => {
   try {
@@ -286,34 +279,12 @@ CRITICAL OUTPUT RULES:
 DM ART CONTROL (required):
 - dm_mood MUST be one of: ${DM_MOODS.join(", ")}
 - dm_frame MUST be an integer 0–5
-- Pick mood based on your emotional stance toward the player's current behavior:
-  - encouraging/impressed/proud/satisfied for good outcomes
-  - amused for playful roast
-  - annoyed/frustrated/disappointed/furious when they waste moves / ignore direction
 
 MODIFIER RULE:
-- If wantModifier=false, you MUST output modifier as ALL ZEROS with ruleTag "none".
+- If wantModifier=false, output modifier as ALL ZEROS with ruleTag "none".
 
-FORESHADOW MODE (when context.foreshadowOnly=true):
-- DO NOT introduce new mechanics.
-- DO NOT mention "locks", "stabilizers", "hidden bottles", "unlock conditions", or anything that reveals gameplay rules.
-- You are ONLY planting a warning about consequences (metaphor + behavior) that will pay off later.
-- The warning MUST reference the *meaning* of urgency vs clarity (or missing stabilizing factors), but never explain how the game will enforce it.
-- Use BANK-adaptive framing based on context.bankPrimary:
-
-  If bankPrimary = "A" (Action):
-  - challenge + consequence framing, short and sharp, "you'll get stopped" energy.
-
-  If bankPrimary = "K" (Knowledge):
-  - systems + inevitability framing, "constraints emerge" energy.
-
-  If bankPrimary = "N" (Nurturing):
-  - safety + burnout framing, "panic costs you" energy.
-
-  If bankPrimary = "B" (Blueprint):
-  - structure + preparation framing, "you're skipping a step" energy.
-
-- Keep it confident and in-character. No spoilers.
+FORESHADOW MODE:
+- If foreshadowOnly=true: do not introduce new mechanics; warn metaphorically only.
 `.trim();
 
     const input = `
@@ -387,7 +358,6 @@ HARD BAN: finance/corporate language. BANK is personality framework only.
 
 IMPORTANT:
 - You MUST obey modifier deltas for THIS level.
-- If a delta would push out of bounds, clamp to valid ranges.
 - Make it solvable: include emptyBottles.
 `.trim();
 
@@ -428,19 +398,10 @@ Return appliedModifier equal to these deltas (same object).
     if (!parsed.ok) return fail(res, 502, parsed.error, parsed.details);
 
     const recipe = parsed.value;
-
     const checkText = [recipe.title, recipe.lore, ...(recipe.bonuses||[]), ...(recipe.constraints||[])].join(" ");
     if (violatesVoice(checkText)) {
       return fail(res, 400, "LLM voice drift: forbidden-topic detected", ["Detected finance/corporate language in recipe text."]);
     }
-
-    // clamp safety
-    recipe.capacity = clamp(recipe.capacity, 3, 6);
-    recipe.colors = clamp(recipe.colors, 4, 10);
-    recipe.bottleCount = clamp(recipe.bottleCount, 6, 14);
-    recipe.emptyBottles = clamp(recipe.emptyBottles, 1, 6);
-    recipe.lockedBottles = clamp(recipe.lockedBottles, 0, 3);
-    recipe.wildcardSlots = clamp(recipe.wildcardSlots, 0, 2);
 
     return ok(res, { payload: recipe });
   } catch (err) {
@@ -449,8 +410,6 @@ Return appliedModifier equal to these deltas (same object).
     return fail(res, Number(err?.status) || 500, err?.message || String(err), { status: err?.status || null });
   }
 });
-
-function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
 
 app.listen(PORT, () => {
   console.log(`✅ MA Bottle Fill API listening on :${PORT}`);
