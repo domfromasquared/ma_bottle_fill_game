@@ -1,21 +1,18 @@
 import { ELEMENTS, THESES, pickLoreLine } from "../../element_schema.js";
-import { getJSON, setJSON, getNum, setNum, del } from "../utils/storage.js";
+import { getJSON, setJSON, setNum } from "../utils/storage.js";
 import { makeRng, hashSeed, randInt } from "../utils/rng.js";
 import { singleFlight } from "../utils/singleFlight.js";
 import { postJSON } from "../utils/http.js";
 import { makeToaster, qs, playPourFX } from "../utils/ui.js";
 
 /**
- * Mobile-first UI version:
- * - Base playfield: Bottles grid
- * - Bottom overlays: Modifiers bar (persistent), Speech bubble + Character (DM moments)
- * - BANK rail: persistent left HUD
- *
- * Keeps mechanics:
- * - DM visits (seeded/persisted)
- * - Soft foreshadowing window
- * - Stabilizer lock/hide mechanic
- * - Punish-on-invalid pours -> show punishes line + queue sinTag
+ * UI update:
+ * - Removed HUD + legend from playfield (space reclaimed for bottles)
+ * - Thesis is now a top overlay bar
+ * - Elements live in a Glossary dialog (pauses game)
+ * - Title / level / moves / invalid live in Settings -> Info panel
+ * - DM close (X) cancels pending DM fetch
+ * - BANK rail tap still expands explanation
  */
 
 // ---------------- Progression gates ----------------
@@ -48,15 +45,8 @@ function consumeSinTag(){
 
 // ---------------- DM PNG (mood folders) ----------------
 const DM_MOODS = [
-  "amused",
-  "annoyed",
-  "disappointed",
-  "encouraging",
-  "frustrated",
-  "furious",
-  "impressed",
-  "proud",
-  "satisfied",
+  "amused","annoyed","disappointed","encouraging","frustrated",
+  "furious","impressed","proud","satisfied",
 ];
 
 function normMood(m){
@@ -69,7 +59,6 @@ function pad3(n){
   return String(x).padStart(3, "0");
 }
 function ensureDMImg(){
-  // dmCharacter is an overlay div; we inject an <img> if none exists.
   let img = dmCharacter.querySelector("img");
   if (!img){
     img = document.createElement("img");
@@ -91,13 +80,11 @@ function setDMAvatar({ mood, frame, seedKey }){
 
   let f = Number.isInteger(frame) ? frame : null;
   if (f === null){
-    // deterministic-ish fallback: runSeed + level + questId
     const r = makeRng(hashSeed(runSeed, level, questId, seedKey || 777));
-    f = r.int(0, 5); // 0..5
+    f = r.int(0, 5);
   } else {
     f = Math.max(0, Math.min(5, f));
   }
-
   img.src = `assets/dm/${m}/MA_${pad3(f)}.png`;
 }
 
@@ -105,19 +92,28 @@ function setDMAvatar({ mood, frame, seedKey }){
 const statusOut = qs("statusOut");
 
 const grid = qs("grid");
-const legendEl = qs("legend");
-
-const levelOut = qs("levelOut");
-const movesOut = qs("movesOut");
-const badOut = qs("badOut");
 const pourFX = qs("pourFX");
-
 const showToast = makeToaster(qs("toast"));
 
 // Settings / api base
 const settings = qs("settings");
 const devBtn = qs("devBtn");
 const apiBaseEl = qs("apiBase");
+
+// Info panel outputs (Settings)
+const infoLevel = qs("infoLevel");
+const infoMoves = qs("infoMoves");
+const infoInvalid = qs("infoInvalid");
+const infoThesis = qs("infoThesis");
+
+// Thesis bar
+const thesisLabel = qs("thesisLabel");
+const thesisSub = qs("thesisSub");
+const glossaryBtn = qs("glossaryBtn");
+
+// Glossary dialog
+const glossary = qs("glossary");
+const glossaryList = qs("glossaryList");
 
 // DM overlays
 const dmCharacter = qs("dmCharacter");
@@ -128,9 +124,7 @@ const speechText = qs("speechText");
 const speechSmall = qs("speechSmall");
 
 // ---------------- Speech theme (dark/light) ----------------
-// CSS reads this via: .speech[data-theme="dark|light"] { background-image: ... }
 const SPEECH_THEME_KEY = "ma_speechTheme"; // "dark" | "light"
-
 function getSpeechTheme(){
   const v = (localStorage.getItem(SPEECH_THEME_KEY) || "").toLowerCase();
   return (v === "light" || v === "dark") ? v : "dark";
@@ -196,7 +190,7 @@ function scheduleNextDM(currentLevel){
 const sig = { moves:0, invalid:0, resets:0, moveTimes:[], lastMoveAt:0 };
 const avg = (arr)=> arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
 
-let level = 1; // (declared early so inferBANK can read it safely)
+let level = 1;
 
 function inferBANK(){
   const pace = avg(sig.moveTimes.slice(-12));
@@ -226,7 +220,6 @@ function inferBANK(){
 function inferSinTags(){
   const tags = [];
 
-  // Pull exactly one carryover sinTag from last level's punish event (if any)
   const carry = consumeSinTag();
   if (carry) tags.push(carry);
 
@@ -250,7 +243,6 @@ function setBankRail(bankPrimary){
 let currentElements = [];
 let currentPalette = [];
 
-// Bias thesis selection based on sinTags + current BANK
 function pickThesisKey(rng, sinTags=[], bankPrimary="K"){
   const tags = new Set(sinTags || []);
   if (tags.has("hesitation")) return "UR_without_CL";
@@ -304,43 +296,44 @@ const state = {
   stabilizer: null
 };
 
-function renderLegend(recipe){
-  legendEl.innerHTML = "";
-
-  const thesisKey = recipe.thesisKey;
+// Thesis overlay renderer
+function renderThesisBar(thesisKey){
   const thesis = thesisKey ? THESES[thesisKey] : null;
-  if (thesis){
-    const pill = document.createElement("div");
-    pill.className = "legendItem thesisPill";
-    pill.innerHTML = `
-      <div class="legendText">
-        <div class="legendTop">Thesis: ${thesis.name}</div>
-        <div class="legendSub">Must include: ${(thesis.must_include||[]).join(", ") || "—"} · Must exclude: ${(thesis.must_exclude||[]).join(", ") || "—"}</div>
-      </div>
-    `;
-    legendEl.appendChild(pill);
+  if (!thesis){
+    thesisLabel.textContent = "Thesis: —";
+    thesisSub.textContent = "—";
+    infoThesis.textContent = "—";
+    return;
   }
+  thesisLabel.textContent = `Thesis: ${thesis.name}`;
+  thesisSub.textContent =
+    `Must include: ${(thesis.must_include||[]).join(", ") || "—"} · Must exclude: ${(thesis.must_exclude||[]).join(", ") || "—"}`;
+  infoThesis.textContent = thesis.name;
+}
 
-  const hideCL = !!state.stabilizer && !state.stabilizer.unlocked && state.stabilizer.symbol === "CL";
-  for (let i=0; i<currentElements.length; i++){
-    const sym = currentElements[i];
-    if (hideCL && sym === "CL") continue;
+// Glossary renderer (all elements)
+function renderGlossary(){
+  glossaryList.innerHTML = "";
+  const syms = Object.keys(ELEMENTS).sort();
 
+  for (const sym of syms){
     const el = ELEMENTS[sym];
     if (!el) continue;
 
     const item = document.createElement("div");
-    item.className = "legendItem";
-    const teaches = el.teaches ? `teaches: ${el.teaches}` : "";
-    const punishes = el.punishes ? `punishes: ${el.punishes}` : "";
+    item.className = "gItem";
     item.innerHTML = `
-      <div class="swatch" style="background:${el.color}"></div>
-      <div class="legendText">
-        <div class="legendTop">${el.symbol} — ${el.name}</div>
-        <div class="legendSub">${[teaches, punishes].filter(Boolean).join(" · ")}</div>
+      <div class="gSwatch" style="background:${el.color || "#fff"}"></div>
+      <div>
+        <div class="gTitle">${el.symbol} — ${el.name}</div>
+        <div class="gSub">
+          ${el.role ? `role: ${el.role}` : ""}
+          ${el.teaches ? `${el.role ? " · " : ""}teaches: ${el.teaches}` : ""}
+          ${el.punishes ? `${(el.role||el.teaches) ? " · " : ""}punishes: ${el.punishes}` : ""}
+        </div>
       </div>
     `;
-    legendEl.appendChild(item);
+    glossaryList.appendChild(item);
   }
 }
 
@@ -395,7 +388,6 @@ function checkStabilizerUnlock(){
     state.stabilizer.unlocked = true;
 
     showToast("Clarity unlocked. Now stop panicking.");
-    renderLegend(lastRecipe);
     render();
   }
 }
@@ -404,9 +396,16 @@ function checkStabilizerUnlock(){
 let levelInvalid = 0;
 let punishedThisLevel = false;
 
+function syncInfoPanel(){
+  infoLevel.textContent = String(level);
+  infoMoves.textContent = String(sig.moves);
+  infoInvalid.textContent = String(sig.invalid);
+}
+
 function doPour(from,to){
   if(!canPour(from,to)){
-    sig.invalid++; badOut.textContent=String(sig.invalid);
+    sig.invalid++;
+    syncInfoPanel();
     levelInvalid++;
 
     if (!punishedThisLevel && levelInvalid >= INVALID_POUR_PUNISH_THRESHOLD){
@@ -435,7 +434,7 @@ function doPour(from,to){
   for(let i=0;i<amount;i++) b.push(a.pop());
 
   sig.moves++;
-  movesOut.textContent = String(sig.moves);
+  syncInfoPanel();
   playPourFX(pourFX, from, to, currentPalette[color] || "#fff", amount);
 
   checkStabilizerUnlock();
@@ -484,7 +483,6 @@ function buildRecipe(){
   const cfg = computeLevelConfig();
   const elements = chooseElementsForThesis(thesisKey, cfg.colors, rng);
 
-  // Illegal reaction trap
   let stabilizer = null;
   let elementsForPuzzle = [...elements];
 
@@ -636,8 +634,16 @@ function hideDMOverlay(){
   speech.setAttribute("aria-hidden","true");
 }
 
+/**
+ * DM cancellation token:
+ * - Increment dmToken to invalidate any in-flight DM response
+ */
+let dmToken = 0;
+
 async function runDMIfAvailable(){
   if (!isDMLevel(level)) return;
+
+  const myToken = ++dmToken;
 
   const { bankPrimary, bankConfidence } = inferBANK();
   const sinTags = inferSinTags();
@@ -646,7 +652,6 @@ async function runDMIfAvailable(){
   const upcoming = dmAppearCount + 1;
   const wantModifier = isMajorDM(upcoming);
 
-  // Auto-theme: major ritual => light plate, normal DM => dark plate
   setSpeechTheme(wantModifier ? "light" : "dark");
 
   const foreshadowOnly =
@@ -655,7 +660,6 @@ async function runDMIfAvailable(){
 
   statusOut.textContent = wantModifier ? "brewing..." : "speaking...";
 
-  // show overlay immediately with a safe default DM image
   showDMOverlay();
   setDMAvatar({ mood: wantModifier ? "proud" : "encouraging", seedKey: 123 });
 
@@ -678,16 +682,17 @@ async function runDMIfAvailable(){
   try{
     const key = `quest-node:${runSeed}:${questId}:${level}:${upcoming}:${wantModifier}:${foreshadowOnly}`;
     const data = await singleFlight(key, () => postJSON(apiBaseEl.value, "/api/quest-node", payload));
+
+    if (myToken !== dmToken) return; // cancelled
+
     const q = data.payload;
 
-    // DM art (based on LLM mood)
     setDMAvatar({
       mood: q.dm_mood || (wantModifier ? "proud" : "encouraging"),
       frame: Number.isInteger(q.dm_frame) ? q.dm_frame : null,
       seedKey: 999,
     });
 
-    // Render into bubble
     questTitle.textContent = q.quest_title || (wantModifier ? "Major Ritual" : "DM Speaks");
 
     const parts = [
@@ -714,6 +719,8 @@ async function runDMIfAvailable(){
     statusOut.textContent = "ok";
     questId++;
   } catch(e){
+    if (myToken !== dmToken) return; // cancelled
+
     statusOut.textContent = (e?.status === 429) ? "rate-limited" : "dm error";
     speechText.textContent = (e?.status === 429)
       ? "Rate limited. Try again soon."
@@ -727,10 +734,6 @@ function startLevel(){
   levelInvalid = 0;
   punishedThisLevel = false;
 
-  levelOut.textContent = String(level);
-  badOut.textContent = String(sig.invalid);
-  movesOut.textContent = String(sig.moves);
-
   const { bankPrimary } = inferBANK();
   setBankRail(bankPrimary);
 
@@ -741,11 +744,11 @@ function startLevel(){
   state.stabilizer = recipe.stabilizer;
 
   genPuzzle(recipe);
-  renderLegend({ thesisKey: recipe.thesisKey, colors: recipe.elements.length, elements: recipe.elements });
+  renderThesisBar(recipe.thesisKey);
+  syncInfoPanel();
 
   render();
 
-  // If this is a DM level, DM can pop and pause vibe; player can X out to continue
   if (isDMLevel(level)){
     runDMIfAvailable();
   } else {
@@ -767,30 +770,32 @@ bankRail.addEventListener("click", ()=>{
 });
 
 dmClose.addEventListener("click", ()=>{
+  dmToken++;         // invalidate pending DM response
   hideDMOverlay();
 });
 
-// Manual theme toggle for testing: double-click the quest title (desktop) / rapid double tap (some mobile browsers)
+// Manual theme toggle (dev)
 questTitle.addEventListener("dblclick", toggleSpeechTheme);
 
-// Modifiers shop placeholders
-function modTap(){
-  showToast("Modifier shop (later).");
-}
+// Glossary
+glossaryBtn.addEventListener("click", ()=>{
+  renderGlossary();
+  glossary.showModal();
+});
+
+// Modifiers placeholders
+function modTap(){ showToast("Modifier shop (later)."); }
 modSlot1.addEventListener("click", modTap);
 modSlot2.addEventListener("click", modTap);
 modSlot3.addEventListener("click", modTap);
 
 // ---------------- Boot ----------------
 (function boot(){
-  // Ensure persisted speech theme is applied even before first DM shows
   setSpeechTheme(getSpeechTheme());
 
-  // ambient line in bubble only if DM is open; otherwise no overlay
   hideDMOverlay();
   startLevel();
 
-  // Optional: show a one-time toast
   const seen = localStorage.getItem("ma_seenMobileUI");
   if (!seen){
     localStorage.setItem("ma_seenMobileUI","1");
