@@ -470,35 +470,49 @@ body{
   z-index: 8;
 }
 
-/* ---------- SPEECH ---------- */
+/* ---------- SPEECH (PNG plate + safe content inset) ---------- */
 .speech{
   position:absolute;
   right: calc(var(--sar) + var(--pad));
   bottom: calc(var(--sab) + var(--pad) + var(--modsH) + 8px);
-  width: min(62vw, 420px);
-  aspect-ratio: 39 / 22;
+
+  /* keep it readable on mobile */
+  width: min(72vw, 460px);
+  aspect-ratio: 780 / 440; /* matches your uploaded plate size */
+
   background-image: var(--speech-plate-dark);
-  background-repeat: no-repeat;
-  background-size: contain;
-  background-position: center bottom;
+  background-repeat:no-repeat;
+  background-size:contain;
+  background-position:center bottom;
+
   border-radius: 22px;
   border: 0;
-  overflow:hidden;
   display:none;
-  max-height: 45vh;
   z-index: 7;
+
+  /* prevents the bubble itself from scrolling */
+  overflow:hidden;
 }
 
 .speech.show{ display:block; }
 .speech[data-theme="dark"]  { background-image: var(--speech-plate-dark); }
 .speech[data-theme="light"] { background-image: var(--speech-plate-light); }
 
+/*
+  IMPORTANT:
+  This is the “safe text zone” inside the speech bubble PNG.
+  Tune these 4 values if you want the text to sit more perfectly.
+*/
 .speechInner{
-  padding: 24px;
+  position:absolute;
+  inset: 14% 10% 18% 12%; /* top right bottom left */
+
   display:flex;
   flex-direction:column;
   gap:10px;
-  height:100%;
+
+  /* allow only the text area to scroll */
+  overflow:hidden;
 }
 
 .speech.show .speechTitle,
@@ -508,9 +522,59 @@ body{
   letter-spacing: .2px;
 }
 
-.speechTitle{ font-weight: 1000; font-size: 18px; }
-.speechText{ font-size: 16px; line-height: 1.25; overflow:auto; white-space: pre-wrap; }
-.speechSmall{ font-family: inherit; font-size: 12px; color: var(--muted); }
+.speechTitle{
+  font-weight: 1000;
+  font-size: 18px;
+  line-height: 1.05;
+}
+
+.speechText{
+  font-size: 16px;
+  line-height: 1.25;
+  white-space: pre-wrap;
+
+  /* scroll only the main copy */
+  overflow:auto;
+  padding-right: 6px;
+}
+
+.speechSmall{
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--muted);
+  opacity: .92;
+}
+
+/* DM UI controls (used by intro + deadlock) */
+.dmActions{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  margin-top: 10px;
+}
+
+.dmBtn{
+  flex:1;
+  border-radius:14px;
+  padding:12px 14px;
+  border:1px solid rgba(220,232,255,.18);
+  background: rgba(17,26,39,.80);
+  color:#e6edf3;
+  font-weight:1000;
+  cursor:pointer;
+}
+
+.dmInput{
+  flex:1;
+  border-radius:12px;
+  padding:10px 12px;
+  border:1px solid rgba(220,232,255,.18);
+  background: rgba(17,26,39,.55);
+  color: #e6edf3;
+  outline:none;
+  font-weight:800;
+  min-width: 0;
+}
 
 /* ---------- TOAST + FX ---------- */
 .toast{
