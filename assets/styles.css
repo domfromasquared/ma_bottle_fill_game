@@ -74,19 +74,67 @@ body{
   position: absolute;
   left: calc(var(--sal) + 6px);
   top: calc(var(--sat) + 22px);
+
   width: var(--railW);
   border: 1px solid var(--line);
-  background: rgba(230,237,243,.10);
+
+  /* SOLID BG (no transparency) */
+  background: #0b1220;
+
   border-radius: 14px;
   padding: 10px 8px;
+
   display:flex;
   align-items:center;
   cursor:pointer;
   user-select:none;
   z-index: 6;
+
   box-shadow:
     inset 0 0 0 1px rgba(255,255,255,.03),
     0 10px 24px rgba(0,0,0,.18);
+}
+
+/* expanded meanings panel (hidden by default) */
+.bankExpanded{
+  display:none;
+  width: 260px;
+  padding: 6px 10px 6px 10px;
+}
+
+/* Expanded state: meanings LEFT, letters RIGHT (colors preserved) */
+.bankRail.expanded{
+  width: calc(var(--railW) + 260px + 18px);
+  display:grid;
+  grid-template-columns: 260px var(--railW);
+  align-items:center;
+  padding: 10px 8px;
+  column-gap: 10px;
+}
+
+.bankRail.expanded .bankExpanded{ display:block; }
+
+/* DO NOT hide letters when expanded */
+.bankRail.expanded .bankLetters{
+  display:flex;
+  justify-self:end;
+}
+
+/* rows: text left, letter right (you already changed the HTML for this) */
+.bankRow{
+  display:grid;
+  grid-template-columns: 1fr 28px;
+  align-items:center;
+  gap:10px;
+  padding: 6px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.bankRow b{
+  justify-self:end;
+  font-size: 18px;
+  color: rgba(230,237,243,.72);
 }
 
 /* collapsed letters */
@@ -234,76 +282,66 @@ body{
 
 /* ---------- BOTTLES (with PNG art plates) ---------- */
 .bottle{
-  height: clamp(150px, 18vh, 220px);
-  border-radius: 22px 22px 26px 26px;
   position:relative;
   overflow:hidden;
   user-select:none;
   touch-action: manipulation;
-  transform: translateZ(0);
 
-  /* plate art */
-  background-image: var(--bottle-open);
-  background-repeat: no-repeat;
-  background-position: center bottom;
-  background-size: contain;
+  /* IMPORTANT: stack segments from bottom up */
+  display:flex;
+  flex-direction: column-reverse;
 
-  /* subtle outline to match your UI */
+  height: clamp(150px, 18vh, 220px);
+  border-radius: 22px 22px 26px 26px;
+
   border: 1px solid rgba(220,232,255,.10);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
+  background: transparent;
 }
 
-/* locked bottle plate */
-.bottle.locked{
-  background-image: var(--bottle-locked);
-  opacity:.90;
-  filter:saturate(.85);
+/* This creates the INNER chamber area so liquid doesn't sit outside */
+.bottle{
+  /* tune these numbers if needed */
+  padding: 34px 18px 18px 18px; /* top, right, bottom, left */
 }
 
-/* Keep segments inside bottle */
+/* each segment becomes an equal “layer” */
 .seg{
+  flex: 1;
   width:100%;
-  height: 22%;
   position:relative;
   overflow:hidden;
+  border-radius: 0;
 }
 
-/* Put liquids behind the glass art so it looks like it's inside */
-.bottle .seg{
-  z-index: 1;
-}
-
-/* Glass plate sits above liquids */
+/* glass overlay art always on top */
 .bottle::after{
   content:"";
   position:absolute;
-  inset: 0;
-  background-image: inherit; /* uses current bottle background-image */
-  background-repeat: no-repeat;
-  background-position: center bottom;
-  background-size: contain;
+  inset:0;
+  background-repeat:no-repeat;
+  background-position:center bottom;
+  background-size:contain;
   pointer-events:none;
-  z-index: 3;
-  opacity: 1;
+  z-index: 5;
 }
 
-/* Main bottle background (liquid well) layer below glass */
+/* open vs locked overlay art */
+.bottle::after{ background-image: var(--bottle-open); }
+.bottle.locked::after{ background-image: var(--bottle-locked); }
+
+/* keep liquids UNDER the glass */
+.bottle .seg{ z-index: 2; }
+
+/* (optional) dark interior to help it feel “inside” */
 .bottle::before{
   content:"";
   position:absolute;
-  inset: 0;
-  background: rgba(0,0,0,.12);
+  /* match the same chamber padding */
+  top: 34px; left: 18px; right: 18px; bottom: 18px;
+  background: rgba(0,0,0,.10);
+  border-radius: 16px;
+  z-index: 1;
   pointer-events:none;
-  z-index: 0;
-}
-
-/* Stabilizer hidden segs */
-.bottle.hiddenSegs .seg{ background:transparent !important; }
-
-/* Selected highlight */
-.bottle.selected{
-  outline: 3px solid rgba(130, 210, 255,.45);
-  box-shadow: 0 0 0 6px rgba(80,140,255,.12), inset 0 0 0 2px rgba(255,255,255,.04);
 }
 
 /* --------- SVG Pattern Overlay (Role-Based) --------- */
