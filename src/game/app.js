@@ -1,10 +1,11 @@
-import { ELEMENTS, THESES, pickLoreLine } from "../../element_schema.js";
+import { ELEMENTS, THESES } from "../../element_schema.js";
 import { getJSON, setJSON, setNum } from "../utils/storage.js";
 import { makeRng, hashSeed, randInt } from "../utils/rng.js";
 import { singleFlight } from "../utils/singleFlight.js";
 import { postJSON } from "../utils/http.js";
 import { makeToaster, qs, playPourFX } from "../utils/ui.js";
 
+/* ---------------- Constants ---------------- */
 const FORESHADOW_START_LEVEL = 10;
 const STABILIZER_UNLOCK_LEVEL = 15;
 
@@ -15,6 +16,18 @@ const isLocal = location.hostname === "localhost" || location.hostname === "127.
 const INVALID_POUR_PUNISH_THRESHOLD = 3;
 const SIN_QUEUE_KEY = "ma_sinQueue";
 
+const PLAYER_NAME_KEY = "ma_playerName";
+const PLAYER_NAME_MAX = 14;
+const DEFAULT_PLAYER_NAME = "Acolyte";
+
+const SPEECH_THEME_KEY = "ma_speechTheme";
+
+const API_BASE_KEY = "ma_apiBase";
+const RUN_SEED_KEY = "ma_runSeed";
+const DM_COUNT_KEY = "ma_dmAppearCount";
+const NEXT_DM_KEY = "ma_nextDMAtLevel";
+
+/* ---------------- SIN queue ---------------- */
 function loadSinQueue(){ return getJSON(SIN_QUEUE_KEY, []); }
 function saveSinQueue(q){ setJSON(SIN_QUEUE_KEY, q.slice(0, 12)); }
 function pushSinTag(tag){
@@ -30,25 +43,8 @@ function consumeSinTag(){
   return next;
 }
 
-const DM_MOODS = ["amused","annoyed","disappointed","encouraging","frustrated","furious","impressed","proud","satisfied"];
-function normMood(m){
-  const s = String(m || "").trim().toLowerCase();
-  if (DM_MOODS.includes(s)) return s;
-  return "encouraging";
-}
-function pad3(n){
-  const x = Math.max(0, Math.min(999, Number(n) || 0));
-  return String(x).padStart(3, "0");
-}
-
-/* ---------------- Player identity (name) ---------------- */
-const PLAYER_NAME_KEY = "ma_playerName";
-const PLAYER_NAME_MAX = 14;
-const DEFAULT_PLAYER_NAME = "Acolyte";
-
-function getPlayerName(){
-  return (localStorage.getItem(PLAYER_NAME_KEY) || "").trim();
-}
+/* ---------------- Player identity ---------------- */
+function getPlayerName(){ return (localStorage.getItem(PLAYER_NAME_KEY) || "").trim(); }
 function setPlayerName(name){
   const clean = String(name || "").trim().slice(0, PLAYER_NAME_MAX);
   localStorage.setItem(PLAYER_NAME_KEY, clean);
@@ -90,7 +86,16 @@ const questTitle = qs("questTitle");
 const speechText = qs("speechText");
 const speechSmall = qs("speechSmall");
 
-const SPEECH_THEME_KEY = "ma_speechTheme";
+const bankRail = qs("bankRail");
+const bankExpanded = qs("bankExpanded");
+
+const modSlot1 = qs("modSlot1");
+const modSlot2 = qs("modSlot2");
+const modSlot3 = qs("modSlot3");
+
+const factoryResetBtn = qs("factoryResetBtn");
+
+/* ---------------- Speech theme ---------------- */
 function getSpeechTheme(){
   const v = (localStorage.getItem(SPEECH_THEME_KEY) || "").toLowerCase();
   return (v === "light" || v === "dark") ? v : "dark";
@@ -100,24 +105,15 @@ function setSpeechTheme(theme){
   speech.dataset.theme = t;
   localStorage.setItem(SPEECH_THEME_KEY, t);
 }
-function toggleSpeechTheme(){
-  setSpeechTheme(getSpeechTheme() === "dark" ? "light" : "dark");
-}
+function toggleSpeechTheme(){ setSpeechTheme(getSpeechTheme() === "dark" ? "light" : "dark"); }
 
-const bankRail = qs("bankRail");
-const bankExpanded = qs("bankExpanded");
-
-const modSlot1 = qs("modSlot1");
-const modSlot2 = qs("modSlot2");
-const modSlot3 = qs("modSlot3");
-
-const API_BASE_KEY = "ma_apiBase";
+/* ---------------- API base ---------------- */
 apiBaseEl.value = localStorage.getItem(API_BASE_KEY) || (isLocal ? DEFAULT_LOCAL : DEFAULT_PROD);
+apiBaseEl.addEventListener("change", () => {
+  localStorage.setItem(API_BASE_KEY, (apiBaseEl.value || "").trim());
+});
 
-const RUN_SEED_KEY = "ma_runSeed";
-const DM_COUNT_KEY = "ma_dmAppearCount";
-const NEXT_DM_KEY = "ma_nextDMAtLevel";
-
+/* ---------------- Run state ---------------- */
 const DM_GAP_MIN = 3;
 const DM_GAP_MAX = 6;
 const DM_MAJOR_EVERY = 5;
@@ -140,14 +136,20 @@ function loadOrInitRunState(){
 let { runSeed, dmAppearCount, nextDMAtLevel } = loadOrInitRunState();
 function isDMLevel(lvl){ return lvl === nextDMAtLevel; }
 function isMajorDM(upcomingCount){ return (upcomingCount % DM_MAJOR_EVERY) === 0; }
-
 function scheduleNextDM(currentLevel){
   const gap = randInt(DM_GAP_MIN, DM_GAP_MAX, hashSeed(runSeed, dmAppearCount * 97, currentLevel * 131));
   nextDMAtLevel = currentLevel + gap;
   setNum(NEXT_DM_KEY, nextDMAtLevel);
 }
 
-/* ---------------- DM Sprite Helpers ---------------- */
+/* ---------------- DM sprite ---------------- */
+const DM_MOODS = ["amused","annoyed","disappointed","encouraging","frustrated","furious","impressed","proud","satisfied"];
+function normMood(m){
+  const s = String(m || "").trim().toLowerCase();
+  return DM_MOODS.includes(s) ? s : "encouraging";
+}
+function pad3(n){ return String(Math.max(0, Math.min(999, Number(n)||0))).padStart(3,"0"); }
+
 function ensureDMImg(){
   let img = dmCharacter.querySelector("img");
   if (!img){
@@ -178,11 +180,12 @@ function setDMAvatar({ mood, frame, seedKey }){
   img.src = `assets/dm/${m}/MA_${pad3(f)}.png`;
 }
 
-/* ---------------- Telemetry (BANK inference) ---------------- */
+/* ---------------- BANK inference ---------------- */
 const sig = { moves:0, invalid:0, resets:0, moveTimes:[], lastMoveAt:0 };
 const avg = (arr)=> arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
 
 let level = 1;
+let questId = 1;
 
 function inferBANK(){
   const pace = avg(sig.moveTimes.slice(-12));
@@ -211,7 +214,6 @@ function inferBANK(){
 
 function inferSinTags(){
   const tags = [];
-
   const carry = consumeSinTag();
   if (carry) tags.push(carry);
 
@@ -231,7 +233,7 @@ function setBankRail(bankPrimary){
   if (on) on.classList.add("on");
 }
 
-/* ---------------- Thesis selection + palette ---------------- */
+/* ---------------- Thesis + palette ---------------- */
 let currentElements = [];
 let currentPalette = [];
 
@@ -256,12 +258,11 @@ function chooseElementsForThesis(thesisKey, colorsWanted, rng){
 
   const mustInclude = thesis?.must_include || [];
   const mustExclude = new Set(thesis?.must_exclude || []);
-
   const chosen = [];
+
   for (const sym of mustInclude){
     if (ELEMENTS[sym] && !chosen.includes(sym)) chosen.push(sym);
   }
-
   const pool = all.filter(sym => ELEMENTS[sym] && !mustExclude.has(sym) && !chosen.includes(sym));
   while (chosen.length < colorsWanted && pool.length){
     const idx = Math.floor(rng.f() * pool.length);
@@ -281,15 +282,62 @@ function applyElementPalette(recipe){
 
 /* ---------------- State ---------------- */
 const state = {
-  bottles:[],
-  capacity:4,
-  selected:-1,
-  locked:[],
-  hiddenSegs:[],
-  stabilizer: null
+  bottles: [],
+  capacity: 4,
+  selected: -1,
+  locked: [],
+  hiddenSegs: [],
+  stabilizer: null,
 };
 
-/* ---------------- UI rendering helpers ---------------- */
+const topColor = (b)=> b.length ? b[b.length-1] : null;
+function topRunCount(b){
+  if (!b.length) return 0;
+  const c = topColor(b);
+  let n=0;
+  for (let i=b.length-1;i>=0;i--){ if (b[i]===c) n++; else break; }
+  return n;
+}
+
+function isSolved(){
+  return state.bottles.every(b => {
+    if (b.length === 0) return true;
+    if (b.length !== state.capacity) return false;
+    return b.every(x => x === b[0]);
+  });
+}
+
+function canPour(from,to){
+  if (from===to) return false;
+  if (state.locked[from] || state.locked[to]) return false;
+  const a=state.bottles[from], b=state.bottles[to];
+  if (!a.length) return false;
+  if (b.length>=state.capacity) return false;
+  const color=topColor(a), target=topColor(b);
+  return (target===null || target===color);
+}
+
+function hasAnyPlayableMove(){
+  for (let from = 0; from < state.bottles.length; from++){
+    if (state.locked[from]) continue;
+    if (!state.bottles[from]?.length) continue;
+    for (let to = 0; to < state.bottles.length; to++){
+      if (from === to) continue;
+      if (canPour(from,to)) return true;
+    }
+  }
+  return false;
+}
+
+/* ---------------- UI ---------------- */
+function syncInfoPanel(){
+  infoLevel.textContent = String(level);
+  infoMoves.textContent = String(sig.moves);
+  infoInvalid.textContent = String(sig.invalid);
+  infoPlayer.textContent = getPlayerName() || "—";
+  infoThesis.textContent = thesisLabel.textContent.replace("Thesis: ","") || "—";
+}
+
 function renderThesisBar(thesisKey){
   const thesis = thesisKey ? THESES[thesisKey] : null;
   if (!thesis){
@@ -328,13 +376,7 @@ function renderGlossary(){
   }
 }
 
-/* ---------------- Speech bubble (clean + consistent) ---------------- */
-function clearSpeech(){
-  speechText.innerHTML = "";
-  questTitle.textContent = "—";
-  speechSmall.textContent = "";
-}
-
+/* ---------------- Speech bubble helpers ---------------- */
 function makePrimaryBtn(label){
   const btn = document.createElement("button");
   btn.type = "button";
@@ -370,17 +412,14 @@ function makeInput(placeholder){
 function setDMSpeech({ title, body, small }){
   questTitle.textContent = title || "—";
   speechSmall.textContent = small || "";
-
   speechText.innerHTML = "";
   const copy = document.createElement("div");
   copy.style.whiteSpace = "pre-wrap";
   copy.textContent = body || "";
   speechText.appendChild(copy);
-
   return { copy };
 }
 
-/* ---------------- DM overlay helpers ---------------- */
 function showDMOverlay(){
   dmCharacter.classList.add("show");
   dmCharacter.setAttribute("aria-hidden","false");
@@ -394,343 +433,58 @@ function hideDMOverlay(){
   speech.setAttribute("aria-hidden","true");
 }
 
-/**
- * Cancellation token:
- * - increment dmToken to invalidate any in-flight DM response
- */
+/* ---------------- DM cancellation token ---------------- */
 let dmToken = 0;
 
-/* ---------------- Intro + deadlock mode flags ---------------- */
-let introStep = 0;            // 0 = not running, 1 = name entry, 2 = ready to start quest
-let deadlockActive = false;   // if DM popped for deadlock
-
+/* ---------------- Intro/deadlock flags ---------------- */
+let introStep = 0;          // 0 none, 1 name entry, 2 ready start quest
+let deadlockActive = false; // deadlock DM active
 function introIsActive(){ return introStep === 1 || introStep === 2; }
 
-/* ---------------- Puzzle rules ---------------- */
-const topColor = (b)=> b.length ? b[b.length-1] : null;
-function topRunCount(b){
-  if (!b.length) return 0;
-  const c = topColor(b);
-  let n=0;
-  for (let i=b.length-1;i>=0;i--){ if (b[i]===c) n++; else break; }
-  return n;
-}
-
-function isSolved(){
-  return state.bottles.every(b => {
-    if (b.length === 0) return true;
-    if (b.length !== state.capacity) return false;
-    return b.every(x => x === b[0]);
+/* ---------------- Name roast (server) ---------------- */
+async function getNameRoastFromServer(name){
+  const apiBase = (apiBaseEl?.value || "").trim();
+  if (!apiBase) throw new Error("no api base");
+  const res = await postJSON(apiBase, "/api/name-roast", {
+    candidateName: String(name || "").trim().slice(0, PLAYER_NAME_MAX)
   });
+  const roast = res?.payload?.roast;
+  const blocked = !!res?.payload?.blocked;
+  if (!roast) throw new Error("no roast returned");
+  return { roast: String(roast), blocked };
 }
 
-function canPour(from,to){
-  if (from===to) return false;
-  if (state.locked[from] || state.locked[to]) return false;
-  const a=state.bottles[from], b=state.bottles[to];
-  if (!a.length) return false;
-  if (b.length>=state.capacity) return false;
-  const color=topColor(a), target=topColor(b);
-  return (target===null || target===color);
+function localNameRoast(name){
+  const n = String(name || "").trim();
+  const refs = [
+    `“${n}”? That name walks in like it’s about to pitch a mastermind with no slides.`,
+    `“${n}”… bold. Very “main character energy” and “supporting character execution.”`,
+    `“${n}”? That sounds like a legend in their own group chat.`,
+    `“${n}”… fine. Just don’t pour like you’re guessing.`,
+  ];
+  return refs[Math.floor(Math.random() * refs.length)];
 }
 
-function hasAnyPlayableMove(){
-  for (let from = 0; from < state.bottles.length; from++){
-    if (state.locked[from]) continue;
-    if (!state.bottles[from]?.length) continue;
-    for (let to = 0; to < state.bottles.length; to++){
-      if (from === to) continue;
-      if (canPour(from, to)) return true;
-    }
-  }
-  return false;
-}
-
-/* ---------------- Stabilizer unlock ---------------- */
-function checkStabilizerUnlock(){
-  if (!state.stabilizer || state.stabilizer.unlocked) return;
-  if (state.stabilizer.unlock !== "UR_full") return;
-
-  const urIndex = currentElements.indexOf("UR");
-  if (urIndex < 0) return;
-
-  const cap = state.capacity;
-  const hasFullUR = state.bottles.some(b =>
-    b.length === cap && b.every(x => x === urIndex)
-  );
-
-  if (hasFullUR){
-    const idx = state.stabilizer.idx;
-    state.locked[idx] = false;
-    state.hiddenSegs[idx] = false;
-    state.stabilizer.unlocked = true;
-    showToast("Clarity unlocked. Now stop panicking.");
-    render();
-  }
-}
-
-/* ---------------- Per-level tracking ---------------- */
-let levelInvalid = 0;
-let punishedThisLevel = false;
-
-/* ---------------- Info panel ---------------- */
-function syncInfoPanel(){
-  infoLevel.textContent = String(level);
-  infoMoves.textContent = String(sig.moves);
-  infoInvalid.textContent = String(sig.invalid);
-  infoPlayer.textContent = getPlayerName() || "—";
-}
-
-/* ---------------- Pour logic ---------------- */
-function doPour(from,to){
-  if(!canPour(from,to)){
-    sig.invalid++;
-    syncInfoPanel();
-    levelInvalid++;
-
-    if (!punishedThisLevel && levelInvalid >= INVALID_POUR_PUNISH_THRESHOLD){
-      punishedThisLevel = true;
-      const a = state.bottles[from] || [];
-      const ci = a.length ? topColor(a) : null;
-      const sym = (ci !== null && ci !== undefined) ? currentElements[ci] : null;
-      const el = sym ? ELEMENTS[sym] : null;
-      const punishTag = el?.punishes || "sloppiness";
-      showToast(`${el?.symbol || sym || "??"} punishes: ${punishTag}`);
-      pushSinTag(punishTag);
-    } else {
-      showToast("Invalid pour");
-    }
-    return false;
-  }
-
-  const a=state.bottles[from], b=state.bottles[to];
-  const color=topColor(a);
-  const run=topRunCount(a);
-  const space=state.capacity-b.length;
-  const amount=Math.min(run, space);
-
-  for(let i=0;i<amount;i++) b.push(a.pop());
-
-  sig.moves++;
-  syncInfoPanel();
-  playPourFX(pourFX, from, to, currentPalette[color] || "#fff", amount);
-
-  checkStabilizerUnlock();
-
-  if (isSolved()){
-    showToast("Solved. Next level.");
-    nextLevel();
-    return true;
-  }
-
-  render();
-
-  // NEW: if deadlocked, DM pops in with retry option
-  if (!isSolved() && !hasAnyPlayableMove()){
-    showOutOfMovesDM();
-  }
-
-  return true;
-}
-
-/* ---------------- Level / recipe generation ---------------- */
-let questId = 1;
-let pendingModifier = null;
-
-function setPendingModifier(mod){ pendingModifier = mod || null; }
-
-function computeLevelConfig(){
-  const base = {
-    colors: Math.min(6, 3 + Math.floor((level-1)/6)),
-    capacity: 4,
-    bottleCount: null,
-    emptyBottles: 2,
-    lockedBottles: 0,
-    wildcardSlots: 0,
-  };
-
-  const m = pendingModifier || null;
-  if (m){
-    base.colors = Math.max(3, Math.min(8, base.colors + (m.colorsDelta||0)));
-    base.capacity = Math.max(3, Math.min(6, base.capacity + (m.capacityDelta||0)));
-    base.emptyBottles = Math.max(1, Math.min(4, base.emptyBottles + (m.emptyBottlesDelta||0)));
-    base.lockedBottles = Math.max(0, Math.min(2, base.lockedBottles + (m.lockedBottlesDelta||0)));
-    base.wildcardSlots = Math.max(0, Math.min(2, base.wildcardSlots + (m.wildcardSlotsDelta||0)));
-    base.bottleCount = (base.colors + base.emptyBottles) + (m.bottleCountDelta||0);
-  }
-  if (!base.bottleCount) base.bottleCount = base.colors + base.emptyBottles;
-  return base;
-}
-
-function buildRecipe(){
-  const rng = makeRng(hashSeed(runSeed, 4242, level));
-  const { bankPrimary } = inferBANK();
-  const sinTags = inferSinTags();
-  const thesisKey = pickThesisKey(rng, sinTags, bankPrimary);
-
-  const cfg = computeLevelConfig();
-  const elements = chooseElementsForThesis(thesisKey, cfg.colors, rng);
-
-  let stabilizer = null;
-  let elementsForPuzzle = [...elements];
-
-  if (thesisKey === "UR_without_CL"){
-    const hasUR = elementsForPuzzle.includes("UR");
-    if (!hasUR) elementsForPuzzle[0] = "UR";
-
-    if (ELEMENTS["CL"]){
-      if (level >= STABILIZER_UNLOCK_LEVEL){
-        if (!elementsForPuzzle.includes("CL")) elementsForPuzzle.push("CL");
-        stabilizer = { unlock:"UR_full", symbol:"CL", idx:-1, unlocked:false };
-      }
-    }
-  }
-
-  return { level, cfg, thesisKey, elements: elementsForPuzzle, stabilizer };
-}
-
-function genPuzzle(recipe){
-  const cfg = recipe.cfg;
-  state.capacity = cfg.capacity;
-
-  const symbols = recipe.elements.slice();
-  const colors = symbols.length;
-
-  const rng = makeRng(hashSeed(runSeed, 9001, level));
-  const stabilizerSym = recipe.stabilizer?.symbol || null;
-  const stabilizerIndex = stabilizerSym ? symbols.indexOf(stabilizerSym) : -1;
-
-  const bottleCount = cfg.bottleCount;
-  const bottles = Array.from({length:bottleCount}, ()=>[]);
-  const locked = Array.from({length:bottleCount}, ()=>false);
-  const hiddenSegs = Array.from({length:bottleCount}, ()=>false);
-
-  const pool = [];
-  for (let ci=0; ci<colors; ci++){
-    if (ci === stabilizerIndex) continue;
-    for (let k=0;k<cfg.capacity;k++) pool.push(ci);
-  }
-
-  for (let i=pool.length-1;i>0;i--){
-    const j = rng.int(0,i);
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
-
-  let bi = 0;
-  while (pool.length){
-    if (bottles[bi].length >= cfg.capacity) bi = (bi+1) % (bottleCount - cfg.emptyBottles);
-    bottles[bi].push(pool.pop());
-  }
-
-  for (let i=bottleCount-cfg.emptyBottles; i<bottleCount; i++){
-    bottles[i] = [];
-  }
-
-  for (let i=0;i<cfg.lockedBottles;i++){
-    locked[i] = true;
-  }
-
-  if (recipe.stabilizer && stabilizerIndex >= 0){
-    const idx = bottleCount-1;
-    recipe.stabilizer.idx = idx;
-
-    bottles[idx] = Array.from({length:cfg.capacity}, ()=>stabilizerIndex);
-    locked[idx] = true;
-    hiddenSegs[idx] = true;
-  }
-
-  state.bottles = bottles;
-  state.locked = locked;
-  state.hiddenSegs = hiddenSegs;
-  state.selected = -1;
-  state.stabilizer = recipe.stabilizer;
-}
-
-function render(){
-  grid.innerHTML = "";
-
-  for (let i=0;i<state.bottles.length;i++){
-    const bottle = document.createElement("div");
-    bottle.className = "bottle";
-    bottle.dataset.bottle = String(i);
-
-    if (state.selected === i) bottle.classList.add("selected");
-    if (state.locked[i]) bottle.classList.add("locked");
-    if (state.hiddenSegs[i]) bottle.classList.add("hiddenSegs");
-
-    bottle.addEventListener("click", () => onBottleTap(i));
-    bottle.addEventListener("touchend", (e)=>{ e.preventDefault(); onBottleTap(i); }, {passive:false});
-
-    const b = state.bottles[i];
-    for (let s=0; s<state.capacity; s++){
-      const seg = document.createElement("div");
-      seg.className = "seg";
-
-      const ci = b[s] ?? null;
-      if (ci === null || ci === undefined){
-        seg.style.background = "transparent";
-      } else {
-        const sym = currentElements[ci];
-        const el = ELEMENTS[sym];
-        seg.style.background = el?.color || "#fff";
-        if (el?.role) seg.classList.add(`role-${String(el.role).toLowerCase()}`);
-        seg.classList.add(`el-${sym}`);
-      }
-      bottle.appendChild(seg);
-    }
-
-    grid.appendChild(bottle);
-  }
-}
-
-function onBottleTap(i){
-  // If intro step 1 or 2 is active, still allow gameplay? No — intro is modal.
-  if (introIsActive()) return;
-
-  const now = performance.now();
-  if (sig.lastMoveAt) sig.moveTimes.push(now - sig.lastMoveAt);
-  sig.lastMoveAt = now;
-
-  if (state.selected < 0){
-    state.selected = i;
-    render();
-    return;
-  }
-
-  const from = state.selected;
-  const to = i;
-  state.selected = -1;
-  doPour(from,to);
-}
-
-function nextLevel(){
-  level++;
-  startLevel();
-}
-
-/* ---------------- Intro DM (name -> start quest) ---------------- */
+/* ---------------- Intro DM (first load) ---------------- */
 function runFirstLoadIntro(){
   if (getPlayerName()) return false;
 
   introStep = 1;
-  deadlockActive = false;
+  dmToken++;
 
   showDMOverlay();
   setSpeechTheme("dark");
-  setDMAvatar({ mood: "impressed", seedKey: 20251229 });
+  setDMAvatar({ mood:"impressed", seedKey: 9001 });
 
   setDMSpeech({
-    title: "Welcome to The Balance Protocol",
+    title: "At last.",
     body:
-`I am The Marketing Alchemist.
+`Welcome to The Balance Protocol.
 
-You’ve stepped into The Balance Protocol — a system meant to keep power, process, and progress in equilibrium.
+There’s a flaw in the lab — the mixtures are unstable.
+Your job is to restore order.
 
-But something’s off. The balance has been disrupted — and it’s already leaking into everything you touch.
-
-You’ll fix it. One bottle at a time. One thesis at a time.
-
-What should I call you?`,
+Tell me… what do I call you?`,
     small: "Enter a name (14 characters max), then press Submit."
   });
 
@@ -740,38 +494,48 @@ What should I call you?`,
   row.style.alignItems = "center";
   row.style.marginTop = "10px";
 
-  const input = makeInput(`Name (max ${PLAYER_NAME_MAX})`);
+  const input = makeInput("Your name…");
   const submitBtn = makePrimaryBtn("Submit");
 
-  row.appendChild(input);
-  row.appendChild(submitBtn);
-  speechText.appendChild(row);
-
-  const submit = () => {
+  const submit = async () => {
     const name = (input.value || "").trim();
     if (!name){
       showToast("Give me a name.");
       return;
     }
+
+    let roastRes;
+    try {
+      roastRes = await getNameRoastFromServer(name);
+    } catch {
+      roastRes = { roast: localNameRoast(name), blocked: false };
+    }
+
+    if (roastRes.blocked){
+      setDMSpeech({
+        title: "No.",
+        body: `${roastRes.roast}\n\nTry again.`,
+        small: "Enter a different name."
+      });
+      return;
+    }
+
     const saved = setPlayerName(name);
     syncInfoPanel();
-
     introStep = 2;
 
-    // Show Start Quest button
     setDMSpeech({
-      title: `Good. ${saved}.`,
+      title: `…${saved}.`,
       body:
-`Now listen carefully, ${saved}.
+`${roastRes.roast}
+
+Fine. ${saved} it is.
 
 The Balance Protocol doesn’t reward “busy.”
 It rewards alignment.
 
-When I appear, I’m not entertaining you.
-I’m correcting you.
-
 Ready?`,
-      small: "Press Start Quest to begin. (You can also close me with ✕ anytime.)"
+      small: "Press Start Quest to begin. (✕ always cancels me.)"
     });
 
     const row2 = document.createElement("div");
@@ -793,28 +557,27 @@ Ready?`,
   submitBtn.addEventListener("click", submit);
   input.addEventListener("keydown", (e)=>{ if (e.key === "Enter") submit(); });
 
-  setTimeout(()=> input.focus(), 200);
+  row.appendChild(input);
+  row.appendChild(submitBtn);
+  speechText.appendChild(row);
 
+  setTimeout(()=> input.focus(), 200);
   return true;
 }
 
-/* ---------------- Deadlock DM (out of moves) ---------------- */
+/* ---------------- Deadlock DM ---------------- */
 function dmReactionForBANK(bankPrimary){
   switch (bankPrimary){
-    case "A":
-      return { mood:"annoyed", title:"Out of moves.", body:"Action without aim.\nYou brute-forced the ritual into a wall.\n\nRetry. Fewer clicks. More intent." };
-    case "B":
-      return { mood:"disappointed", title:"Protocol failure.", body:"Blueprint ignored.\nYou tried to solve chaos without structure.\n\nRetry. Plan two pours ahead. Minimum." };
-    case "N":
-      return { mood:"encouraging", title:"No moves left.", body:"Breathe.\n\nYou’re close — but you protected the wrong stacks.\n\nRetry. Calm hands. Clean pours." };
+    case "A": return { mood:"annoyed", title:"Out of moves.", body:"Action without aim.\nYou brute-forced the ritual into a wall.\n\nRetry. Fewer clicks. More intent." };
+    case "B": return { mood:"disappointed", title:"Protocol failure.", body:"Blueprint ignored.\nYou tried to solve chaos without structure.\n\nRetry. Plan two pours ahead. Minimum." };
+    case "N": return { mood:"encouraging", title:"No moves left.", body:"Breathe.\n\nYou’re close — but you protected the wrong stacks.\n\nRetry. Calm hands. Clean pours." };
     case "K":
-    default:
-      return { mood:"amused", title:"No legal pours remain.", body:"Ah. Classic.\n\nYou constructed a perfectly unsolvable state.\n\nRetry — and respect constraints before you pour." };
+    default:  return { mood:"amused", title:"No legal pours remain.", body:"Ah. Classic.\n\nYou constructed a perfectly unsolvable state.\n\nRetry — and respect constraints before you pour." };
   }
 }
 
 function showOutOfMovesDM(){
-  if (deadlockActive) return; // prevent stacking
+  if (deadlockActive) return;
   deadlockActive = true;
 
   const { bankPrimary } = inferBANK();
@@ -843,7 +606,7 @@ function showOutOfMovesDM(){
     deadlockActive = false;
     sig.resets++;
     hideDMOverlay();
-    startLevel(); // deterministic same level (same runSeed + level)
+    startLevel();
   });
 
   row.appendChild(retryBtn);
@@ -855,212 +618,425 @@ async function runDMIfAvailable(){
   if (!isDMLevel(level)) return;
 
   const myToken = ++dmToken;
-
   const { bankPrimary, bankConfidence } = inferBANK();
-  const sinTags = inferSinTags();
   setBankRail(bankPrimary);
-
-  const upcoming = dmAppearCount + 1;
-  const wantModifier = isMajorDM(upcoming);
-
-  setSpeechTheme(wantModifier ? "light" : "dark");
-
-  const foreshadowOnly = level >= FORESHADOW_START_LEVEL && level < STABILIZER_UNLOCK_LEVEL;
-
-  statusOut.textContent = wantModifier ? "brewing..." : "speaking...";
 
   showDMOverlay();
-  setDMAvatar({ mood: wantModifier ? "proud" : "encouraging", seedKey: 123 });
+  setSpeechTheme("dark");
 
-  setDMSpeech({
-    title: wantModifier ? "Major Ritual" : "DM Speaks",
-    body: "…",
-    small: `BANK ${bankPrimary} (${Math.round(bankConfidence*100)}%) · sinTags: ${sinTags.join(", ")}`
-  });
-
-  const payload = {
-    act: Math.ceil(level/5),
-    questId,
-    bankPrimary,
-    bankConfidence,
-    sinTags,
-    seed: runSeed,
-    level,
-    wantModifier,
-    foreshadowOnly,
-    playerName: getPlayerName() || DEFAULT_PLAYER_NAME
-  };
-
-  try{
-    const key = `quest-node:${runSeed}:${questId}:${level}:${upcoming}:${wantModifier}:${foreshadowOnly}`;
-    const data = await singleFlight(key, () => postJSON(apiBaseEl.value, "/api/quest-node", payload));
-    if (myToken !== dmToken) return; // cancelled by X
-
-    const q = data.payload;
-
-    setDMAvatar({
-      mood: q.dm_mood || (wantModifier ? "proud" : "encouraging"),
-      frame: Number.isInteger(q.dm_frame) ? q.dm_frame : null,
-      seedKey: 999,
-    });
-
-    const parts = [q.dm_intro || "", q.dm_midpoint || "", q.dm_verdict || ""].filter(Boolean);
+  const apiBase = (apiBaseEl?.value || "").trim();
+  if (!apiBase){
+    setDMAvatar({ mood:"annoyed", seedKey: 222 });
     setDMSpeech({
-      title: q.quest_title || (wantModifier ? "Major Ritual" : "DM Speaks"),
-      body: parts.join("\n\n") || "…",
-      small: `Next DM scheduled · major every ${DM_MAJOR_EVERY}`
+      title: "No server.",
+      body: "You didn’t connect the lab’s brain.\nSet API Base in Settings.",
+      small: "Open Settings (⚙️) → set API Base."
     });
-
-    if (wantModifier){
-      setPendingModifier(q.modifier);
-      showToast("Modifier brewed for next level");
-    } else {
-      setPendingModifier(null);
-      showToast("DM visit (no modifier)");
-    }
-
-    dmAppearCount = upcoming;
-    setNum(DM_COUNT_KEY, dmAppearCount);
-    scheduleNextDM(level);
-
-    statusOut.textContent = "ok";
-    questId++;
-  } catch(e){
-    if (myToken !== dmToken) return; // cancelled
-
-    statusOut.textContent = (e?.status === 429) ? "rate-limited" : "dm error";
-    setDMSpeech({
-      title: "DM Error",
-      body: (e?.status === 429)
-        ? "Rate limited. Try again soon."
-        : "DM error. Check API base / server.",
-      small: ""
-    });
-    console.warn(e, e.detailText);
-  }
-}
-
-/* ---------------- Start level ---------------- */
-function startLevel(){
-  deadlockActive = false;
-
-  levelInvalid = 0;
-  punishedThisLevel = false;
-
-  const { bankPrimary } = inferBANK();
-  setBankRail(bankPrimary);
-
-  const rng = makeRng(hashSeed(runSeed, 4242, level));
-  const sinTags = inferSinTags();
-  const thesisKey = pickThesisKey(rng, sinTags, bankPrimary);
-
-  const cfg = computeLevelConfig();
-  const elements = chooseElementsForThesis(thesisKey, cfg.colors, rng);
-
-  const recipe = (() => {
-    let stabilizer = null;
-    let elementsForPuzzle = [...elements];
-
-    if (thesisKey === "UR_without_CL"){
-      const hasUR = elementsForPuzzle.includes("UR");
-      if (!hasUR) elementsForPuzzle[0] = "UR";
-
-      if (ELEMENTS["CL"] && level >= STABILIZER_UNLOCK_LEVEL){
-        if (!elementsForPuzzle.includes("CL")) elementsForPuzzle.push("CL");
-        stabilizer = { unlock:"UR_full", symbol:"CL", idx:-1, unlocked:false };
-      }
-    }
-    return { level, cfg, thesisKey, elements: elementsForPuzzle, stabilizer };
-  })();
-
-  applyElementPalette({ elements: recipe.elements, colors: recipe.elements.length });
-  state.stabilizer = recipe.stabilizer;
-
-  genPuzzle(recipe);
-  renderThesisBar(recipe.thesisKey);
-  syncInfoPanel();
-  render();
-
-  // If intro is active, do not trigger quest DM
-  if (!introIsActive()){
-    if (isDMLevel(level)) runDMIfAvailable();
-    else hideDMOverlay();
-  }
-
-  // Safety: if it spawns deadlocked, show DM
-  if (!introIsActive() && !isSolved() && !hasAnyPlayableMove()){
-    showOutOfMovesDM();
-  }
-
-  statusOut.textContent = "ready";
-}
-
-/* ---------------- Boot ---------------- */
-devBtn.addEventListener("click", ()=> settings.showModal());
-apiBaseEl.addEventListener("change", ()=>{
-  localStorage.setItem(API_BASE_KEY, apiBaseEl.value.trim());
-});
-
-bankRail.addEventListener("click", ()=>{
-  const expanded = bankRail.classList.toggle("expanded");
-  bankExpanded.setAttribute("aria-hidden", expanded ? "false" : "true");
-});
-
-/**
- * ✅ X ALWAYS WORKS
- * - Cancels any in-flight quest response
- * - Closes DM instantly
- * - If intro is active and no name exists: sets default "Acolyte"
- * - If deadlock is active: auto-retry the level so player isn't stuck
- */
-dmClose.addEventListener("click", ()=>{
-  dmToken++; // cancel any in-flight DM fetch
-
-  if (introIsActive()){
-    // allow cancelling the intro; ensure name exists
-    ensurePlayerName();
-    syncInfoPanel();
-    introStep = 0;
-  }
-
-  if (deadlockActive){
-    deadlockActive = false;
-    sig.resets++;
-    hideDMOverlay();
-    startLevel();
     return;
   }
 
-  hideDMOverlay();
-});
+  const sinTags = inferSinTags();
+  const act = Math.max(1, Math.floor((level-1)/5)+1);
 
-// optional dev toggle
-questTitle.addEventListener("dblclick", toggleSpeechTheme);
+  const wantModifier = true;
+  const foreshadowOnly = level >= FORESHADOW_START_LEVEL && level < STABILIZER_UNLOCK_LEVEL;
 
-glossaryBtn.addEventListener("click", ()=>{
+  let payload;
+  try{
+    const resp = await singleFlight(`quest:${runSeed}:${questId}:${level}:${bankPrimary}:${wantModifier}`, () =>
+      postJSON(apiBase, "/api/quest-node", {
+        act,
+        questId,
+        level,
+        playerName: ensurePlayerName(),
+        bankPrimary,
+        bankConfidence,
+        sinTags,
+        seed: runSeed,
+        wantModifier,
+        foreshadowOnly
+      })
+    );
+    payload = resp?.payload;
+  } catch (e){
+    if (myToken !== dmToken) return;
+    setDMAvatar({ mood:"furious", seedKey: 333 });
+    setDMSpeech({
+      title: "Server error.",
+      body: "The lab stuttered.\n\nFix your API, then return.",
+      small: String(e?.message || e)
+    });
+    return;
+  }
+
+  if (myToken !== dmToken) return;
+  if (!payload){
+    setDMAvatar({ mood:"annoyed", seedKey: 444 });
+    setDMSpeech({ title:"Empty response.", body:"The lab answered with silence.", small:"Check server logs." });
+    return;
+  }
+
+  setDMAvatar({ mood: payload.dm_mood || "encouraging", frame: payload.dm_frame, seedKey: 555 });
+
+  // Apply modifier for NEXT level build if present
+  if (payload.modifier){
+    pendingModifier = payload.modifier;
+  }
+
+  dmAppearCount++;
+  setNum(DM_COUNT_KEY, dmAppearCount);
+  scheduleNextDM(level);
+
+  setDMSpeech({
+    title: payload.quest_title || "Quest",
+    body: `${payload.dm_intro || ""}\n\n${payload.dm_midpoint || ""}\n\n${payload.dm_verdict || ""}`,
+    small: isMajorDM(dmAppearCount) ? "Major node." : "Minor node."
+  });
+}
+
+/* ---------------- Level generation ---------------- */
+let pendingModifier = null;
+let currentThesisKey = null;
+
+function computeLevelConfig(){
+  const base = {
+    colors: Math.min(6, 3 + Math.floor((level-1)/6)),
+    capacity: 4,
+    bottleCount: null,
+    emptyBottles: 2,
+    lockedBottles: 0,
+    wildcardSlots: 0,
+  };
+  const m = pendingModifier || null;
+  if (m){
+    base.colors = Math.max(3, Math.min(8, base.colors + (m.colorsDelta||0)));
+    base.capacity = Math.max(3, Math.min(6, base.capacity + (m.capacityDelta||0)));
+    base.emptyBottles = Math.max(1, Math.min(4, base.emptyBottles + (m.emptyBottlesDelta||0)));
+    base.lockedBottles = Math.max(0, Math.min(2, base.lockedBottles + (m.lockedBottlesDelta||0)));
+    base.wildcardSlots = Math.max(0, Math.min(2, base.wildcardSlots + (m.wildcardSlotsDelta||0)));
+    base.bottleCount = (base.colors + base.emptyBottles) + (m.bottleCountDelta||0);
+  }
+  if (!base.bottleCount) base.bottleCount = base.colors + base.emptyBottles;
+  return base;
+}
+
+function buildLocalRecipe(){
+  const rng = makeRng(hashSeed(runSeed, 4242, level));
+  const { bankPrimary } = inferBANK();
+  const sinTags = inferSinTags();
+  currentThesisKey = pickThesisKey(rng, sinTags, bankPrimary);
+
+  const cfg = computeLevelConfig();
+  const elems = chooseElementsForThesis(currentThesisKey, cfg.colors, rng);
+
+  return {
+    title: `Level ${level}`,
+    colors: cfg.colors,
+    bottleCount: cfg.bottleCount,
+    capacity: cfg.capacity,
+    emptyBottles: cfg.emptyBottles,
+    lockedBottles: cfg.lockedBottles,
+    wildcardSlots: cfg.wildcardSlots,
+    elements: elems,
+    sinTags,
+    appliedModifier: pendingModifier || null,
+  };
+}
+
+function shuffle(arr, rng){
+  for (let i=arr.length-1;i>0;i--){
+    const j = Math.floor(rng.f() * (i+1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+function generateBottlesFromRecipe(recipe){
+  const rng = makeRng(hashSeed(runSeed, 9898, level));
+  state.capacity = recipe.capacity;
+  state.selected = -1;
+
+  const colors = recipe.colors;
+  const bottleCount = recipe.bottleCount;
+  const empty = recipe.emptyBottles;
+
+  const pool = [];
+  for (let c=0;c<colors;c++){
+    for (let i=0;i<recipe.capacity;i++) pool.push(c);
+  }
+  shuffle(pool, rng);
+
+  state.bottles = [];
+  let idx = 0;
+  const filledBottles = bottleCount - empty;
+
+  for (let b=0;b<filledBottles;b++){
+    const bottle = [];
+    for (let k=0;k<recipe.capacity;k++){
+      bottle.push(pool[idx++]);
+    }
+    state.bottles.push(bottle);
+  }
+  for (let e=0;e<empty;e++) state.bottles.push([]);
+
+  state.locked = new Array(bottleCount).fill(false);
+  state.hiddenSegs = new Array(bottleCount).fill(false);
+  state.stabilizer = null;
+
+  // Locked bottles (uses your open/locked PNG visuals)
+  const lockCount = Math.min(recipe.lockedBottles || 0, bottleCount);
+  for (let i=0;i<lockCount;i++){
+    state.locked[i] = true;
+    state.hiddenSegs[i] = true;
+  }
+
+  // Stabilizer unlock mechanic after threshold
+  if (level >= STABILIZER_UNLOCK_LEVEL && lockCount > 0){
+    state.stabilizer = { unlock: "UR_full", idx: 0, unlocked: false };
+  }
+}
+
+function checkStabilizerUnlock(){
+  if (!state.stabilizer || state.stabilizer.unlocked) return;
+  if (state.stabilizer.unlock !== "UR_full") return;
+
+  const urIndex = currentElements.indexOf("UR");
+  if (urIndex < 0) return;
+
+  const cap = state.capacity;
+  const hasFullUR = state.bottles.some(b => b.length === cap && b.every(x => x === urIndex));
+  if (hasFullUR){
+    const idx = state.stabilizer.idx;
+    state.locked[idx] = false;
+    state.hiddenSegs[idx] = false;
+    state.stabilizer.unlocked = true;
+    showToast("Clarity unlocked. Now stop panicking.");
+    render();
+  }
+}
+
+/* ---------------- Pour + win ---------------- */
+let levelInvalid = 0;
+let punishedThisLevel = false;
+
+function doPour(from,to){
+  if(!canPour(from,to)){
+    sig.invalid++;
+    levelInvalid++;
+    syncInfoPanel();
+
+    if (!punishedThisLevel && levelInvalid >= INVALID_POUR_PUNISH_THRESHOLD){
+      punishedThisLevel = true;
+      const a = state.bottles[from] || [];
+      const ci = a.length ? topColor(a) : null;
+      const sym = (ci !== null && ci !== undefined) ? currentElements[ci] : null;
+      const el = sym ? ELEMENTS[sym] : null;
+      const punishTag = el?.punishes || "sloppiness";
+      showToast(`${el?.symbol || sym || "??"} punishes: ${punishTag}`);
+      pushSinTag(punishTag);
+    } else {
+      showToast("Invalid pour");
+    }
+    return false;
+  }
+
+  const a=state.bottles[from], b=state.bottles[to];
+  const color=topColor(a);
+  const run=topRunCount(a);
+  const space=state.capacity-b.length;
+  const amount=Math.min(run, space);
+
+  for(let i=0;i<amount;i++) b.push(a.pop());
+
+  sig.moves++;
+  syncInfoPanel();
+
+  playPourFX(pourFX, from, to, currentPalette[color] || "#fff", amount);
+
+  checkStabilizerUnlock();
+
+  if (isSolved()){
+    showToast("Solved. Next level.");
+    nextLevel();
+    return true;
+  }
+
+  render();
+
+  if (!isSolved() && !hasAnyPlayableMove()){
+    showOutOfMovesDM();
+  }
+
+  return true;
+}
+
+/* ---------------- Render bottles ---------------- */
+function render(){
+  grid.innerHTML = "";
+
+  for (let i=0;i<state.bottles.length;i++){
+    const bottle = document.createElement("button");
+    bottle.className = "bottle";
+    if (state.selected === i) bottle.classList.add("selected");
+    if (state.locked[i]) bottle.classList.add("locked");
+    if (state.hiddenSegs[i]) bottle.classList.add("hiddenSegs");
+
+    bottle.addEventListener("click", ()=> handleBottleTap(i));
+    bottle.addEventListener("touchend", (e)=>{ e.preventDefault(); handleBottleTap(i); }, { passive:false });
+
+    // segments
+    const segs = document.createElement("div");
+    segs.className = "segs";
+
+    const cap = state.capacity;
+    const b = state.bottles[i];
+    for (let s=0;s<cap;s++){
+      const seg = document.createElement("div");
+      seg.className = "seg";
+      const idx = b[s] ?? null;
+      seg.style.background = (idx === null) ? "transparent" : (currentPalette[idx] || "#fff");
+      segs.appendChild(seg);
+    }
+
+    bottle.appendChild(segs);
+    grid.appendChild(bottle);
+  }
+}
+
+/* ---------------- Input ---------------- */
+function handleBottleTap(i){
+  if (introIsActive()) return;
+  if (deadlockActive) return;
+
+  const now = performance.now();
+  if (sig.lastMoveAt) sig.moveTimes.push(now - sig.lastMoveAt);
+  sig.lastMoveAt = now;
+
+  if (state.selected < 0){
+    state.selected = i;
+    render();
+    return;
+  }
+
+  const from = state.selected;
+  const to = i;
+  state.selected = -1;
+  doPour(from,to);
+}
+
+/* ---------------- Level flow ---------------- */
+function startLevel(){
+  deadlockActive = false;
+  punishedThisLevel = false;
+  levelInvalid = 0;
+
+  const recipe = buildLocalRecipe();
+  applyElementPalette(recipe);
+  renderThesisBar(currentThesisKey);
+
+  generateBottlesFromRecipe(recipe);
+  render();
+  syncInfoPanel();
+
+  // DM node may pop on this level
+  runDMIfAvailable();
+}
+
+function nextLevel(){
+  level++;
+  questId++;
+  startLevel();
+}
+
+/* ---------------- Settings / Glossary / BANK ---------------- */
+devBtn.addEventListener("click", () => settings.showModal());
+glossaryBtn.addEventListener("click", () => {
   renderGlossary();
   glossary.showModal();
 });
 
-function modTap(){ showToast("Modifier shop (later)."); }
-modSlot1.addEventListener("click", modTap);
-modSlot2.addEventListener("click", modTap);
-modSlot3.addEventListener("click", modTap);
+bankRail.addEventListener("click", () => {
+  const expanded = bankRail.classList.toggle("expanded");
+  bankExpanded.setAttribute("aria-hidden", expanded ? "false" : "true");
+});
 
-(function boot(){
-  setSpeechTheme(getSpeechTheme());
+/* ---------------- DM close: ALWAYS WORKS ---------------- */
+dmClose.addEventListener("click", () => {
+  dmToken++; // cancels in-flight LLM
   hideDMOverlay();
 
+  // If intro was active, we still need a name to proceed
+  if (introIsActive()){
+    setPlayerName(DEFAULT_PLAYER_NAME);
+    introStep = 0;
+    syncInfoPanel();
+    return;
+  }
+
+  // If deadlock DM was active, auto-retry (prevents stuck state)
+  if (deadlockActive){
+    deadlockActive = false;
+    sig.resets++;
+    startLevel();
+  }
+});
+
+/* ---------------- Factory reset (Settings) ---------------- */
+function factoryResetGame(){
+  const ok = confirm(
+    "Factory Reset will erase ALL progress, name, and history.\n\nProceed?"
+  );
+  if (!ok) return;
+
+  // MA reset line
+  try{
+    dmToken++;
+    showDMOverlay();
+    setSpeechTheme("dark");
+    setDMAvatar({ mood:"satisfied", seedKey: 7777 });
+
+    setDMSpeech({
+      title: "Factory Reset",
+      body:
+`Good.
+
+Burn it down.
+We begin again — clean glass, clean ritual.
+
+Try not to disappoint me twice.`,
+      small: "Resetting…"
+    });
+  } catch {}
+
+  setTimeout(() => {
+    localStorage.removeItem("ma_playerName");
+    localStorage.removeItem("ma_introSeen");
+    localStorage.removeItem("ma_runSeed");
+    localStorage.removeItem("ma_dmAppearCount");
+    localStorage.removeItem("ma_nextDMAtLevel");
+    localStorage.removeItem("ma_sinQueue");
+    localStorage.removeItem("ma_speechTheme");
+    location.reload();
+  }, 650);
+}
+
+factoryResetBtn?.addEventListener("click", factoryResetGame);
+
+/* ---------------- Boot ---------------- */
+function boot(){
+  setSpeechTheme(getSpeechTheme());
+  ensurePlayerName(); // ensures info panel not blank in normal play
+  syncInfoPanel();
+
+  // If player already named, do normal start
   startLevel();
 
-  // First load intro (DM entrance + name)
-  const introRan = runFirstLoadIntro();
-
-  if (!introRan){
-    const seen = localStorage.getItem("ma_seenMobileUI");
-    if (!seen){
-      localStorage.setItem("ma_seenMobileUI","1");
-      showToast(pickLoreLine?.("open") || "Tap bottle → tap target.");
+  // If new player, run intro (overrides name)
+  // Run on next tick to avoid any immediate hide calls
+  setTimeout(() => {
+    if (!getPlayerName() || getPlayerName() === DEFAULT_PLAYER_NAME && !localStorage.getItem("ma_introSeen")){
+      runFirstLoadIntro();
     }
-  }
-})();
+  }, 0);
+}
+
+boot();
