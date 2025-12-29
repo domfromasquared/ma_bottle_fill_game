@@ -56,6 +56,20 @@ body{
   gap:10px;
   cursor:pointer;
   user-select:none;
+
+  /* slight depth even when “off” */
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.03),
+    0 10px 24px rgba(0,0,0,.18);
+}
+
+/* Soft halo when any letter is on (Safari/Chrome support :has) */
+.bankRail:has(.bankLetters span.on){
+  box-shadow:
+    0 0 0 4px rgba(255,255,255,.04),
+    0 0 22px rgba(120,180,255,.16),
+    inset 0 0 0 1px rgba(255,255,255,.04),
+    0 14px 28px rgba(0,0,0,.24);
 }
 
 .bankLetters{
@@ -65,11 +79,55 @@ body{
   font-weight: 900;
   letter-spacing: .5px;
 }
+
+/* OFF state: explicitly grey + dim “tube” */
 .bankLetters span{
-  opacity:.35;
   font-size: 18px;
+  opacity: 1;
+
+  /* off grey */
+  color: rgba(230,237,243,.30);
+
+  /* outline “tube” even when off */
+  -webkit-text-stroke: 1px rgba(255,255,255,.10);
+  text-stroke: 1px rgba(255,255,255,.10);
+
+  /* faint tube shimmer */
+  text-shadow:
+    0 1px 0 rgba(0,0,0,.55),
+    0 0 2px rgba(255,255,255,.06);
+
+  transition:
+    color .18s ease,
+    text-shadow .18s ease,
+    -webkit-text-stroke-color .18s ease,
+    transform .18s ease,
+    filter .18s ease;
 }
-.bankLetters span.on{ opacity:1; }
+
+/* ON state: neon LED sign effect */
+.bankLetters span.on{
+  opacity: 1;
+  transform: translateZ(0) scale(1.04);
+  filter: saturate(1.2);
+
+  /* brighter tube outline */
+  -webkit-text-stroke: 1px rgba(255,255,255,.28);
+  text-stroke: 1px rgba(255,255,255,.28);
+
+  /* neon glow stack: inner white + color glow */
+  text-shadow:
+    /* inner glow */
+    0 0 3px rgba(255,255,255,.30),
+    0 0 7px rgba(255,255,255,.20),
+
+    /* outer color glow (currentColor) */
+    0 0 12px currentColor,
+    0 0 24px currentColor,
+    0 0 42px rgba(255,255,255,.08);
+}
+
+/* Color mapping when ON (currentColor drives glow) */
 .bankLetters span[data-bank="B"].on{ color:#48a0ff; }
 .bankLetters span[data-bank="A"].on{ color:#ff4d4d; }
 .bankLetters span[data-bank="N"].on{ color:#3fe27a; }
