@@ -32,6 +32,12 @@
   --thesis-pad-y: 5px;       /* was 10px -> 10px thinner total (top+bottom) */
   --thesis-pad-x: 10px;
   --thesis-gap-below: 10px;  /* extra padding below thesis before bottles */
+
+  /* inner chamber (tuned for vial_empty.png / vial_corked.png) */
+  --ch-top: 36px;
+  --ch-side: 12px;   /* smaller = wider liquid (yours is too narrow) */
+  --ch-bottom: 20px;
+  --ch-radius: 14px;
 }
 
 *{ box-sizing:border-box; }
@@ -287,33 +293,56 @@ body{
   user-select:none;
   touch-action: manipulation;
 
-  /* IMPORTANT: stack segments from bottom up */
+  /* IMPORTANT: fills from bottom */
   display:flex;
   flex-direction: column-reverse;
 
   height: clamp(150px, 18vh, 220px);
   border-radius: 22px 22px 26px 26px;
 
-  border: 1px solid rgba(220,232,255,.10);
   background: transparent;
+  border: 1px solid rgba(220,232,255,.10);
 }
 
-/* This creates the INNER chamber area so liquid doesn't sit outside */
+/* The chamber inset that holds the liquid */
 .bottle{
-  /* tune these numbers if needed */
-  padding: 34px 18px 18px 18px; /* top, right, bottom, left */
+  padding: var(--ch-top) var(--ch-side) var(--ch-bottom) var(--ch-side);
 }
 
-/* each segment becomes an equal “layer” */
+/* subtle interior “well” */
+.bottle::before{
+  content:"";
+  position:absolute;
+  top: var(--ch-top);
+  left: var(--ch-side);
+  right: var(--ch-side);
+  bottom: var(--ch-bottom);
+  border-radius: var(--ch-radius);
+  background: rgba(0,0,0,.12);
+  z-index: 1;
+  pointer-events:none;
+}
+
+/* liquid layers */
 .seg{
   flex: 1;
   width:100%;
   position:relative;
   overflow:hidden;
-  border-radius: 0;
+  z-index: 2;
 }
 
-/* glass overlay art always on top */
+/* Round the top & bottom of the stack so it looks “contained” */
+.bottle > .seg:first-child{
+  border-bottom-left-radius: var(--ch-radius);
+  border-bottom-right-radius: var(--ch-radius);
+}
+.bottle > .seg:last-child{
+  border-top-left-radius: var(--ch-radius);
+  border-top-right-radius: var(--ch-radius);
+}
+
+/* Glass overlay art always on top */
 .bottle::after{
   content:"";
   position:absolute;
@@ -325,7 +354,7 @@ body{
   z-index: 5;
 }
 
-/* open vs locked overlay art */
+/* open vs locked overlay */
 .bottle::after{ background-image: var(--bottle-open); }
 .bottle.locked::after{ background-image: var(--bottle-locked); }
 
