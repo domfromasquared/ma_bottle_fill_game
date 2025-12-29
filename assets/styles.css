@@ -24,9 +24,9 @@
   /* DM-only font */
   --dm-font: "UnifrakturCook", serif;
 
-  /* Bottle art (EDIT THESE PATHS if your filenames differ) */
-  --bottle-open: url("./bottles/bottle_open.png");
-  --bottle-locked: url("./bottles/bottle_locked.png");
+    /* Bottle art */
+  --bottle-open: url("./chemset/vial/vial_empty.png");
+  --bottle-locked: url("./chemset/vial/vial_corked.png");
 
   /* Thesis spacing controls */
   --thesis-pad-y: 5px;       /* was 10px -> 10px thinner total (top+bottom) */
