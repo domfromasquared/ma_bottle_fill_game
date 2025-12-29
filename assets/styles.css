@@ -320,11 +320,16 @@ body{
 .dmAvatar{
   width:100%;
   height:100%;
-  /* placeholder visual; swap to a real PNG later */
-  background:
-    radial-gradient(circle at 40% 30%, rgba(255,255,255,.08), transparent 55%),
-    linear-gradient(180deg, rgba(255,255,255,.04), transparent 60%),
-    rgba(0,0,0,.15);
+  background-color: transparent;
+
+  /* real DM art (set via JS: element.style.backgroundImage) */
+  background-repeat: no-repeat;
+  background-position: left bottom;
+  background-size: contain;
+
+  /* optional: gives “ultra crisp” edge without muddying the PNG */
+  image-rendering: auto;
+  filter: drop-shadow(0 10px 22px rgba(0,0,0,.45));
 }
 
 /* ---------- SPEECH BUBBLE (bottom-right overlay) ---------- */
