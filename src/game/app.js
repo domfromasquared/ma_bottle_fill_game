@@ -5,26 +5,13 @@ import { singleFlight } from "../utils/singleFlight.js";
 import { postJSON } from "../utils/http.js";
 import { makeToaster, qs, playPourFX } from "../utils/ui.js";
 
-/**
- * UI update:
- * - Removed HUD + legend from playfield (space reclaimed for bottles)
- * - Thesis is now a top overlay bar
- * - Elements live in a Glossary dialog (pauses game)
- * - Title / level / moves / invalid live in Settings -> Info panel
- * - DM close (X) cancels pending DM fetch
- * - BANK rail tap still expands explanation
- */
-
-// ---------------- Progression gates ----------------
 const FORESHADOW_START_LEVEL = 10;
 const STABILIZER_UNLOCK_LEVEL = 15;
 
-// ---------------- API base ----------------
 const DEFAULT_PROD = "https://ma-bottle-fill-api.onrender.com";
 const DEFAULT_LOCAL = "http://localhost:8787";
 const isLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1";
 
-// ---------------- Punish-on-behavior ----------------
 const INVALID_POUR_PUNISH_THRESHOLD = 3;
 const SIN_QUEUE_KEY = "ma_sinQueue";
 
@@ -43,12 +30,7 @@ function consumeSinTag(){
   return next;
 }
 
-// ---------------- DM PNG (mood folders) ----------------
-const DM_MOODS = [
-  "amused","annoyed","disappointed","encouraging","frustrated",
-  "furious","impressed","proud","satisfied",
-];
-
+const DM_MOODS = ["amused","annoyed","disappointed","encouraging","frustrated","furious","impressed","proud","satisfied"];
 function normMood(m){
   const s = String(m || "").trim().toLowerCase();
   if (DM_MOODS.includes(s)) return s;
@@ -58,6 +40,92 @@ function pad3(n){
   const x = Math.max(0, Math.min(999, Number(n) || 0));
   return String(x).padStart(3, "0");
 }
+
+const statusOut = qs("statusOut");
+const grid = qs("grid");
+const pourFX = qs("pourFX");
+const showToast = makeToaster(qs("toast"));
+
+const settings = qs("settings");
+const devBtn = qs("devBtn");
+const apiBaseEl = qs("apiBase");
+
+const infoLevel = qs("infoLevel");
+const infoMoves = qs("infoMoves");
+const infoInvalid = qs("infoInvalid");
+const infoThesis = qs("infoThesis");
+
+const thesisLabel = qs("thesisLabel");
+const thesisSub = qs("thesisSub");
+const glossaryBtn = qs("glossaryBtn");
+
+const glossary = qs("glossary");
+const glossaryList = qs("glossaryList");
+
+const dmCharacter = qs("dmCharacter");
+const dmClose = qs("dmClose");
+const speech = qs("speech");
+const questTitle = qs("questTitle");
+const speechText = qs("speechText");
+const speechSmall = qs("speechSmall");
+
+const SPEECH_THEME_KEY = "ma_speechTheme";
+function getSpeechTheme(){
+  const v = (localStorage.getItem(SPEECH_THEME_KEY) || "").toLowerCase();
+  return (v === "light" || v === "dark") ? v : "dark";
+}
+function setSpeechTheme(theme){
+  const t = (String(theme || "").toLowerCase() === "light") ? "light" : "dark";
+  speech.dataset.theme = t;
+  localStorage.setItem(SPEECH_THEME_KEY, t);
+}
+function toggleSpeechTheme(){
+  setSpeechTheme(getSpeechTheme() === "dark" ? "light" : "dark");
+}
+
+const bankRail = qs("bankRail");
+const bankExpanded = qs("bankExpanded");
+
+const modSlot1 = qs("modSlot1");
+const modSlot2 = qs("modSlot2");
+const modSlot3 = qs("modSlot3");
+
+const API_BASE_KEY = "ma_apiBase";
+apiBaseEl.value = localStorage.getItem(API_BASE_KEY) || (isLocal ? DEFAULT_LOCAL : DEFAULT_PROD);
+
+const RUN_SEED_KEY = "ma_runSeed";
+const DM_COUNT_KEY = "ma_dmAppearCount";
+const NEXT_DM_KEY = "ma_nextDMAtLevel";
+
+const DM_GAP_MIN = 3;
+const DM_GAP_MAX = 6;
+const DM_MAJOR_EVERY = 5;
+
+function loadOrInitRunState(){
+  let runSeed = Number(localStorage.getItem(RUN_SEED_KEY) || "0");
+  if (!runSeed){
+    runSeed = Math.floor(Math.random() * 1e9);
+    setNum(RUN_SEED_KEY, runSeed);
+  }
+  const dmAppearCount = Number(localStorage.getItem(DM_COUNT_KEY) || "0");
+  let nextDMAtLevel = Number(localStorage.getItem(NEXT_DM_KEY) || "0");
+  if (!nextDMAtLevel){
+    nextDMAtLevel = 1 + randInt(DM_GAP_MIN, DM_GAP_MAX, hashSeed(runSeed, 111, 222));
+    setNum(NEXT_DM_KEY, nextDMAtLevel);
+  }
+  return { runSeed, dmAppearCount, nextDMAtLevel };
+}
+
+let { runSeed, dmAppearCount, nextDMAtLevel } = loadOrInitRunState();
+function isDMLevel(lvl){ return lvl === nextDMAtLevel; }
+function isMajorDM(upcomingCount){ return (upcomingCount % DM_MAJOR_EVERY) === 0; }
+
+function scheduleNextDM(currentLevel){
+  const gap = randInt(DM_GAP_MIN, DM_GAP_MAX, hashSeed(runSeed, dmAppearCount * 97, currentLevel * 131));
+  nextDMAtLevel = currentLevel + gap;
+  setNum(NEXT_DM_KEY, nextDMAtLevel);
+}
+
 function ensureDMImg(){
   let img = dmCharacter.querySelector("img");
   if (!img){
@@ -88,105 +156,6 @@ function setDMAvatar({ mood, frame, seedKey }){
   img.src = `assets/dm/${m}/MA_${pad3(f)}.png`;
 }
 
-// ---------------- DOM ----------------
-const statusOut = qs("statusOut");
-
-const grid = qs("grid");
-const pourFX = qs("pourFX");
-const showToast = makeToaster(qs("toast"));
-
-// Settings / api base
-const settings = qs("settings");
-const devBtn = qs("devBtn");
-const apiBaseEl = qs("apiBase");
-
-// Info panel outputs (Settings)
-const infoLevel = qs("infoLevel");
-const infoMoves = qs("infoMoves");
-const infoInvalid = qs("infoInvalid");
-const infoThesis = qs("infoThesis");
-
-// Thesis bar
-const thesisLabel = qs("thesisLabel");
-const thesisSub = qs("thesisSub");
-const glossaryBtn = qs("glossaryBtn");
-
-// Glossary dialog
-const glossary = qs("glossary");
-const glossaryList = qs("glossaryList");
-
-// DM overlays
-const dmCharacter = qs("dmCharacter");
-const dmClose = qs("dmClose");
-const speech = qs("speech");
-const questTitle = qs("questTitle");
-const speechText = qs("speechText");
-const speechSmall = qs("speechSmall");
-
-// ---------------- Speech theme (dark/light) ----------------
-const SPEECH_THEME_KEY = "ma_speechTheme"; // "dark" | "light"
-function getSpeechTheme(){
-  const v = (localStorage.getItem(SPEECH_THEME_KEY) || "").toLowerCase();
-  return (v === "light" || v === "dark") ? v : "dark";
-}
-function setSpeechTheme(theme){
-  const t = (String(theme || "").toLowerCase() === "light") ? "light" : "dark";
-  speech.dataset.theme = t;
-  localStorage.setItem(SPEECH_THEME_KEY, t);
-}
-function toggleSpeechTheme(){
-  setSpeechTheme(getSpeechTheme() === "dark" ? "light" : "dark");
-}
-
-// BANK rail
-const bankRail = qs("bankRail");
-const bankExpanded = qs("bankExpanded");
-
-// Mod slots
-const modSlot1 = qs("modSlot1");
-const modSlot2 = qs("modSlot2");
-const modSlot3 = qs("modSlot3");
-
-// ---------------- Local api base preference ----------------
-const API_BASE_KEY = "ma_apiBase";
-apiBaseEl.value = localStorage.getItem(API_BASE_KEY) || (isLocal ? DEFAULT_LOCAL : DEFAULT_PROD);
-
-// ---------------- Run/Progress storage keys ----------------
-const RUN_SEED_KEY = "ma_runSeed";
-const DM_COUNT_KEY = "ma_dmAppearCount";
-const NEXT_DM_KEY = "ma_nextDMAtLevel";
-
-// ---------------- DM Scheduling ----------------
-const DM_GAP_MIN = 3;
-const DM_GAP_MAX = 6;
-const DM_MAJOR_EVERY = 5;
-
-function loadOrInitRunState(){
-  let runSeed = Number(localStorage.getItem(RUN_SEED_KEY) || "0");
-  if (!runSeed){
-    runSeed = Math.floor(Math.random() * 1e9);
-    setNum(RUN_SEED_KEY, runSeed);
-  }
-  const dmAppearCount = Number(localStorage.getItem(DM_COUNT_KEY) || "0");
-  let nextDMAtLevel = Number(localStorage.getItem(NEXT_DM_KEY) || "0");
-  if (!nextDMAtLevel){
-    nextDMAtLevel = 1 + randInt(DM_GAP_MIN, DM_GAP_MAX, hashSeed(runSeed, 111, 222));
-    setNum(NEXT_DM_KEY, nextDMAtLevel);
-  }
-  return { runSeed, dmAppearCount, nextDMAtLevel };
-}
-
-let { runSeed, dmAppearCount, nextDMAtLevel } = loadOrInitRunState();
-function isDMLevel(lvl){ return lvl === nextDMAtLevel; }
-function isMajorDM(upcomingCount){ return (upcomingCount % DM_MAJOR_EVERY) === 0; }
-
-function scheduleNextDM(currentLevel){
-  const gap = randInt(DM_GAP_MIN, DM_GAP_MAX, hashSeed(runSeed, dmAppearCount * 97, currentLevel * 131));
-  nextDMAtLevel = currentLevel + gap;
-  setNum(NEXT_DM_KEY, nextDMAtLevel);
-}
-
-// ---------------- Telemetry (BANK inference) ----------------
 const sig = { moves:0, invalid:0, resets:0, moveTimes:[], lastMoveAt:0 };
 const avg = (arr)=> arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
 
@@ -239,7 +208,6 @@ function setBankRail(bankPrimary){
   if (on) on.classList.add("on");
 }
 
-// ---------------- Thesis selection + palette ----------------
 let currentElements = [];
 let currentPalette = [];
 
@@ -296,7 +264,6 @@ const state = {
   stabilizer: null
 };
 
-// Thesis overlay renderer
 function renderThesisBar(thesisKey){
   const thesis = thesisKey ? THESES[thesisKey] : null;
   if (!thesis){
@@ -311,11 +278,9 @@ function renderThesisBar(thesisKey){
   infoThesis.textContent = thesis.name;
 }
 
-// Glossary renderer (all elements)
 function renderGlossary(){
   glossaryList.innerHTML = "";
   const syms = Object.keys(ELEMENTS).sort();
-
   for (const sym of syms){
     const el = ELEMENTS[sym];
     if (!el) continue;
@@ -337,11 +302,9 @@ function renderGlossary(){
   }
 }
 
-// ---------------- Modifier (placeholder) ----------------
 let pendingModifier = null;
 function setPendingModifier(mod){ pendingModifier = mod || null; }
 
-// ---------------- Bottle Game State ----------------
 const topColor = (b)=> b.length ? b[b.length-1] : null;
 function topRunCount(b){
   if (!b.length) return 0;
@@ -386,13 +349,11 @@ function checkStabilizerUnlock(){
     state.locked[idx] = false;
     state.hiddenSegs[idx] = false;
     state.stabilizer.unlocked = true;
-
     showToast("Clarity unlocked. Now stop panicking.");
     render();
   }
 }
 
-// invalid pour punish tracking (per-level)
 let levelInvalid = 0;
 let punishedThisLevel = false;
 
@@ -410,12 +371,10 @@ function doPour(from,to){
 
     if (!punishedThisLevel && levelInvalid >= INVALID_POUR_PUNISH_THRESHOLD){
       punishedThisLevel = true;
-
       const a = state.bottles[from] || [];
       const ci = a.length ? topColor(a) : null;
       const sym = (ci !== null && ci !== undefined) ? currentElements[ci] : null;
       const el = sym ? ELEMENTS[sym] : null;
-
       const punishTag = el?.punishes || "sloppiness";
       showToast(`${el?.symbol || sym || "??"} punishes: ${punishTag}`);
       pushSinTag(punishTag);
@@ -447,7 +406,6 @@ function doPour(from,to){
   return true;
 }
 
-// ---------------- Level generation ----------------
 let questId = 1;
 let lastRecipe = null;
 
@@ -498,7 +456,7 @@ function buildRecipe(){
     }
   }
 
-  return { level, cfg, thesisKey, recipeSource: thesisKey, elements: elementsForPuzzle, stabilizer };
+  return { level, cfg, thesisKey, elements: elementsForPuzzle, stabilizer };
 }
 
 function genPuzzle(recipe){
@@ -619,14 +577,12 @@ function nextLevel(){
   startLevel();
 }
 
-// ---------------- DM overlay + quest call ----------------
 function showDMOverlay(){
   dmCharacter.classList.add("show");
   dmCharacter.setAttribute("aria-hidden","false");
   speech.classList.add("show");
   speech.setAttribute("aria-hidden","false");
 }
-
 function hideDMOverlay(){
   dmCharacter.classList.remove("show");
   dmCharacter.setAttribute("aria-hidden","true");
@@ -634,10 +590,6 @@ function hideDMOverlay(){
   speech.setAttribute("aria-hidden","true");
 }
 
-/**
- * DM cancellation token:
- * - Increment dmToken to invalidate any in-flight DM response
- */
 let dmToken = 0;
 
 async function runDMIfAvailable(){
@@ -654,9 +606,7 @@ async function runDMIfAvailable(){
 
   setSpeechTheme(wantModifier ? "light" : "dark");
 
-  const foreshadowOnly =
-    level >= FORESHADOW_START_LEVEL &&
-    level < STABILIZER_UNLOCK_LEVEL;
+  const foreshadowOnly = level >= FORESHADOW_START_LEVEL && level < STABILIZER_UNLOCK_LEVEL;
 
   statusOut.textContent = wantModifier ? "brewing..." : "speaking...";
 
@@ -683,7 +633,7 @@ async function runDMIfAvailable(){
     const key = `quest-node:${runSeed}:${questId}:${level}:${upcoming}:${wantModifier}:${foreshadowOnly}`;
     const data = await singleFlight(key, () => postJSON(apiBaseEl.value, "/api/quest-node", payload));
 
-    if (myToken !== dmToken) return; // cancelled
+    if (myToken !== dmToken) return;
 
     const q = data.payload;
 
@@ -695,12 +645,7 @@ async function runDMIfAvailable(){
 
     questTitle.textContent = q.quest_title || (wantModifier ? "Major Ritual" : "DM Speaks");
 
-    const parts = [
-      q.dm_intro || "",
-      q.dm_midpoint || "",
-      q.dm_verdict || ""
-    ].filter(Boolean);
-
+    const parts = [q.dm_intro || "", q.dm_midpoint || "", q.dm_verdict || ""].filter(Boolean);
     speechText.textContent = parts.join("\n\n") || "…";
     speechSmall.textContent = `Next DM scheduled · major every ${DM_MAJOR_EVERY}`;
 
@@ -719,7 +664,7 @@ async function runDMIfAvailable(){
     statusOut.textContent = "ok";
     questId++;
   } catch(e){
-    if (myToken !== dmToken) return; // cancelled
+    if (myToken !== dmToken) return;
 
     statusOut.textContent = (e?.status === 429) ? "rate-limited" : "dm error";
     speechText.textContent = (e?.status === 429)
@@ -729,7 +674,6 @@ async function runDMIfAvailable(){
   }
 }
 
-// ---------------- Level boot ----------------
 function startLevel(){
   levelInvalid = 0;
   punishedThisLevel = false;
@@ -758,7 +702,6 @@ function startLevel(){
   statusOut.textContent = "ready";
 }
 
-// ---------------- UI events ----------------
 devBtn.addEventListener("click", ()=> settings.showModal());
 apiBaseEl.addEventListener("change", ()=>{
   localStorage.setItem(API_BASE_KEY, apiBaseEl.value.trim());
@@ -770,29 +713,24 @@ bankRail.addEventListener("click", ()=>{
 });
 
 dmClose.addEventListener("click", ()=>{
-  dmToken++;         // invalidate pending DM response
+  dmToken++;
   hideDMOverlay();
 });
 
-// Manual theme toggle (dev)
 questTitle.addEventListener("dblclick", toggleSpeechTheme);
 
-// Glossary
 glossaryBtn.addEventListener("click", ()=>{
   renderGlossary();
   glossary.showModal();
 });
 
-// Modifiers placeholders
 function modTap(){ showToast("Modifier shop (later)."); }
 modSlot1.addEventListener("click", modTap);
 modSlot2.addEventListener("click", modTap);
 modSlot3.addEventListener("click", modTap);
 
-// ---------------- Boot ----------------
 (function boot(){
   setSpeechTheme(getSpeechTheme());
-
   hideDMOverlay();
   startLevel();
 
