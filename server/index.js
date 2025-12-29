@@ -184,10 +184,35 @@ const QUEST_SCHEMA = {
     dm_intro: { type: "string" },
     dm_midpoint: { type: "string" },
     dm_verdict: { type: "string" },
+
+    // NEW: drives which DM image folder we use
+    dm_mood: {
+      type: "string",
+      enum: [
+        "amused",
+        "annoyed",
+        "disappointed",
+        "encouraging",
+        "frustrated",
+        "furious",
+        "impressed",
+        "proud",
+        "satisfied",
+      ],
+    },
+
     used_voice_ids: { type: "array", items: { type: "string" } },
     modifier: MODIFIER_SCHEMA,
   },
-  required: ["quest_title","dm_intro","dm_midpoint","dm_verdict","used_voice_ids","modifier"],
+  required: [
+    "quest_title",
+    "dm_intro",
+    "dm_midpoint",
+    "dm_verdict",
+    "dm_mood",
+    "used_voice_ids",
+    "modifier",
+  ],
 };
 
 const RECIPE_SCHEMA = {
