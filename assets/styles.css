@@ -1,283 +1,332 @@
+/* =========================================================
+   The Marketing Alchemist: The Balance Protocol
+   CLEAN consolidated stylesheet (no duplicate blocks)
+   ========================================================= */
+
+/* ---------------- Root / Theme ---------------- */
 :root{
-  color-scheme: dark;
+  /* Safe-area insets (iOS notch etc.) */
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
 
-  /* safe areas */
-  --sat: env(safe-area-inset-top);
-  --sar: env(safe-area-inset-right);
-  --sab: env(safe-area-inset-bottom);
-  --sal: env(safe-area-inset-left);
+  /* Spacing */
+  --pad: 14px;
 
-  /* layout constants */
-  --pad: 12px;
-  --modsH: 84px;
+  /* Rail + bars */
   --railW: 54px;
+  --thesisH: 44px;          /* thesis bar: thin */
+  --modsH: 72px;            /* bottom modifier bar */
 
-  --card: rgba(15, 23, 36, .92);
-  --line: rgba(220,232,255,.12);
-  --text: #e6edf3;
-  --muted: #aab6ca;
-
-  /* DM speech bubble plates */
-  --speech-plate-dark: url("./dmspeaks/speech_bubble_dark.png");
-  --speech-plate-light: url("./dmspeaks/speech_bubble_light.png");
-
-  /* DM-only font */
+  /* Typography */
+  --ui-font: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
   --dm-font: "UnifrakturCook", serif;
 
-    /* Bottle art */
-  --bottle-open: url("./chemset/vial/vial_empty.png");
-  --bottle-locked: url("./chemset/vial/vial_corked.png");
+  /* Colors */
+  --bg0: #070a10;
+  --bg1: #0b1220;
+  --panel: rgba(17,26,39,0.86);
+  --panel2: rgba(17,26,39,0.72);
+  --stroke: rgba(220,232,255,0.16);
+  --stroke2: rgba(220,232,255,0.22);
+  --text: #e6edf3;
+  --muted: rgba(230,237,243,0.70);
 
-  /* Thesis spacing controls */
-  --thesis-pad-y: 5px;       /* was 10px -> 10px thinner total (top+bottom) */
-  --thesis-pad-x: 10px;
-  --thesis-gap-below: 10px;  /* extra padding below thesis before bottles */
+  /* BANK letter colors (keep consistent even when expanded) */
+  --bankB: #77b7ff; /* Blueprint */
+  --bankA: #ffb24c; /* Action */
+  --bankN: #7dffb1; /* Nurturing */
+  --bankK: #d7a6ff; /* Knowledge */
 
-  /* inner chamber (tuned for vial_empty.png / vial_corked.png) */
-  --ch-top: 28px;
-  --ch-side: 9px;   /* smaller = wider liquid (yours is too narrow) */
-  --ch-bottom: 10px;
-  --ch-radius: 14px;
+  /* Bottle art paths (update if your names differ) */
+  --bottle-open: url("../assets/bottles/bottle_open.png");
+  --bottle-locked: url("../assets/bottles/bottle_locked.png");
+
+  /* Bottle chamber geometry (tune these to match your PNG interior) */
+  --ch-top: 42px;
+  --ch-side: 18px;
+  --ch-bottom: 18px;
+  --ch-radius: 18px;
+
+  /* Speech bubble plates (update paths if needed) */
+  --speech-plate-dark: url("../assets/dmspeaks/speech_bubble_dark.png");
+  --speech-plate-light: url("../assets/dmspeaks/speech_bubble_light.png");
 }
 
+/* ---------------- Base ---------------- */
 *{ box-sizing:border-box; }
+html, body{ height:100%; }
 body{
   margin:0;
-  background:#0b0f14;
-  color:var(--text);
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  overscroll-behavior: none;
+  font-family: var(--ui-font);
+  color: var(--text);
+  background: radial-gradient(1200px 800px at 70% 10%, rgba(78,120,255,0.14), transparent 55%),
+              radial-gradient(900px 650px at 20% 80%, rgba(255,170,70,0.10), transparent 60%),
+              linear-gradient(180deg, var(--bg0), var(--bg1));
+  overflow:hidden; /* game is app-like */
 }
 
-.screen{
-  position: relative;
-  height: 100vh;
-  height: 100dvh;
+/* hidden screenreader region */
+.sr{
+  position:absolute;
+  width:1px; height:1px;
   overflow:hidden;
-  padding-top: calc(var(--sat) + var(--pad));
-  padding-left: calc(var(--sal) + var(--pad));
-  padding-right: calc(var(--sar) + var(--pad));
-  padding-bottom: calc(var(--sab) + var(--pad));
+  clip: rect(1px, 1px, 1px, 1px);
 }
 
-/* ---------- SETTINGS FAB ---------- */
+/* ---------------- Layout shell ---------------- */
+.screen{
+  position:relative;
+  height:100%;
+  padding-top: var(--sat);
+  padding-left: var(--sal);
+  padding-right: var(--sar);
+  padding-bottom: var(--sab);
+}
+
+/* ---------------- Settings (top-right button) ---------------- */
 .settingsFab{
   position:absolute;
-  right: calc(var(--sar) + var(--pad));
-  top: calc(var(--sat) + var(--pad));
-  z-index: 6;
-  border: 1px solid var(--line);
-  background: rgba(17,26,39,.7);
+  top: calc(var(--sat) + 10px);
+  right: calc(var(--sar) + 10px);
+  z-index: 10;
+
+  width:44px;
+  height:44px;
+  border-radius:14px;
+  border:1px solid var(--stroke);
+  background: rgba(17,26,39,0.55);
   color: var(--text);
-  border-radius: 14px;
-  padding: 10px 12px;
-  font-weight: 900;
+  font-size:18px;
   cursor:pointer;
+  backdrop-filter: blur(8px);
 }
 
-/* ---------- BANK RAIL ---------- */
+/* ---------------- BANK Rail ---------------- */
 .bankRail{
-  position: absolute;
-  left: calc(var(--sal) + 6px);
-  top: calc(var(--sat) + 22px);
+  position:absolute;
+  left: calc(var(--sal) + 10px);
+  top: calc(var(--sat) + 10px);
+  z-index: 10;
 
   width: var(--railW);
-  border: 1px solid var(--line);
-
-  /* SOLID BG (no transparency) */
-  background: #0b1220;
-
-  border-radius: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--stroke);
+  background: rgba(17,26,39,0.92); /* solid-ish (NO transparency look) */
+  color: var(--text);
   padding: 10px 8px;
-
-  display:flex;
-  align-items:center;
   cursor:pointer;
-  user-select:none;
-  z-index: 6;
 
-  box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,.03),
-    0 10px 24px rgba(0,0,0,.18);
-}
-
-/* expanded meanings panel (hidden by default) */
-.bankExpanded{
-  display:none;
-  width: 260px;
-  padding: 6px 10px 6px 10px;
-}
-
-/* Expanded state: meanings LEFT, letters RIGHT (colors preserved) */
-.bankRail.expanded{
-  width: calc(var(--railW) + 260px + 18px);
-  display:grid;
-  grid-template-columns: 260px var(--railW);
-  align-items:center;
-  padding: 10px 8px;
-  column-gap: 10px;
-}
-
-.bankRail.expanded .bankExpanded{ display:block; }
-
-/* DO NOT hide letters when expanded */
-.bankRail.expanded .bankLetters{
   display:flex;
-  justify-self:end;
+  align-items:stretch;
+  justify-content:center;
+  gap: 10px;
+
+  box-shadow: 0 10px 35px rgba(0,0,0,0.35);
+  backdrop-filter: blur(8px);
 }
 
-/* rows: text left, letter right (you already changed the HTML for this) */
-.bankRow{
-  display:grid;
-  grid-template-columns: 1fr 28px;
-  align-items:center;
-  gap:10px;
-  padding: 6px 0;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.bankRow b{
-  justify-self:end;
-  font-size: 18px;
-  color: rgba(230,237,243,.72);
-}
-
-/* collapsed letters */
 .bankLetters{
   display:flex;
   flex-direction:column;
-  gap:10px;
-  font-weight: 900;
-  letter-spacing: .5px;
+  gap: 6px;
   align-items:center;
-  justify-content:center;
 }
 
 .bankLetters span{
-  font-size: 18px;
-  opacity: 1;
-  color: rgba(230,237,243,.30);
-  -webkit-text-stroke: 1px rgba(255,255,255,.10);
-  text-stroke: 1px rgba(255,255,255,.10);
-  text-shadow:
-    0 1px 0 rgba(0,0,0,.55),
-    0 0 2px rgba(255,255,255,.06);
-  transition: color .18s ease, text-shadow .18s ease, transform .18s ease, filter .18s ease;
+  display:block;
+  width: 28px;
+  text-align:center;
+  font-weight: 1000;
+  letter-spacing: 0.5px;
+  opacity: 0.92;
 }
 
+/* Keep letter colors ALWAYS consistent */
+.bankLetters span[data-bank="B"]{ color: var(--bankB); }
+.bankLetters span[data-bank="A"]{ color: var(--bankA); }
+.bankLetters span[data-bank="N"]{ color: var(--bankN); }
+.bankLetters span[data-bank="K"]{ color: var(--bankK); }
+
+/* optional highlight for current primary */
 .bankLetters span.on{
   opacity: 1;
-  transform: translateZ(0) scale(1.04);
-  filter: saturate(1.2);
-  -webkit-text-stroke: 1px rgba(255,255,255,.28);
-  text-stroke: 1px rgba(255,255,255,.28);
-  text-shadow:
-    0 0 3px rgba(255,255,255,.30),
-    0 0 7px rgba(255,255,255,.20),
-    0 0 12px currentColor,
-    0 0 24px currentColor,
-    0 0 42px rgba(255,255,255,.08);
+  text-shadow: 0 0 12px rgba(255,255,255,0.15);
+  transform: translateZ(0);
 }
 
-.bankLetters span[data-bank="B"].on{ color:#48a0ff; }
-.bankLetters span[data-bank="A"].on{ color:#ff4d4d; }
-.bankLetters span[data-bank="N"].on{ color:#3fe27a; }
-.bankLetters span[data-bank="K"].on{ color:#ffd24a; }
+.bankExpanded{
+  display:none;
+  width: 260px; /* slide-out width */
+  padding-left: 10px;
+  border-left: 1px solid rgba(220,232,255,0.12);
 }
 
-/* ---------- PLAYFIELD ---------- */
+/* Meanings on LEFT, letters on RIGHT (no vertical expansion) */
+.bankRow{
+  display:grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items:center;
+
+  padding: 6px 0;
+  font-size: 13px;
+  color: rgba(230,237,243,0.92);
+}
+
+.bankRow b{
+  font-weight: 1100;
+  width: 18px;
+  text-align:right;
+}
+
+.bankRow:nth-child(1) b{ color: var(--bankB); }
+.bankRow:nth-child(2) b{ color: var(--bankA); }
+.bankRow:nth-child(3) b{ color: var(--bankN); }
+.bankRow:nth-child(4) b{ color: var(--bankK); }
+
+.bankRail.expanded{
+  width: calc(var(--railW) + 260px + 10px);
+  justify-content:flex-start;
+}
+
+.bankRail.expanded .bankExpanded{
+  display:block;
+}
+
+/* ---------------- Playfield ---------------- */
 .playfield{
-  position: absolute;
-  inset: 0;
-  padding-left: calc(var(--railW) + 10px);
-  padding-right: 0;
-  padding-top: 0;
-  padding-bottom: calc(var(--modsH) + 8px + var(--sab));
+  position:relative;
+  height:100%;
+  padding-left: calc(var(--sal) + 10px + var(--railW) + 10px);
+  padding-right: calc(var(--sar) + 10px);
+  padding-top: calc(var(--sat) + 10px);
+  padding-bottom: calc(var(--sab) + var(--modsH) + 10px);
 }
 
-/* Thesis overlay bar (10px thinner total + extra gap below bottles) */
+/* Thesis bar overlays the grid */
 .thesisBar{
   position:absolute;
-  left: calc(var(--railW) + 10px);
-  right: calc(var(--sar) + var(--pad));
-  top: calc(var(--sat) + 6px);
+  left: calc(var(--sal) + 10px + var(--railW) + 10px);
+  right: calc(var(--sar) + 10px);
+  top: calc(var(--sat) + 10px);
+  height: var(--thesisH);
+  z-index: 6;
+
+  border-radius: 16px;
+  border: 1px solid var(--stroke);
+  background: rgba(17,26,39,0.78);
+  backdrop-filter: blur(8px);
 
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:10px;
+  padding: 8px 10px;
+  gap: 10px;
+}
 
-  padding: var(--thesis-pad-y) var(--thesis-pad-x);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: rgba(11,18,28,.70);
-  backdrop-filter: blur(8px);
-  z-index: 5;
+.thesisLeft{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
 }
 
 .thesisLabel{
   font-weight: 1000;
-  font-size: 14px;
-  line-height: 1.05;
+  font-size: 13px;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow:hidden;
+  text-overflow: ellipsis;
 }
-
 .thesisSub{
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
-  margin-top: 1px;
+  white-space: nowrap;
+  overflow:hidden;
+  text-overflow: ellipsis;
 }
 
 .thesisBtn{
-  border: 1px solid var(--line);
-  background: rgba(17,26,39,.65);
+  border-radius: 12px;
+  border: 1px solid var(--stroke);
+  background: rgba(0,0,0,0.12);
   color: var(--text);
-  border-radius: 14px;
   padding: 8px 10px;
   font-weight: 900;
   cursor:pointer;
 }
 
-/* Bottles grid
-   Padding-top ensures:
-   - thesis bar never overlaps bottles
-   - +10px extra gap below thesis bar
-*/
+/* grid sits below thesis + extra padding (10px) */
 .grid{
+  position:absolute;
+  left: calc(var(--sal) + 10px + var(--railW) + 10px);
+  right: calc(var(--sar) + 10px);
+  top: calc(var(--sat) + 10px + var(--thesisH) + 10px); /* +10px pad below thesis */
+  bottom: calc(var(--sab) + var(--modsH) + 10px);
+
   display:grid;
-  grid-template-columns: repeat(5, minmax(56px, 1fr));
   gap: 10px;
-
-  /* conservative top padding to avoid overlap across devices */
-  padding: calc(58px + var(--thesis-gap-below)) 4px 0 4px;
-
   align-content:start;
+  justify-content:center;
+
+  /* Responsive columns */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-/* ---------- BOTTLES (with PNG art plates) ---------- */
+/* Adjust columns for small screens */
+@media (max-width: 440px){
+  .grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 760px){
+  .grid{ grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+
+/* ---------------- Bottles ---------------- */
 .bottle{
   position:relative;
-  overflow:hidden;
-  user-select:none;
-  touch-action: manipulation;
-
-  /* IMPORTANT: fills from bottom */
-  display:flex;
-  flex-direction: column-reverse;
-
-  height: clamp(150px, 18vh, 220px);
-  border-radius: 22px 22px 26px 26px;
-
+  width: 100%;
+  aspect-ratio: 248 / 720; /* your bottle art dimension */
+  border: none;
   background: transparent;
-  border: 1px solid rgba(220,232,255,.10);
+  padding:0;
+  cursor:pointer;
+
+  /* makes mobile tap behavior smoother */
+  touch-action: manipulation;
+  user-select:none;
+
+  display:block;
 }
 
-/* The chamber inset that holds the liquid */
+/* bottle art */
 .bottle{
-  padding: var(--ch-top) var(--ch-side) var(--ch-bottom) var(--ch-side);
+  background-image: var(--bottle-open);
+  background-repeat:no-repeat;
+  background-size: contain;
+  background-position: center;
 }
 
-/* subtle interior “well” */
+.bottle.locked{
+  background-image: var(--bottle-locked);
+  cursor:not-allowed;
+  filter: saturate(0.92) contrast(0.96);
+}
+
+/* selected outline */
+.bottle.selected::after{
+  content:"";
+  position:absolute;
+  inset: 4px;
+  border-radius: 22px;
+  border: 2px solid rgba(255,255,255,0.22);
+  box-shadow: 0 0 0 3px rgba(120,170,255,0.12);
+  pointer-events:none;
+}
+
+/* Chamber "glass interior" mask - ONE definition only */
 .bottle::before{
   content:"";
   position:absolute;
@@ -286,21 +335,36 @@ body{
   right: var(--ch-side);
   bottom: var(--ch-bottom);
   border-radius: var(--ch-radius);
-  background: rgba(0,0,0,.12);
+  background: rgba(0,0,0,0.10);
   z-index: 1;
   pointer-events:none;
 }
 
-/* liquid layers */
-.seg{
-  flex: 1;
-  width:100%;
-  position:relative;
+/* Segments container lives INSIDE the chamber */
+.bottle .segs{
+  position:absolute;
+  top: var(--ch-top);
+  left: var(--ch-side);
+  right: var(--ch-side);
+  bottom: var(--ch-bottom);
+  border-radius: var(--ch-radius);
   overflow:hidden;
+
+  display:flex;
+  flex-direction: column-reverse; /* fill from bottom visually */
+  gap: 2px;
+
   z-index: 2;
 }
 
-/* Round the top & bottom of the stack so it looks “contained” */
+/* Liquid segments */
+.seg{
+  flex: 1;
+  border-radius: 0;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.10);
+}
+
+/* Correct rounding rules for your actual DOM (segs wrapper!) */
 .bottle .segs .seg:first-child{
   border-bottom-left-radius: var(--ch-radius);
   border-bottom-right-radius: var(--ch-radius);
@@ -310,149 +374,98 @@ body{
   border-top-right-radius: var(--ch-radius);
 }
 
-
-/* Glass overlay art always on top */
-.bottle::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  background-repeat:no-repeat;
-  background-position:center bottom;
-  background-size:contain;
-  pointer-events:none;
-  z-index: 5;
+/* If hidden segs (locked/unknown), dim the liquid */
+.bottle.hiddenSegs .seg{
+  background: rgba(0,0,0,0.18) !important;
 }
 
-/* open vs locked overlay */
-.bottle::after{ background-image: var(--bottle-open); }
-.bottle.locked::after{ background-image: var(--bottle-locked); }
-
-/* keep liquids UNDER the glass */
-.bottle .seg{ z-index: 2; }
-
-.bottle{
-  touch-action: manipulation;
-  /* tells browser: this is a tap target */
-}
-
-/* --------- SVG Pattern Overlay (Role-Based) --------- */
-.seg::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  opacity:.90;
-  background-size:64px 64px;
-  background-repeat:repeat;
-  mix-blend-mode: screen;
-  z-index: 2; /* above liquid fill */
-}
-
-.seg.role-volatile::after   { background-image: url("./elements/textures/pattern_ripples.svg"); animation: drift 7s linear infinite; }
-.seg.role-catalyst::after   { background-image: url("./elements/textures/pattern_streaks.svg"); animation: drift 6s linear infinite; }
-.seg.role-stabilizer::after { background-image: url("./elements/textures/pattern_noise.svg"); opacity:.52; }
-.seg.role-structural::after,
-.seg.role-foundational::after { background-image: url("./elements/textures/pattern_grid.svg"); opacity:.66; }
-.seg.role-transmission::after,
-.seg.role-conversion::after { background-image: url("./elements/textures/pattern_chevrons.svg"); opacity:.66; }
-
-.seg.el-EM::after { background-image: url("./elements/textures/pattern_bubbles.svg"); opacity:.78; animation: drift 8s linear infinite; }
-.seg.el-CO::after,
-.seg.el-DI::after { background-image: url("./elements/textures/pattern_hatch.svg"); opacity:.66; }
-
-@media (prefers-reduced-motion: reduce){
-  .seg::after{ animation:none !important; }
-}
-
-@keyframes drift{
-  from { background-position: 0 0; }
-  to   { background-position: 64px 64px; }
-}
-
-/* ---------- MODIFIERS BAR ---------- */
+/* ---------------- Bottom modifiers ---------------- */
 .modBar{
   position:absolute;
-  left: calc(var(--sal) + var(--pad));
-  right: calc(var(--sar) + var(--pad));
-  bottom: calc(var(--sab) + var(--pad));
+  left: calc(var(--sal) + 10px);
+  right: calc(var(--sar) + 10px);
+  bottom: calc(var(--sab) + 10px);
   height: var(--modsH);
+  z-index: 9;
+
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:10px;
-  background: rgba(11,18,28,.78);
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  padding: 10px;
-  z-index: 5;
+  gap: 10px;
 }
 
 .modSlot{
-  flex: 1;
+  flex:1;
   height: 100%;
-  border-radius: 14px;
-  border: 1px dashed rgba(220,232,255,.18);
-  background: rgba(17,26,39,.35);
+  border-radius: 18px;
+  border: 1px solid var(--stroke);
+  background: rgba(17,26,39,0.58);
   color: var(--text);
-  font-weight: 1000;
-  font-size: 26px;
+  font-weight: 1100;
   cursor:pointer;
+  backdrop-filter: blur(8px);
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size: 22px;
 }
 
-/* ---------- DM CHARACTER ---------- */
+/* ---------------- DM Character overlay ---------------- */
 .dmCharacter{
   position:absolute;
-  left: calc(var(--sal) + var(--pad));
-  bottom: calc(var(--sab) + var(--pad) + var(--modsH) + 8px);
-  width: min(44vw, 220px);
-  height: min(34vh, 340px);
-  border-radius: 22px;
-  border: 1px solid var(--line);
-  background: rgba(11,18,28,.65);
-  transform: translateX(-120%);
-  transition: transform .28s ease;
-  overflow:hidden;
-  z-index: 7;
+  left: calc(var(--sal) + 10px);
+  bottom: calc(var(--sab) + var(--modsH) + 10px);
+  width: 130px;
+  height: 180px;
+  z-index: 11;
+
+  display:none;
+  pointer-events:none; /* only X is clickable */
 }
 
-.dmCharacter.show{ transform: translateX(0); }
+.dmCharacter.show{ display:block; }
+
+.dmAvatar{
+  width:100%;
+  height:100%;
+  border-radius: 22px;
+  overflow:hidden;
+  border: 1px solid rgba(220,232,255,0.10);
+  background: rgba(0,0,0,0.10);
+}
 
 .dmClose{
   position:absolute;
-  right: 8px;
-  top: 8px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: rgba(17,26,39,.85);
-  color: var(--text);
+  top: -8px;
+  right: -8px;
   width: 34px;
   height: 34px;
+  border-radius: 12px;
+  border: 1px solid rgba(220,232,255,0.22);
+  background: rgba(17,26,39,0.92);
+  color: var(--text);
   cursor:pointer;
-  font-weight: 1000;
-  z-index: 8;
+  pointer-events:auto;
+  font-weight: 1200;
 }
 
-/* ---------- SPEECH (PNG plate + safe content inset) ---------- */
+/* ---------------- Speech bubble (plate) ---------------- */
 .speech{
   position:absolute;
   right: calc(var(--sar) + var(--pad));
   bottom: calc(var(--sab) + var(--pad) + var(--modsH) + 8px);
 
-  /* keep it readable on mobile */
   width: min(72vw, 460px);
-  aspect-ratio: 780 / 440; /* matches your uploaded plate size */
+  aspect-ratio: 780 / 440;
+  z-index: 11;
 
   background-image: var(--speech-plate-dark);
   background-repeat:no-repeat;
   background-size:contain;
   background-position:center bottom;
 
-  border-radius: 22px;
-  border: 0;
   display:none;
-  z-index: 7;
-
-  /* prevents the bubble itself from scrolling */
   overflow:hidden;
 }
 
@@ -460,177 +473,152 @@ body{
 .speech[data-theme="dark"]  { background-image: var(--speech-plate-dark); }
 .speech[data-theme="light"] { background-image: var(--speech-plate-light); }
 
-/*
-  IMPORTANT:
-  This is the “safe text zone” inside the speech bubble PNG.
-  Tune these 4 values if you want the text to sit more perfectly.
-*/
+/* Safe text zone inside bubble art */
 .speechInner{
   position:absolute;
-  inset: 14% 10% 18% 12%; /* top right bottom left */
-
+  inset: 14% 10% 18% 12%;
   display:flex;
   flex-direction:column;
-  gap:10px;
-
-  /* allow only the text area to scroll */
+  gap: 10px;
   overflow:hidden;
 }
 
-.speech.show .speechTitle,
-.speech.show .speechText{
-  font-family: var(--dm-font);
-  font-weight: 700;
-  letter-spacing: .2px;
-}
-
 .speechTitle{
-  font-weight: 1000;
+  font-family: var(--dm-font);
+  font-weight: 900;
   font-size: 18px;
   line-height: 1.05;
 }
 
 .speechText{
+  font-family: var(--dm-font);
+  font-weight: 700;
   font-size: 16px;
   line-height: 1.25;
   white-space: pre-wrap;
 
-  /* scroll only the main copy */
   overflow:auto;
   padding-right: 6px;
 }
 
 .speechSmall{
-  font-family: inherit;
   font-size: 12px;
   color: var(--muted);
-  opacity: .92;
 }
 
-/* DM UI controls (used by intro + deadlock) */
-.dmActions{
-  display:flex;
-  gap:10px;
-  align-items:center;
-  margin-top: 10px;
-}
-
-.dmBtn{
-  flex:1;
-  border-radius:14px;
-  padding:12px 14px;
-  border:1px solid rgba(220,232,255,.18);
-  background: rgba(17,26,39,.80);
-  color:#e6edf3;
-  font-weight:1000;
-  cursor:pointer;
-}
-
-.dmInput{
-  flex:1;
-  border-radius:12px;
-  padding:10px 12px;
-  border:1px solid rgba(220,232,255,.18);
-  background: rgba(17,26,39,.55);
-  color: #e6edf3;
-  outline:none;
-  font-weight:800;
-  min-width: 0;
-}
-
-/* ---------- TOAST + FX ---------- */
+/* ---------------- Toast + FX ---------------- */
 .toast{
   position:absolute;
   left: 50%;
-  bottom: calc(var(--sab) + var(--pad) + var(--modsH) + 10px);
   transform: translateX(-50%);
-  background: rgba(11,18,28,.92);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 10px 14px;
-  font-weight: 900;
-  opacity: 0;
-  transition: opacity .18s ease;
-  pointer-events:none;
-  z-index: 9;
+  bottom: calc(var(--sab) + var(--modsH) + 14px);
+  z-index: 12;
+
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(220,232,255,0.18);
+  background: rgba(0,0,0,0.55);
+  color: var(--text);
+  backdrop-filter: blur(8px);
+
+  max-width: min(92vw, 520px);
+  text-align:center;
+  display:none;
 }
-.toast.show{ opacity:1; }
+
+.toast.show{ display:block; }
 
 .pourFX{
   position:absolute;
-  width: 10px; height: 10px;
-  border-radius: 999px;
+  inset:0;
   pointer-events:none;
-  opacity:0;
-  transform: translate(-50%, -50%);
-  filter: blur(.2px);
-  z-index: 9;
+  z-index: 8;
 }
 
-/* ---------- SETTINGS / GLOSSARY ---------- */
-.settings, .glossary{
-  border: 1px solid var(--line);
+/* ---------------- Dialogs (Glossary / Settings) ---------------- */
+dialog{
+  border:none;
   border-radius: 18px;
-  background: rgba(11,18,28,.96);
+  padding:0;
+  background: rgba(17,26,39,0.96);
   color: var(--text);
   width: min(92vw, 560px);
+  box-shadow: 0 18px 60px rgba(0,0,0,0.55);
 }
-.settings header, .glossary header{
+
+dialog::backdrop{
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(2px);
+}
+
+dialog header{
   display:flex;
-  justify-content:space-between;
   align-items:center;
-  padding: 12px 14px;
-  border-bottom: 1px solid rgba(255,255,255,.06);
+  justify-content:space-between;
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid rgba(220,232,255,0.10);
 }
-.settings .x, .glossary .x{
-  width: 34px; height: 34px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: rgba(17,26,39,.85);
+
+dialog .x{
+  width: 36px;
+  height: 36px;
+  border-radius: 14px;
+  border: 1px solid rgba(220,232,255,0.18);
+  background: rgba(0,0,0,0.20);
   color: var(--text);
   cursor:pointer;
   font-weight: 1000;
 }
 
-.settings .row{
+dialog form{
+  margin:0;
+}
+
+/* Settings form rows */
+.row{
   display:flex;
-  flex-direction:column;
-  gap:8px;
+  gap: 10px;
+  align-items:center;
   padding: 12px 14px;
+}
+
+.row span{
+  width: 90px;
   color: var(--muted);
+  font-size: 13px;
 }
 
-.settings input{
-  border-radius: 14px;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  background: rgba(17,26,39,.55);
+.row input{
+  flex:1;
+  min-width:0;
+  border-radius: 12px;
+  border: 1px solid rgba(220,232,255,0.16);
+  background: rgba(0,0,0,0.18);
   color: var(--text);
+  padding: 10px 12px;
+  outline:none;
 }
 
-.settings menu, .glossary menu{
-  display:flex;
-  justify-content:flex-end;
-  padding: 12px 14px;
-}
+.mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
 
+/* Info panel */
 .infoPanel{
-  padding: 12px 14px;
-  border-bottom: 1px solid rgba(255,255,255,.06);
+  padding: 12px 14px 2px;
 }
 .infoRow{
   display:flex;
   justify-content:space-between;
-  align-items:center;
+  gap: 10px;
   padding: 6px 0;
-  color: var(--muted);
+  font-size: 13px;
+  border-bottom: 1px solid rgba(220,232,255,0.08);
 }
-.infoRow b{ color: var(--text); }
+.infoRow span{ color: var(--muted); }
+.infoRow b{ font-weight: 1000; }
 
+/* Glossary content */
 .glossaryBody{
   padding: 12px 14px;
-  max-height: 70vh;
-  overflow:auto;
 }
 .glossaryNote{
   color: var(--muted);
@@ -640,27 +628,58 @@ body{
 .glossaryList{
   display:flex;
   flex-direction:column;
-  gap:10px;
+  gap: 10px;
 }
+
 .gItem{
   display:flex;
-  gap:10px;
+  gap: 10px;
   align-items:flex-start;
-  border:1px solid var(--line);
+  border: 1px solid rgba(220,232,255,0.12);
+  background: rgba(0,0,0,0.16);
   border-radius: 16px;
-  padding: 10px 12px;
-  background: rgba(17,26,39,.35);
+  padding: 10px;
 }
 .gSwatch{
   width: 16px;
   height: 16px;
-  border-radius: 999px;
-  border:1px solid rgba(255,255,255,.14);
+  border-radius: 6px;
+  border: 1px solid rgba(0,0,0,0.15);
   margin-top: 2px;
-  flex: 0 0 auto;
 }
-.gTitle{ font-weight: 1000; }
-.gSub{ color: var(--muted); font-size: 12px; margin-top: 2px; }
+.gTitle{
+  font-weight: 1000;
+  font-size: 13px;
+}
+.gSub{
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.25;
+  margin-top: 2px;
+}
 
-.mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-.sr{ position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
+menu{
+  display:flex;
+  gap: 10px;
+  justify-content:flex-end;
+  padding: 12px 14px 14px;
+  border-top: 1px solid rgba(220,232,255,0.10);
+}
+
+menu button{
+  border-radius: 14px;
+  border: 1px solid rgba(220,232,255,0.18);
+  background: rgba(0,0,0,0.18);
+  color: var(--text);
+  padding: 10px 12px;
+  font-weight: 900;
+  cursor:pointer;
+}
+
+/* danger reset button */
+button.danger{
+  background: #5a1616;
+  border: 1px solid rgba(255,140,140,0.35);
+  color: #fff;
+  font-weight: 1000;
+}
