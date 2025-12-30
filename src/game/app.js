@@ -107,6 +107,19 @@ function setSpeechTheme(theme){
 }
 function toggleSpeechTheme(){ setSpeechTheme(getSpeechTheme() === "dark" ? "light" : "dark"); }
 
+factoryResetBtn?.addEventListener("click", () => {
+  // wipe everything that makes the game “remember”
+  localStorage.removeItem("ma_playerName");
+  localStorage.removeItem("ma_sinQueue");
+  localStorage.removeItem("ma_runSeed");
+  localStorage.removeItem("ma_dmAppearCount");
+  localStorage.removeItem("ma_nextDMAtLevel");
+  // keep API base if you want; or wipe it too:
+  // localStorage.removeItem("ma_apiBase");
+
+  location.reload();
+});
+
 /* ---------------- API base ---------------- */
 apiBaseEl.value = localStorage.getItem(API_BASE_KEY) || (isLocal ? DEFAULT_LOCAL : DEFAULT_PROD);
 apiBaseEl.addEventListener("change", () => {
