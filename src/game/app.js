@@ -880,11 +880,8 @@ function render(){
     if (state.locked[i]) bottle.classList.add("locked");
     if (state.hiddenSegs[i]) bottle.classList.add("hiddenSegs");
 
-    bottle.addEventListener("pointerup", (e) => {
-  // left-click or touch/pen
-  if (e.pointerType === "mouse" && e.button !== 0) return;
-  handleBottleTap(i);
-});
+    bottle.addEventListener("click", ()=> handleBottleTap(i));
+    bottle.addEventListener("touchend", (e)=>{ e.preventDefault(); handleBottleTap(i); }, { passive:false });
 
     // segments
     const segs = document.createElement("div");
