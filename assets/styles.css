@@ -34,9 +34,9 @@
   --thesis-gap-below: 10px;  /* extra padding below thesis before bottles */
 
   /* inner chamber (tuned for vial_empty.png / vial_corked.png) */
-  --ch-top: 36px;
-  --ch-side: 12px;   /* smaller = wider liquid (yours is too narrow) */
-  --ch-bottom: 20px;
+  --ch-top: 28px;
+  --ch-side: 9px;   /* smaller = wider liquid (yours is too narrow) */
+  --ch-bottom: 10px;
   --ch-radius: 14px;
 }
 
@@ -371,6 +371,11 @@ body{
   border-radius: 16px;
   z-index: 1;
   pointer-events:none;
+}
+
+.bottle{
+  touch-action: manipulation;
+  /* tells browser: this is a tap target */
 }
 
 /* --------- SVG Pattern Overlay (Role-Based) --------- */
