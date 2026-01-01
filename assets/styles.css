@@ -112,7 +112,7 @@ body{
 .bankRail.expanded{
   width: calc(var(--railW) + 260px + 18px);
   display:grid;
-  grid-template-columns: 260px var(--railW);
+  grid-template-columns: -460px var(--railW);
   align-items:center;
   padding: 10px 8px;
   column-gap: 10px;
