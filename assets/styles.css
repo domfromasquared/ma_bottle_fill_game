@@ -40,7 +40,7 @@
   --ch-radius: 6px;
 }
 
-*{ box-sizing:border-box; }
+{ box-sizing:border-box; }
 body{
   margin:0;
   background:#0b0f14;
@@ -115,7 +115,7 @@ body{
 .bankRail.expanded{
   width: calc(var(--railW) + 240px + 200px);
   display:grid;
-  grid-template-columns: 260px var(--railW);
+  grid-template-columns: 240px var(--railW);
   align-items:center;
   padding: 10px 8px;
   column-gap: 10px;
