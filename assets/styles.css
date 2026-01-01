@@ -1,319 +1,315 @@
-/* =========================================================
-   The Marketing Alchemist: The Balance Protocol
-   Cleaned assets/styles.css (deduped + aligned to DOM)
-   Fixes:
-   - Removes duplicate/conflicting BANK expanded rules
-   - Removes duplicate .bottle::before that broke chamber alignment
-   - Fixes segment rounding selectors to match .bottle > .segs > .seg
-   ========================================================= */
-
 :root{
   color-scheme: dark;
 
   /* safe areas */
-  --sat: env(safe-area-inset-top, 0px);
-  --sar: env(safe-area-inset-right, 0px);
-  --sab: env(safe-area-inset-bottom, 0px);
-  --sal: env(safe-area-inset-left, 0px);
+  --sat: env(safe-area-inset-top);
+  --sar: env(safe-area-inset-right);
+  --sab: env(safe-area-inset-bottom);
+  --sal: env(safe-area-inset-left);
 
-  /* layout */
-  --pad: 14px;
+  /* layout constants */
+  --pad: 12px;
+  --modsH: 84px;
   --railW: 54px;
-  --thesisH: 44px;         /* thesis bar (thin) */
-  --modsH: 72px;
 
-  /* colors */
-  --bg0: #070a10;
-  --bg1: #0b1220;
-  --panel: rgba(17,26,39,.86);
-  --panel2: rgba(17,26,39,.72);
-  --line: rgba(220,232,255,.16);
-  --line2: rgba(220,232,255,.22);
+  --card: rgba(15, 23, 36, .92);
+  --line: rgba(220,232,255,.12);
   --text: #e6edf3;
-  --muted: rgba(230,237,243,.70);
+  --muted: #aab6ca;
 
-  /* BANK colors */
-  --bankB: #77b7ff;
-  --bankA: #ffb24c;
-  --bankN: #7dffb1;
-  --bankK: #d7a6ff;
+  /* DM speech bubble plates */
+  --speech-plate-dark: url("./dmspeaks/speech_bubble_dark.png");
+  --speech-plate-light: url("./dmspeaks/speech_bubble_light.png");
 
-  /* bottle art (update names if yours differ) */
-  --bottle-open: url("../assets/bottles/bottle_open.png");
-  --bottle-locked: url("../assets/bottles/bottle_locked.png");
+  /* DM-only font */
+  --dm-font: "UnifrakturCook", serif;
 
-  /* chamber geometry (tune to match PNG interior window) */
-  --ch-top: 42px;
-  --ch-side: 18px;
-  --ch-bottom: 18px;
-  --ch-radius: 18px;
+    /* Bottle art */
+  --bottle-open: url("./chemset/vial/vial_empty.png");
+  --bottle-locked: url("./chemset/vial/vial_corked.png");
 
-  /* speech plates */
-  --speech-plate-dark: url("../assets/dmspeaks/speech_bubble_dark.png");
-  --speech-plate-light: url("../assets/dmspeaks/speech_bubble_light.png");
+  /* Thesis spacing controls */
+  --thesis-pad-y: 5px;       /* was 10px -> 10px thinner total (top+bottom) */
+  --thesis-pad-x: 10px;
+  --thesis-gap-below: 10px;  /* extra padding below thesis before bottles */
 
-  /* optional: background image (uncomment if you want it as the main BG)
-     path example: ../assets/BG/game_bg_000.png
-  */
-  /* --game-bg: url("../assets/BG/game_bg_000.png"); */
+  /* inner chamber (tuned for vial_empty.png / vial_corked.png) */
+  --ch-top: 36px;
+  --ch-side: 12px;   /* smaller = wider liquid (yours is too narrow) */
+  --ch-bottom: 20px;
+  --ch-radius: 14px;
 }
 
 *{ box-sizing:border-box; }
-html, body{ height:100%; }
-
 body{
   margin:0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-  color: var(--text);
-
-  /* fallback atmospheric gradient */
-  background:
-    radial-gradient(1200px 800px at 70% 10%, rgba(78,120,255,.14), transparent 55%),
-    radial-gradient(900px 650px at 20% 80%, rgba(255,170,70,.10), transparent 60%),
-    linear-gradient(180deg, var(--bg0), var(--bg1));
-
-  overflow:hidden;
-}
-
-.sr{
-  position:absolute;
-  width:1px; height:1px;
-  overflow:hidden;
-  clip: rect(1px, 1px, 1px, 1px);
+  background:#0b0f14;
+  color:var(--text);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  overscroll-behavior: none;
 }
 
 .screen{
-  position:relative;
-  height:100%;
-  padding-top: var(--sat);
-  padding-left: var(--sal);
-  padding-right: var(--sar);
-  padding-bottom: var(--sab);
-
-  /* If you enabled --game-bg above:
-  background-image: var(--game-bg);
-  background-repeat: no-repeat;
-  background-position: center center;
-  background-size: cover;
-  */
+  position: relative;
+  height: 100vh;
+  height: 100dvh;
+  overflow:hidden;
+  padding-top: calc(var(--sat) + var(--pad));
+  padding-left: calc(var(--sal) + var(--pad));
+  padding-right: calc(var(--sar) + var(--pad));
+  padding-bottom: calc(var(--sab) + var(--pad));
 }
 
 /* ---------- SETTINGS FAB ---------- */
 .settingsFab{
   position:absolute;
-  top: calc(var(--sat) + 10px);
-  right: calc(var(--sar) + 10px);
-  z-index: 10;
-
-  width:44px;
-  height:44px;
-  border-radius:14px;
-  border:1px solid var(--line);
-  background: rgba(17,26,39,.55);
+  right: calc(var(--sar) + var(--pad));
+  top: calc(var(--sat) + var(--pad));
+  z-index: 6;
+  border: 1px solid var(--line);
+  background: rgba(17,26,39,.7);
   color: var(--text);
-  font-size:18px;
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-weight: 900;
   cursor:pointer;
-  backdrop-filter: blur(8px);
 }
 
-/* ---------- BANK RAIL (solid BG, letters always visible) ---------- */
+/* ---------- BANK RAIL ---------- */
 .bankRail{
-  position:absolute;
+  position: absolute;
   left: calc(var(--sal) + 6px);
   top: calc(var(--sat) + 22px);
-  z-index:10;
 
   width: var(--railW);
   border: 1px solid var(--line);
-  background: #0b1220; /* solid */
+
+  /* SOLID BG (no transparency) */
+  background: #0b1220;
+
   border-radius: 14px;
   padding: 10px 8px;
 
   display:flex;
-  align-items:stretch;
-  justify-content:flex-start;
-  gap: 10px;
-
-  box-shadow: 0 10px 26px rgba(0,0,0,.35);
-}
-
-.bankLetters{
-  display:flex;
-  flex-direction:column;
-  gap: 6px;
   align-items:center;
-  justify-content:center;
-  min-width: calc(var(--railW) - 16px);
-}
-.bankLetters span{
-  display:block;
-  width: 26px;
-  text-align:center;
-  font-weight: 900;
-  letter-spacing:.5px;
-  line-height: 1;
+  cursor:pointer;
+  user-select:none;
+  z-index: 6;
+
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.03),
+    0 10px 24px rgba(0,0,0,.18);
 }
 
-/* keep BANK colors consistent */
-.bankLetters span[data-bank="B"]{ color: var(--bankB); }
-.bankLetters span[data-bank="A"]{ color: var(--bankA); }
-.bankLetters span[data-bank="N"]{ color: var(--bankN); }
-.bankLetters span[data-bank="K"]{ color: var(--bankK); }
-.bankLetters span.on{
-  filter: drop-shadow(0 0 10px rgba(255,255,255,.12));
-}
-
+/* expanded meanings panel (hidden by default) */
 .bankExpanded{
   display:none;
   width: 260px;
-  padding: 6px 10px;
-  border-left: 1px solid rgba(230,237,243,.10);
+  padding: 6px 10px 6px 10px;
+}
+
+/* Expanded state: meanings LEFT, letters RIGHT (colors preserved) */
+.bankRail.expanded{
+  width: calc(var(--railW) + 260px + 18px);
+  display:grid;
+  grid-template-columns: 260px var(--railW);
+  align-items:center;
+  padding: 10px 8px;
+  column-gap: 10px;
+}
+
+.bankRail.expanded .bankExpanded{ display:block; }
+
+/* DO NOT hide letters when expanded */
+.bankRail.expanded .bankLetters{
+  display:flex;
+  justify-self:end;
+}
+
+/* rows: text left, letter right (you already changed the HTML for this) */
+.bankRow{
+  display:grid;
+  grid-template-columns: 1fr 28px;
+  align-items:center;
+  gap:10px;
+  padding: 6px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.bankRow b{
+  justify-self:end;
+  font-size: 18px;
+  color: rgba(230,237,243,.72);
+}
+
+/* collapsed letters */
+.bankLetters{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  font-weight: 900;
+  letter-spacing: .5px;
+  align-items:center;
+  justify-content:center;
+}
+
+.bankLetters span{
+  font-size: 18px;
+  opacity: 1;
+  color: rgba(230,237,243,.30);
+  -webkit-text-stroke: 1px rgba(255,255,255,.10);
+  text-stroke: 1px rgba(255,255,255,.10);
+  text-shadow:
+    0 1px 0 rgba(0,0,0,.55),
+    0 0 2px rgba(255,255,255,.06);
+  transition: color .18s ease, text-shadow .18s ease, transform .18s ease, filter .18s ease;
+}
+
+.bankLetters span.on{
+  opacity: 1;
+  transform: translateZ(0) scale(1.04);
+  filter: saturate(1.2);
+  -webkit-text-stroke: 1px rgba(255,255,255,.28);
+  text-stroke: 1px rgba(255,255,255,.28);
+  text-shadow:
+    0 0 3px rgba(255,255,255,.30),
+    0 0 7px rgba(255,255,255,.20),
+    0 0 12px currentColor,
+    0 0 24px currentColor,
+    0 0 42px rgba(255,255,255,.08);
+}
+
+.bankLetters span[data-bank="B"].on{ color:#48a0ff; }
+.bankLetters span[data-bank="A"].on{ color:#ff4d4d; }
+.bankLetters span[data-bank="N"].on{ color:#3fe27a; }
+.bankLetters span[data-bank="K"].on{ color:#ffd24a; }
+
+/* expanded meanings panel: meanings LEFT, letters RIGHT */
+.bankExpanded{
+  display:none;
+  width: 260px;
+  padding: 6px 6px 6px 10px;
 }
 
 .bankRow{
   display:grid;
-  grid-template-columns: 1fr auto; /* meanings left, letter right */
-  gap: 10px;
+  grid-template-columns: 1fr 28px;
   align-items:center;
+  gap:10px;
   padding: 6px 0;
-  font-size: 12px;
-  color: rgba(230,237,243,.85);
+  color: var(--muted);
+  font-size: 13px;
 }
-.bankRow b{
-  width: 18px;
-  text-align:right;
-  font-weight: 900;
-}
-.bankRow:nth-child(1) b{ color: var(--bankB); }
-.bankRow:nth-child(2) b{ color: var(--bankA); }
-.bankRow:nth-child(3) b{ color: var(--bankN); }
-.bankRow:nth-child(4) b{ color: var(--bankK); }
 
+.bankRow b{
+  justify-self:end;
+  font-size: 18px;
+  color: rgba(230,237,243,.72);
+}
+
+/* Expanded state: slide wider to the RIGHT, do not expand vertically */
 .bankRail.expanded{
   width: calc(var(--railW) + 260px + 10px);
+  justify-content:space-between;
+  padding-right: 10px;
 }
+
+.bankRail.expanded .bankLetters{ display:none; }
 .bankRail.expanded .bankExpanded{ display:block; }
 
 /* ---------- PLAYFIELD ---------- */
 .playfield{
-  position:relative;
-  height:100%;
-
-  padding-left: calc(var(--sal) + var(--railW) + 10px);
-  padding-right: calc(var(--sar) + 10px);
-  padding-top: calc(var(--sat) + 10px);
-  padding-bottom: calc(var(--sab) + var(--modsH) + 10px);
+  position: absolute;
+  inset: 0;
+  padding-left: calc(var(--railW) + 10px);
+  padding-right: 0;
+  padding-top: 0;
+  padding-bottom: calc(var(--modsH) + 8px + var(--sab));
 }
 
-/* Thesis bar */
+/* Thesis overlay bar (10px thinner total + extra gap below bottles) */
 .thesisBar{
   position:absolute;
-  left: calc(var(--sal) + var(--railW) + 10px);
-  right: calc(var(--sar) + 10px);
-  top: calc(var(--sat) + 10px);
-  height: var(--thesisH);
-  z-index: 6;
-
-  border-radius: 16px;
-  border: 1px solid var(--line);
-  background: rgba(17,26,39,.78);
-  backdrop-filter: blur(8px);
+  left: calc(var(--railW) + 10px);
+  right: calc(var(--sar) + var(--pad));
+  top: calc(var(--sat) + 6px);
 
   display:flex;
   align-items:center;
   justify-content:space-between;
-  padding: 8px 10px;
-  gap: 10px;
+  gap:10px;
+
+  padding: var(--thesis-pad-y) var(--thesis-pad-x);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(11,18,28,.70);
+  backdrop-filter: blur(8px);
+  z-index: 5;
 }
 
-.thesisLeft{
-  min-width:0;
-  display:flex;
-  flex-direction:column;
-  gap:2px;
-}
 .thesisLabel{
   font-weight: 1000;
-  font-size: 13px;
-  line-height: 1.1;
-  white-space: nowrap;
-  overflow:hidden;
-  text-overflow: ellipsis;
+  font-size: 14px;
+  line-height: 1.05;
 }
+
 .thesisSub{
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
-  white-space: nowrap;
-  overflow:hidden;
-  text-overflow: ellipsis;
+  margin-top: 1px;
 }
+
 .thesisBtn{
-  border-radius: 12px;
   border: 1px solid var(--line);
-  background: rgba(0,0,0,.12);
+  background: rgba(17,26,39,.65);
   color: var(--text);
+  border-radius: 14px;
   padding: 8px 10px;
   font-weight: 900;
   cursor:pointer;
 }
 
-/* Grid below thesis + 10px extra padding */
+/* Bottles grid
+   Padding-top ensures:
+   - thesis bar never overlaps bottles
+   - +10px extra gap below thesis bar
+*/
 .grid{
-  position:absolute;
-  left: calc(var(--sal) + var(--railW) + 10px);
-  right: calc(var(--sar) + 10px);
-  top: calc(var(--sat) + 10px + var(--thesisH) + 10px);
-  bottom: calc(var(--sab) + var(--modsH) + 10px);
-
   display:grid;
+  grid-template-columns: repeat(5, minmax(56px, 1fr));
   gap: 10px;
+
+  /* conservative top padding to avoid overlap across devices */
+  padding: calc(58px + var(--thesis-gap-below)) 4px 0 4px;
+
   align-content:start;
-  justify-content:center;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-@media (max-width: 440px){
-  .grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
-@media (min-width: 760px){
-  .grid{ grid-template-columns: repeat(6, minmax(0, 1fr)); }
 }
 
-/* ---------- BOTTLES ---------- */
+/* ---------- BOTTLES (with PNG art plates) ---------- */
 .bottle{
   position:relative;
-  width: 100%;
-  aspect-ratio: 248 / 720;
-  border:none;
-  background: transparent;
-  padding:0;
-  cursor:pointer;
-
+  overflow:hidden;
   user-select:none;
-  touch-action: manipulation; /* helps mobile tap behavior */
+  touch-action: manipulation;
 
-  background-image: var(--bottle-open);
-  background-repeat:no-repeat;
-  background-size: contain;
-  background-position: center;
+  /* IMPORTANT: fills from bottom */
+  display:flex;
+  flex-direction: column-reverse;
+
+  height: clamp(150px, 18vh, 220px);
+  border-radius: 22px 22px 26px 26px;
+
+  background: transparent;
+  border: 1px solid rgba(220,232,255,.10);
 }
 
-.bottle.locked{
-  background-image: var(--bottle-locked);
-  cursor:not-allowed;
-  filter: saturate(.92) contrast(.96);
+/* The chamber inset that holds the liquid */
+.bottle{
+  padding: var(--ch-top) var(--ch-side) var(--ch-bottom) var(--ch-side);
 }
 
-.bottle.selected::after{
-  content:"";
-  position:absolute;
-  inset: 4px;
-  border-radius: 22px;
-  border: 2px solid rgba(255,255,255,.22);
-  box-shadow: 0 0 0 3px rgba(120,170,255,.12);
-  pointer-events:none;
-}
-
-/* ONE chamber definition (do not duplicate) */
+/* subtle interior “well” */
 .bottle::before{
   content:"";
   position:absolute;
@@ -322,274 +318,294 @@ body{
   right: var(--ch-side);
   bottom: var(--ch-bottom);
   border-radius: var(--ch-radius);
-  background: rgba(0,0,0,.10);
+  background: rgba(0,0,0,.12);
   z-index: 1;
   pointer-events:none;
 }
 
-.bottle .segs{
-  position:absolute;
-  top: var(--ch-top);
-  left: var(--ch-side);
-  right: var(--ch-side);
-  bottom: var(--ch-bottom);
-  border-radius: var(--ch-radius);
+/* liquid layers */
+.seg{
+  flex: 1;
+  width:100%;
+  position:relative;
   overflow:hidden;
-
-  display:flex;
-  flex-direction: column-reverse; /* fill from bottom */
-  gap: 2px;
-
   z-index: 2;
 }
 
-.seg{
-  flex: 1;
-  border-radius: 0;
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,.10);
-}
-
-/* correct rounding selectors for actual DOM */
-.bottle .segs .seg:first-child{
+/* Round the top & bottom of the stack so it looks “contained” */
+.bottle > .seg:first-child{
   border-bottom-left-radius: var(--ch-radius);
   border-bottom-right-radius: var(--ch-radius);
 }
-.bottle .segs .seg:last-child{
+.bottle > .seg:last-child{
   border-top-left-radius: var(--ch-radius);
   border-top-right-radius: var(--ch-radius);
 }
 
-.bottle.hiddenSegs .seg{
-  background: rgba(0,0,0,.18) !important;
+/* Glass overlay art always on top */
+.bottle::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background-repeat:no-repeat;
+  background-position:center bottom;
+  background-size:contain;
+  pointer-events:none;
+  z-index: 5;
+}
+
+/* open vs locked overlay */
+.bottle::after{ background-image: var(--bottle-open); }
+.bottle.locked::after{ background-image: var(--bottle-locked); }
+
+/* keep liquids UNDER the glass */
+.bottle .seg{ z-index: 2; }
+
+/* (optional) dark interior to help it feel “inside” */
+.bottle::before{
+  content:"";
+  position:absolute;
+  /* match the same chamber padding */
+  top: 34px; left: 18px; right: 18px; bottom: 18px;
+  background: rgba(0,0,0,.10);
+  border-radius: 16px;
+  z-index: 1;
+  pointer-events:none;
+}
+
+/* --------- SVG Pattern Overlay (Role-Based) --------- */
+.seg::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  opacity:.90;
+  background-size:64px 64px;
+  background-repeat:repeat;
+  mix-blend-mode: screen;
+  z-index: 2; /* above liquid fill */
+}
+
+.seg.role-volatile::after   { background-image: url("./elements/textures/pattern_ripples.svg"); animation: drift 7s linear infinite; }
+.seg.role-catalyst::after   { background-image: url("./elements/textures/pattern_streaks.svg"); animation: drift 6s linear infinite; }
+.seg.role-stabilizer::after { background-image: url("./elements/textures/pattern_noise.svg"); opacity:.52; }
+.seg.role-structural::after,
+.seg.role-foundational::after { background-image: url("./elements/textures/pattern_grid.svg"); opacity:.66; }
+.seg.role-transmission::after,
+.seg.role-conversion::after { background-image: url("./elements/textures/pattern_chevrons.svg"); opacity:.66; }
+
+.seg.el-EM::after { background-image: url("./elements/textures/pattern_bubbles.svg"); opacity:.78; animation: drift 8s linear infinite; }
+.seg.el-CO::after,
+.seg.el-DI::after { background-image: url("./elements/textures/pattern_hatch.svg"); opacity:.66; }
+
+@media (prefers-reduced-motion: reduce){
+  .seg::after{ animation:none !important; }
+}
+
+@keyframes drift{
+  from { background-position: 0 0; }
+  to   { background-position: 64px 64px; }
 }
 
 /* ---------- MODIFIERS BAR ---------- */
 .modBar{
   position:absolute;
-  left: calc(var(--sal) + 10px);
-  right: calc(var(--sar) + 10px);
-  bottom: calc(var(--sab) + 10px);
+  left: calc(var(--sal) + var(--pad));
+  right: calc(var(--sar) + var(--pad));
+  bottom: calc(var(--sab) + var(--pad));
   height: var(--modsH);
-  z-index: 9;
-
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap: 10px;
+  gap:10px;
+  background: rgba(11,18,28,.78);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 10px;
+  z-index: 5;
 }
 
 .modSlot{
-  flex:1;
+  flex: 1;
   height: 100%;
-  border-radius: 18px;
-  border: 1px solid var(--line);
-  background: rgba(17,26,39,.58);
+  border-radius: 14px;
+  border: 1px dashed rgba(220,232,255,.18);
+  background: rgba(17,26,39,.35);
   color: var(--text);
-  font-weight: 1100;
+  font-weight: 1000;
+  font-size: 26px;
   cursor:pointer;
-  backdrop-filter: blur(8px);
-
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size: 22px;
 }
 
 /* ---------- DM CHARACTER ---------- */
 .dmCharacter{
   position:absolute;
-  left: calc(var(--sal) + 10px);
-  bottom: calc(var(--sab) + var(--modsH) + 10px);
-  width: 130px;
-  height: 180px;
-  z-index: 11;
-
-  display:none;
-  pointer-events:none;
-}
-.dmCharacter.show{ display:block; }
-
-.dmAvatar{
-  width:100%;
-  height:100%;
+  left: calc(var(--sal) + var(--pad));
+  bottom: calc(var(--sab) + var(--pad) + var(--modsH) + 8px);
+  width: min(44vw, 220px);
+  height: min(34vh, 340px);
   border-radius: 22px;
+  border: 1px solid var(--line);
+  background: rgba(11,18,28,.65);
+  transform: translateX(-120%);
+  transition: transform .28s ease;
   overflow:hidden;
-  border: 1px solid rgba(220,232,255,.10);
-  background: rgba(0,0,0,.10);
+  z-index: 7;
 }
+
+.dmCharacter.show{ transform: translateX(0); }
 
 .dmClose{
   position:absolute;
-  top: -8px;
-  right: -8px;
+  right: 8px;
+  top: 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(17,26,39,.85);
+  color: var(--text);
   width: 34px;
   height: 34px;
-  border-radius: 12px;
-  border: 1px solid rgba(220,232,255,.22);
-  background: rgba(17,26,39,.92);
-  color: var(--text);
   cursor:pointer;
-  pointer-events:auto;
-  font-weight: 1200;
+  font-weight: 1000;
+  z-index: 8;
 }
 
-/* ---------- SPEECH BUBBLE ---------- */
+/* ---------- SPEECH ---------- */
 .speech{
   position:absolute;
   right: calc(var(--sar) + var(--pad));
   bottom: calc(var(--sab) + var(--pad) + var(--modsH) + 8px);
-
-  width: min(72vw, 460px);
-  aspect-ratio: 780 / 440;
-  z-index: 11;
-
+  width: min(62vw, 420px);
+  aspect-ratio: 39 / 22;
   background-image: var(--speech-plate-dark);
-  background-repeat:no-repeat;
-  background-size:contain;
-  background-position:center bottom;
-
-  display:none;
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center bottom;
+  border-radius: 22px;
+  border: 0;
   overflow:hidden;
+  display:none;
+  max-height: 45vh;
+  z-index: 7;
 }
+
 .speech.show{ display:block; }
-.speech[data-theme="dark"]{ background-image: var(--speech-plate-dark); }
-.speech[data-theme="light"]{ background-image: var(--speech-plate-light); }
+.speech[data-theme="dark"]  { background-image: var(--speech-plate-dark); }
+.speech[data-theme="light"] { background-image: var(--speech-plate-light); }
 
 .speechInner{
-  position:absolute;
-  inset: 14% 10% 18% 12%;
+  padding: 24px;
   display:flex;
   flex-direction:column;
-  gap: 10px;
-  overflow:hidden;
+  gap:10px;
+  height:100%;
 }
 
-.speechTitle{
-  font-family: "UnifrakturCook", serif;
-  font-weight: 900;
-  font-size: 18px;
-  line-height: 1.05;
-}
-
-.speechText{
-  font-family: "UnifrakturCook", serif;
+.speech.show .speechTitle,
+.speech.show .speechText{
+  font-family: var(--dm-font);
   font-weight: 700;
-  font-size: 16px;
-  line-height: 1.25;
-  white-space: pre-wrap;
-
-  overflow:auto;
-  padding-right: 6px;
+  letter-spacing: .2px;
 }
 
-.speechSmall{
-  font-size: 12px;
-  color: var(--muted);
-}
+.speechTitle{ font-weight: 1000; font-size: 18px; }
+.speechText{ font-size: 16px; line-height: 1.25; overflow:auto; white-space: pre-wrap; }
+.speechSmall{ font-family: inherit; font-size: 12px; color: var(--muted); }
 
 /* ---------- TOAST + FX ---------- */
 .toast{
   position:absolute;
   left: 50%;
+  bottom: calc(var(--sab) + var(--pad) + var(--modsH) + 10px);
   transform: translateX(-50%);
-  bottom: calc(var(--sab) + var(--modsH) + 14px);
-  z-index: 12;
-
-  padding: 10px 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(220,232,255,.18);
-  background: rgba(0,0,0,.55);
-  color: var(--text);
-  backdrop-filter: blur(8px);
-
-  max-width: min(92vw, 520px);
-  text-align:center;
-  display:none;
+  background: rgba(11,18,28,.92);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-weight: 900;
+  opacity: 0;
+  transition: opacity .18s ease;
+  pointer-events:none;
+  z-index: 9;
 }
-.toast.show{ display:block; }
+.toast.show{ opacity:1; }
 
 .pourFX{
   position:absolute;
-  inset:0;
+  width: 10px; height: 10px;
+  border-radius: 999px;
   pointer-events:none;
-  z-index: 8;
+  opacity:0;
+  transform: translate(-50%, -50%);
+  filter: blur(.2px);
+  z-index: 9;
 }
 
-/* ---------- DIALOGS ---------- */
-dialog{
-  border:none;
+/* ---------- SETTINGS / GLOSSARY ---------- */
+.settings, .glossary{
+  border: 1px solid var(--line);
   border-radius: 18px;
-  padding:0;
-  background: rgba(17,26,39,.96);
+  background: rgba(11,18,28,.96);
   color: var(--text);
   width: min(92vw, 560px);
-  box-shadow: 0 18px 60px rgba(0,0,0,.55);
 }
-
-dialog::backdrop{
-  background: rgba(0,0,0,.55);
-  backdrop-filter: blur(2px);
-}
-
-dialog header{
+.settings header, .glossary header{
   display:flex;
-  align-items:center;
   justify-content:space-between;
-  padding: 14px 14px 10px;
-  border-bottom: 1px solid rgba(220,232,255,.10);
+  align-items:center;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
 }
-
-dialog .x{
-  width: 36px;
-  height: 36px;
-  border-radius: 14px;
-  border: 1px solid rgba(220,232,255,.18);
-  background: rgba(0,0,0,.20);
+.settings .x, .glossary .x{
+  width: 34px; height: 34px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(17,26,39,.85);
   color: var(--text);
   cursor:pointer;
   font-weight: 1000;
 }
 
-dialog form{ margin:0; }
-
-.row{
+.settings .row{
   display:flex;
-  gap: 10px;
-  align-items:center;
+  flex-direction:column;
+  gap:8px;
+  padding: 12px 14px;
+  color: var(--muted);
+}
+
+.settings input{
+  border-radius: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  background: rgba(17,26,39,.55);
+  color: var(--text);
+}
+
+.settings menu, .glossary menu{
+  display:flex;
+  justify-content:flex-end;
   padding: 12px 14px;
 }
-.row span{
-  width: 90px;
-  color: var(--muted);
-  font-size: 13px;
-}
-.row input{
-  flex:1;
-  min-width:0;
-  border-radius: 12px;
-  border: 1px solid rgba(220,232,255,.16);
-  background: rgba(0,0,0,.18);
-  color: var(--text);
-  padding: 10px 12px;
-  outline:none;
-}
-.mono{
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-}
 
-.infoPanel{ padding: 12px 14px 2px; }
+.infoPanel{
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
 .infoRow{
   display:flex;
   justify-content:space-between;
-  gap: 10px;
+  align-items:center;
   padding: 6px 0;
-  font-size: 13px;
-  border-bottom: 1px solid rgba(220,232,255,.08);
+  color: var(--muted);
 }
-.infoRow span{ color: var(--muted); }
-.infoRow b{ font-weight: 1000; }
+.infoRow b{ color: var(--text); }
 
-.glossaryBody{ padding: 12px 14px; }
+.glossaryBody{
+  padding: 12px 14px;
+  max-height: 70vh;
+  overflow:auto;
+}
 .glossaryNote{
   color: var(--muted);
   font-size: 12px;
@@ -598,56 +614,27 @@ dialog form{ margin:0; }
 .glossaryList{
   display:flex;
   flex-direction:column;
-  gap: 10px;
+  gap:10px;
 }
-
 .gItem{
   display:flex;
-  gap: 10px;
+  gap:10px;
   align-items:flex-start;
-  border: 1px solid rgba(220,232,255,.12);
-  background: rgba(0,0,0,.16);
+  border:1px solid var(--line);
   border-radius: 16px;
-  padding: 10px;
+  padding: 10px 12px;
+  background: rgba(17,26,39,.35);
 }
 .gSwatch{
   width: 16px;
   height: 16px;
-  border-radius: 6px;
-  border: 1px solid rgba(0,0,0,.15);
+  border-radius: 999px;
+  border:1px solid rgba(255,255,255,.14);
   margin-top: 2px;
+  flex: 0 0 auto;
 }
-.gTitle{
-  font-weight: 1000;
-  font-size: 13px;
-}
-.gSub{
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.25;
-  margin-top: 2px;
-}
+.gTitle{ font-weight: 1000; }
+.gSub{ color: var(--muted); font-size: 12px; margin-top: 2px; }
 
-menu{
-  display:flex;
-  gap: 10px;
-  justify-content:flex-end;
-  padding: 12px 14px 14px;
-  border-top: 1px solid rgba(220,232,255,.10);
-}
-menu button{
-  border-radius: 14px;
-  border: 1px solid rgba(220,232,255,.18);
-  background: rgba(0,0,0,.18);
-  color: var(--text);
-  padding: 10px 12px;
-  font-weight: 900;
-  cursor:pointer;
-}
-
-button.danger{
-  background: #5a1616;
-  border: 1px solid rgba(255,140,140,.35);
-  color: #fff;
-  font-weight: 1000;
-}
+.mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+.sr{ position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
