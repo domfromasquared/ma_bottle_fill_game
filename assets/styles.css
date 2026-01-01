@@ -105,7 +105,7 @@ body{
 .bankExpanded{
   display:none;
   width: 260px;
-  padding: 60px 100px 6px 10px;
+  padding: 0px 10px 60px 100px;
 }
 
 /* Expanded state: meanings LEFT, letters RIGHT (colors preserved) */
