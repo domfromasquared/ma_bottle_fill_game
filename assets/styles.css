@@ -8,9 +8,9 @@
   --sal: env(safe-area-inset-left);
 
   /* layout constants */
-  --pad: 12px;
+  --pad: 8px;
   --modsH: 84px;
-  --railW: 54px;
+  --railW: 24px;
 
   --card: rgba(15, 23, 36, .92);
   --line: rgba(220,232,255,.12);
@@ -132,7 +132,7 @@ body{
   grid-template-columns: 1fr 28px;
   align-items:center;
   gap:10px;
-  padding: 600px 0;
+  padding: 6px 0;
   color: var(--muted);
   font-size: 13px;
 }
