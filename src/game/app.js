@@ -885,10 +885,6 @@ function render(){
   if (e.pointerType === "mouse" && e.button !== 0) return;
   handleBottleTap(i);
 });
-    bottle.addEventListener("touchend", (e)=>{
-  if (e.cancelable) e.preventDefault();
-  handleBottleTap(i);
-}, { passive:false });
 
     // segments
     const segs = document.createElement("div");
@@ -920,6 +916,13 @@ function handleBottleTap(i){
 
   if (state.selected < 0){
     state.selected = i;
+    render();
+    return;
+  }
+
+  // NEW: deselect on same-bottle tap
+  if (state.selected === i){
+    state.selected = -1;
     render();
     return;
   }
