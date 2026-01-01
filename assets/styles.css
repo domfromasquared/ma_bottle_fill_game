@@ -105,7 +105,7 @@ body{
 /* expanded meanings panel (hidden by default) */
 .bankExpanded{
   display:none;
-  width: 280px;
+  width: 300px;
   padding: 6px 1px 6px 1px;
   order: -1;          /* move meanings before letters */
   margin-left: 0px; /* spacing between meanings and letters */
