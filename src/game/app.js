@@ -158,8 +158,8 @@ function ensureDMImg(){
     img.decoding = "async";
     img.loading = "eager";
     img.draggable = false;
-    img.style.width = "100%";
-    img.style.height = "100%";
+    img.style.width = "200%";
+    img.style.height = "200%";
     img.style.objectFit = "contain";
     img.style.pointerEvents = "none";
     dmCharacter.appendChild(img);
