@@ -34,9 +34,9 @@
   --thesis-gap-below: 10px;  /* extra padding below thesis before bottles */
 
   /* inner chamber (tuned for vial_empty.png / vial_corked.png) */
-  --ch-top: 36px;
+  --ch-top: 26px;
   --ch-side: 8px;   /* smaller = wider liquid (yours is too narrow) */
-  --ch-bottom: 20px;
+  --ch-bottom: 10px;
   --ch-radius: 14px;
 }
 
