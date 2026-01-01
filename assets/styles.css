@@ -208,16 +208,6 @@ body{
   color: rgba(230,237,243,.72);
 }
 
-/* Expanded state: slide wider to the RIGHT, do not expand vertically */
-.bankRail.expanded{
-  width: calc(var(--railW) + 260px + 10px);
-  justify-content:space-between;
-  padding-right: 10px;
-}
-
-.bankRail.expanded .bankLetters{ display:none; }
-.bankRail.expanded .bankExpanded{ display:block; }
-
 /* ---------- PLAYFIELD ---------- */
 .playfield{
   position: absolute;
@@ -333,11 +323,11 @@ body{
 }
 
 /* Round the top & bottom of the stack so it looks “contained” */
-.bottle > .seg:first-child{
+.bottle .segs .seg:first-child{
   border-bottom-left-radius: var(--ch-radius);
   border-bottom-right-radius: var(--ch-radius);
 }
-.bottle > .seg:last-child{
+.bottle .segs .seg:last-child{
   border-top-left-radius: var(--ch-radius);
   border-top-right-radius: var(--ch-radius);
 }
@@ -360,18 +350,6 @@ body{
 
 /* keep liquids UNDER the glass */
 .bottle .seg{ z-index: 2; }
-
-/* (optional) dark interior to help it feel “inside” */
-.bottle::before{
-  content:"";
-  position:absolute;
-  /* match the same chamber padding */
-  top: 34px; left: 18px; right: 18px; bottom: 18px;
-  background: rgba(0,0,0,.10);
-  border-radius: 16px;
-  z-index: 1;
-  pointer-events:none;
-}
 
 /* --------- SVG Pattern Overlay (Role-Based) --------- */
 .seg::after{
