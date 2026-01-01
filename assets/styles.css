@@ -263,7 +263,7 @@ body{
   position:relative;
   overflow:hidden;
   user-select:none;
-  touch-action: manipulation;
+  touch-action: none;
 
   /* IMPORTANT: fills from bottom */
   display:flex;
