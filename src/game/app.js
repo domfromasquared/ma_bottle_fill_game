@@ -9,7 +9,7 @@ import { makeToaster, qs, playPourFX } from "../utils/ui.js";
 const FORESHADOW_START_LEVEL = 10;
 const STABILIZER_UNLOCK_LEVEL = 15;
 
-const DEFAULT_PROD = "https://ma-bottle-fill-api.onrender.com";
+const DEFAULT_PROD = "https://ma-bottle-fill-aApi.onrender.com";
 const DEFAULT_LOCAL = "http://localhost:8787";
 const isLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1";
 
@@ -158,8 +158,8 @@ function ensureDMImg(){
     img.decoding = "async";
     img.loading = "eager";
     img.draggable = false;
-    img.style.width = "200%";
-    img.style.height = "200%";
+    img.style.width = "150%";
+    img.style.height = "150%";
     img.style.objectFit = "contain";
     img.style.pointerEvents = "none";
     dmCharacter.appendChild(img);
