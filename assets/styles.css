@@ -131,7 +131,7 @@ body{
   display:grid;
   grid-template-columns: 1fr 28px;
   align-items:center;
-  gap:10px;
+  gap:100px;
   padding: 6px 0;
   color: var(--muted);
   font-size: 13px;
