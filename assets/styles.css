@@ -108,12 +108,12 @@ body{
   width: 260px;
   padding: 6px 10px 6px 10px;
   order: -1;          /* move meanings before letters */
-  margin-right: -20px; /* spacing between meanings and letters */
+  margin-right: 20px; /* spacing between meanings and letters */
 }
 
 /* Expanded state: meanings LEFT, letters RIGHT (colors preserved) */
 .bankRail.expanded{
-  width: calc(var(--railW) + 260px + 10px);
+  width: calc(var(--railW) + 260px + 20px);
   display:grid;
   grid-template-columns: 260px var(--railW);
   align-items:center;
