@@ -107,13 +107,13 @@ body{
   display:none;
   width: 260px;
   padding: 6px 0px 6px 10px;
-  order: 1;          /* move meanings before letters */
-  margin-right: 400px; /* spacing between meanings and letters */
+  order: -1;          /* move meanings before letters */
+  margin-right: 0px; /* spacing between meanings and letters */
 }
 
 /* Expanded state: meanings LEFT, letters RIGHT (colors preserved) */
 .bankRail.expanded{
-  width: calc(var(--railW) + 260px + 20px);
+  width: calc(var(--railW) + 240px + 10px);
   display:grid;
   grid-template-columns: 260px var(--railW);
   align-items:center;
