@@ -110,9 +110,9 @@ body{
 
 /* Expanded state: meanings LEFT, letters RIGHT (colors preserved) */
 .bankRail.expanded{
-  width: calc(var(--railW) + 260px + 18px);
+  width: calc(var(--railW) + 260px + 180px);
   display:grid;
-  grid-template-columns: -460px var(--railW);
+  grid-template-columns: 260px var(--railW);
   align-items:center;
   padding: 10px 8px;
   column-gap: 10px;
