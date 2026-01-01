@@ -106,9 +106,9 @@ body{
 .bankExpanded{
   display:none;
   width: 260px;
-  padding: 6px 10px 6px -10px;
+  padding: 6px 10px 6px 10px;
   order: -1;          /* move meanings before letters */
-  margin-right: 10px; /* spacing between meanings and letters */
+  margin-right: 1px; /* spacing between meanings and letters */
 }
 
 /* Expanded state: meanings LEFT, letters RIGHT (colors preserved) */
