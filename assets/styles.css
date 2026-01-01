@@ -91,6 +91,7 @@ body{
   padding: 10px 8px;
 
   display:flex;
+  flex-direction: row; /* default */
   align-items:center;
   cursor:pointer;
   user-select:none;
@@ -105,12 +106,14 @@ body{
 .bankExpanded{
   display:none;
   width: 260px;
-  padding: 6px 10px 6px -1000px;
+  padding: 6px 10px 6px -10px;
+  order: -1;          /* move meanings before letters */
+  margin-right: 10px; /* spacing between meanings and letters */
 }
 
 /* Expanded state: meanings LEFT, letters RIGHT (colors preserved) */
 .bankRail.expanded{
-  width: calc(var(--railW) + 260px + 18px);
+  width: calc(var(--railW) + 260px + 10px);
   display:grid;
   grid-template-columns: 260px var(--railW);
   align-items:center;
