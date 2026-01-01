@@ -105,15 +105,15 @@ body{
 /* expanded meanings panel (hidden by default) */
 .bankExpanded{
   display:none;
-  width: 10px;
+  width: 240px;
   padding: 6px 0px 6px 10px;
   order: -1;          /* move meanings before letters */
-  margin-leftt: 10px; /* spacing between meanings and letters */
+  margin-left: 10px; /* spacing between meanings and letters */
 }
 
 /* Expanded state: meanings LEFT, letters RIGHT (colors preserved) */
 .bankRail.expanded{
-  width: calc(var(--railW) + 140px + 10px);
+  width: calc(var(--railW) + 240px + 200px);
   display:grid;
   grid-template-columns: 260px var(--railW);
   align-items:center;
