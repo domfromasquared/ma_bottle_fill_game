@@ -881,8 +881,11 @@ function render(){
     if (state.locked[i]) bottle.classList.add("locked");
     if (state.hiddenSegs[i]) bottle.classList.add("hiddenSegs");
 
-    bottle.addEventListener("click", ()=> handleBottleTap(i));
-bottle.addEventListener("touchend", (e)=>{
+    bottle.addEventListener("pointerup", (e) => {
+  if (e.pointerType === "mouse" && e.button !== 0) return;
+  handleBottleTap(i);
+});
+    bottle.addEventListener("touchend", (e)=>{
   if (e.cancelable) e.preventDefault();
   handleBottleTap(i);
 }, { passive:false });
