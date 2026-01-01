@@ -70,7 +70,7 @@ body{
   background: rgba(17,26,39,.7);
   color: var(--text);
   border-radius: 14px;
-  padding: 10px 12px;
+  padding: 10px 102px;
   font-weight: 900;
   cursor:pointer;
 }
@@ -105,7 +105,7 @@ body{
 /* expanded meanings panel (hidden by default) */
 .bankExpanded{
   display:none;
-  width: 300px;
+  width: 3000px;
   padding: 6px 0px 6px 10px;
   order: -1;          /* move meanings before letters */
   margin-leftt: 10px; /* spacing between meanings and letters */
@@ -113,9 +113,9 @@ body{
 
 /* Expanded state: meanings LEFT, letters RIGHT (colors preserved) */
 .bankRail.expanded{
-  width: calc(var(--railW) + 140px + 10px);
+  width: calc(var(--railW) + 1400px + 10px);
   display:grid;
-  grid-template-columns: 260px var(--railW);
+  grid-template-columns: 2600px var(--railW);
   align-items:center;
   padding: 10px 8px;
   column-gap: 10px;
