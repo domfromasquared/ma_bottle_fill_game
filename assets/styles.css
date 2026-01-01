@@ -88,7 +88,7 @@ body{
   background: #0b1220;
 
   border-radius: 14px;
-  padding: 1px 8px;
+  padding: 10px 8px;
 
   display:flex;
   flex-direction: row; /* default */
@@ -108,7 +108,7 @@ body{
   width: 260px;
   padding: 6px 10px 6px 10px;
   order: -1;          /* move meanings before letters */
-  margin-right: 1px; /* spacing between meanings and letters */
+  margin-right: -20px; /* spacing between meanings and letters */
 }
 
 /* Expanded state: meanings LEFT, letters RIGHT (colors preserved) */
@@ -118,7 +118,7 @@ body{
   grid-template-columns: 260px var(--railW);
   align-items:center;
   padding: 10px 8px;
-  column-gap: 1px;
+  column-gap: 10px;
 }
 
 .bankRail.expanded .bankExpanded{ display:block; }
