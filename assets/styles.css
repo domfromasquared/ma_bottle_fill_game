@@ -35,7 +35,7 @@
 
   /* inner chamber (tuned for vial_empty.png / vial_corked.png) */
   --ch-top: 30px;
-  --ch-side: 9px;   /* smaller = wider liquid (yours is too narrow) */
+  --ch-side: 12px;   /* smaller = wider liquid (yours is too narrow) */
   --ch-bottom: 0px;
   --ch-radius: 6px;
 }
