@@ -298,6 +298,7 @@ body{
 /* Seg stack must be a flex column so .seg { flex:1 } actually works */
 .segs{
   position: relative;
+  overflow: hidden; /* keeps pattern inside rounded corners */
   display: flex;
   flex-direction: column-reverse; /* bottom-fill */
   flex: 1;
@@ -336,7 +337,7 @@ body{
 .bottle.locked::after{ background-image: var(--bottle-locked); }
 
 /* keep liquids UNDER the glass */
-.bottle .seg{ z-index: 2; }
+.bottle .seg{ z-index: 1; }
 
 /* --------- SVG Pattern Overlay (Role-Based) --------- */
 .seg::after{
