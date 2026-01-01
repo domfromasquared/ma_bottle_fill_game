@@ -1,0 +1,6 @@
+Refactor Patch (client)
+- Removed duplicate factory reset handler (was bound twice).
+- Intro DM now gates on ma_introSeen instead of playerName so it always runs once on first load.
+- Intro sets ma_introSeen=1 after a successful name submit; factory reset clears ma_introSeen.
+- Bottle input now uses pointerup (replaces click + touchend + preventDefault) to remove Chrome touch intervention warnings.
+- Cleaned styles.css: removed duplicate .bottle::before override; removed conflicting BANK expanded rules; fixed segment rounding selectors to match .bottle > .segs > .seg; made BANK rail background solid.
