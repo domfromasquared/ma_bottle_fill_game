@@ -105,18 +105,18 @@ body{
 /* expanded meanings panel (hidden by default) */
 .bankExpanded{
   display:none;
-  width: 240px;
-  padding: 6px 0px 6px 10px;
+  width: 280px;
+  padding: 6px 1px 6px 1px;
   order: -1;          /* move meanings before letters */
-  margin-left: 10px; /* spacing between meanings and letters */
+  margin-left: 0px; /* spacing between meanings and letters */
 }
 
 /* Expanded state: meanings LEFT, letters RIGHT (colors preserved) */
 .bankRail.expanded{
-  width: calc(var(--railW) + 240px + 200px);
+  width: calc(var(--railW) + 240px + 100px);
   display:grid;
   grid-template-columns: 240px var(--railW);
-  align-items:center;
+  align-items:left;
   padding: 10px 8px;
   column-gap: 10px;
 }
