@@ -10,7 +10,7 @@
   /* layout constants */
   --pad: 8px;
   --modsH: 84px;
-  --railW: 24px;
+  --railW: 30px;
 
   --card: rgba(15, 23, 36, .92);
   --line: rgba(220,232,255,.12);
@@ -37,7 +37,7 @@
   --ch-top: 30px;
   --ch-side: 10px;   /* smaller = wider liquid (yours is too narrow) */
   --ch-bottom: 0px;
-  --ch-radius: 8px;
+  --ch-radius: 6px;
 }
 
 *{ box-sizing:border-box; }
