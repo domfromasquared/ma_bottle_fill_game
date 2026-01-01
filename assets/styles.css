@@ -185,28 +185,7 @@ body{
 .bankLetters span[data-bank="N"].on{ color:#3fe27a; }
 .bankLetters span[data-bank="K"].on{ color:#ffd24a; }
 
-/* expanded meanings panel: meanings LEFT, letters RIGHT */
-.bankExpanded{
-  display:none;
-  width: 260px;
-  padding: 6px 6px 6px 10px;
-}
 
-.bankRow{
-  display:grid;
-  grid-template-columns: 1fr 28px;
-  align-items:center;
-  gap:10px;
-  padding: 6px 0;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.bankRow b{
-  justify-self:end;
-  font-size: 18px;
-  color: rgba(230,237,243,.72);
-}
 
 /* ---------- PLAYFIELD ---------- */
 .playfield{
