@@ -468,6 +468,7 @@ function localNameRoast(name){
 /* ---------------- Intro DM (first load) ---------------- */
 function runFirstLoadIntro(){
 if (localStorage.getItem("ma_introSeen") === "1") return false;
+  localStorage.setItem("ma_introSeen", "1");
 
   introStep = 1;
   dmToken++;
