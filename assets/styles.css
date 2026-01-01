@@ -133,7 +133,7 @@ body{
 .bankRow{
   display:grid;
   grid-template-columns: 1fr 28px;
-  align-items:center;
+  align-items:left;
   gap:10px;
   padding: 6px 10px;
   color: var(--muted);
