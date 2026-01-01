@@ -106,7 +106,7 @@ function setSpeechTheme(theme){
   localStorage.setItem(SPEECH_THEME_KEY, t);
 }
 function toggleSpeechTheme(){ setSpeechTheme(getSpeechTheme() === "dark" ? "light" : "dark"); }
-
+});
 
 /* ---------------- API base ---------------- */
 apiBaseEl.value = localStorage.getItem(API_BASE_KEY) || (isLocal ? DEFAULT_LOCAL : DEFAULT_PROD);
@@ -468,7 +468,7 @@ function localNameRoast(name){
 
 /* ---------------- Intro DM (first load) ---------------- */
 function runFirstLoadIntro(){
-  if (localStorage.getItem("ma_introSeen") === "1") return false;
+if (localStorage.getItem("ma_introSeen") === "1") return false;
 
   introStep = 1;
   dmToken++;
@@ -522,7 +522,6 @@ Tell me… what do I call you?`,
     }
 
     const saved = setPlayerName(name);
-    localStorage.setItem("ma_introSeen", "1");
     syncInfoPanel();
     introStep = 2;
 
@@ -880,10 +879,13 @@ function render(){
     bottle.className = "bottle";
     if (state.selected === i) bottle.classList.add("selected");
     if (state.locked[i]) bottle.classList.add("locked");
-    if (state.hiddenSegs[i]) bottle.classList.add("hiddenSegs");    bottle.addEventListener("pointerup", (e) => {
-      if (e.pointerType === "mouse" && e.button !== 0) return;
-      handleBottleTap(i);
-    });
+    if (state.hiddenSegs[i]) bottle.classList.add("hiddenSegs");
+
+    bottle.addEventListener("click", ()=> handleBottleTap(i));
+bottle.addEventListener("touchend", (e)=>{
+  if (e.cancelable) e.preventDefault();
+  handleBottleTap(i);
+}, { passive:false });
 
     // segments
     const segs = document.createElement("div");
@@ -1026,7 +1028,6 @@ factoryResetBtn?.addEventListener("click", factoryResetGame);
 /* ---------------- Boot ---------------- */
 function boot(){
   setSpeechTheme(getSpeechTheme());
-  ensurePlayerName(); // ensures info panel not blank in normal play
   syncInfoPanel();
 
   // If player already named, do normal start
