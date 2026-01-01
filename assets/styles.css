@@ -88,7 +88,7 @@ body{
   background: #0b1220;
 
   border-radius: 14px;
-  padding: 10px 8px;
+  padding: 1px 8px;
 
   display:flex;
   flex-direction: row; /* default */
@@ -118,7 +118,7 @@ body{
   grid-template-columns: 260px var(--railW);
   align-items:center;
   padding: 10px 8px;
-  column-gap: 10px;
+  column-gap: 1px;
 }
 
 .bankRail.expanded .bankExpanded{ display:block; }
