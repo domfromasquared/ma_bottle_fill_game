@@ -106,7 +106,6 @@ function setSpeechTheme(theme){
   localStorage.setItem(SPEECH_THEME_KEY, t);
 }
 function toggleSpeechTheme(){ setSpeechTheme(getSpeechTheme() === "dark" ? "light" : "dark"); }
-});
 
 /* ---------------- API base ---------------- */
 apiBaseEl.value = localStorage.getItem(API_BASE_KEY) || (isLocal ? DEFAULT_LOCAL : DEFAULT_PROD);
