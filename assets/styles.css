@@ -107,7 +107,7 @@ body{
   display:none;
   width: 260px;
   padding: 6px 0px 6px 10px;
-  order: -1;          /* move meanings before letters */
+  order: 1;          /* move meanings before letters */
   margin-right: 400px; /* spacing between meanings and letters */
 }
 
