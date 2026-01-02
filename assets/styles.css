@@ -81,7 +81,7 @@ body{
 .bankRail{
   position: absolute;
   left: calc(var(--sal) + 6px);
-  top: calc(var(--sat) + 100px);
+  top: calc(var(--sat) + 40px);
   width: var(--railW);
   border: 1px solid var(--line);
 
