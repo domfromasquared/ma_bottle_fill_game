@@ -438,13 +438,6 @@ function hideDMOverlay(){
   speech.setAttribute("aria-hidden","true");
 }
 
-function hideDMOverlay(){
-  dmCharacter.classList.remove("show");
-  dmCharacter.setAttribute("aria-hidden","true");
-  speech.classList.remove("show");
-  speech.setAttribute("aria-hidden","true");
-}
-
 /* ---------------- DM cancellation token ---------------- */
 let dmToken = 0;
 
