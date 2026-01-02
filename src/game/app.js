@@ -926,23 +926,6 @@ function render(){
   }
 }
 
-// Press feedback (mobile + desktop)
-bottle.addEventListener("pointerdown", () => {
-  bottle.classList.add("pressed");
-});
-
-bottle.addEventListener("pointerup", () => {
-  bottle.classList.remove("pressed");
-});
-
-bottle.addEventListener("pointercancel", () => {
-  bottle.classList.remove("pressed");
-});
-
-bottle.addEventListener("pointerleave", () => {
-  bottle.classList.remove("pressed");
-});
-
 
 /* ---------------- Input ---------------- */
 function handleBottleTap(i){
