@@ -63,16 +63,16 @@ body{
 /* ---------- SETTINGS FAB ---------- */
 .settingsFab{
   position: fixed;
-  top: calc(env(safe-area-inset-top, 0px) + 10px);
-  left: calc(env(safe-area-inset-left, 0px) + 10px);
+  top: calc(env(safe-area-inset-top, 0px) + 0px);
+  left: calc(env(safe-area-inset-left, 0px) + 0px);
   right: auto;
   bottom: auto;
   z-index: 2000;
-  border: 1px solid var(--line);
+  border: 0px solid var(--line);
   background: rgba(17,26,39,.7);
   color: var(--text);
   border-radius: 14px;
-  padding: 10px 12px;
+  padding: 4px 4px;
   font-weight: 900;
   cursor:pointer;
 }
@@ -81,7 +81,7 @@ body{
 .bankRail{
   position: absolute;
   left: calc(var(--sal) + 6px);
-  top: calc(var(--sat) + 50px);
+  top: calc(var(--sat) + 150px);
   width: var(--railW);
   border: 1px solid var(--line);
 
