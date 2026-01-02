@@ -441,7 +441,7 @@ body{
 
 /* MA sprite positioning */
 .dmAvatar img, #maSprite {
-  position: absolute;
+  position: fixed;
 
 /* Move left */
 transform: translate(-1100px, 0);
