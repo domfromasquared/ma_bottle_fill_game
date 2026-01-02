@@ -354,17 +354,17 @@ body{
   z-index: 2; /* above liquid fill */
 }
 
-.seg.role-volatile::after   { background-image: url("/assets/elements/textures/pattern_ripples.svg"); animation: drift 7s linear infinite; }
-.seg.role-catalyst::after   { background-image: url("assets/elements/textures/pattern_streaks.svg"); animation: drift 6s linear infinite; }
-.seg.role-stabilizer::after { background-image: url(".assets/elements/textures/pattern_noise.svg"); opacity:.52; }
+.seg.role-volatile::after   { background-image: url("./elements/textures/pattern_ripples.svg"); animation: drift 7s linear infinite; }
+.seg.role-catalyst::after   { background-image: url("./elements/textures/pattern_streaks.svg"); animation: drift 6s linear infinite; }
+.seg.role-stabilizer::after { background-image: url("./elements/textures/pattern_noise.svg"); opacity:.52; }
 .seg.role-structural::after,
-.seg.role-foundational::after { background-image: url(".assets/elements/textures/pattern_grid.svg"); opacity:.66; }
+.seg.role-foundational::after { background-image: url("./elements/textures/pattern_grid.svg"); opacity:.66; }
 .seg.role-transmission::after,
-.seg.role-conversion::after { background-image: url("assets/elements/textures/pattern_chevrons.svg"); opacity:.66; }
+.seg.role-conversion::after { background-image: url("./elements/textures/pattern_chevrons.svg"); opacity:.66; }
 
-.seg.el-EM::after { background-image: url("/assets/elements/textures/pattern_bubbles.svg"); opacity:.78; animation: drift 8s linear infinite; }
+.seg.el-EM::after { background-image: url("./elements/textures/pattern_bubbles.svg"); opacity:.78; animation: drift 8s linear infinite; }
 .seg.el-CO::after,
-.seg.el-DI::after { background-image: url("./assets/elements/textures/pattern_hatch.svg"); opacity:.66; }
+.seg.el-DI::after { background-image: url("./elements/textures/pattern_hatch.svg"); opacity:.66; }
 
 @media (prefers-reduced-motion: reduce){
   .seg::after{ animation:none !important; }
