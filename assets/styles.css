@@ -439,6 +439,14 @@ body{
   z-index: 6;
 }
 
+/* MA sprite positioning */
+.dmAvatar img, #maSprite {
+  position: relative;
+
+/* Move left */
+transform: translate(-50px, 0);
+}
+
 /* ---------- SPEECH ---------- */
 .speech{
   position:absolute;
