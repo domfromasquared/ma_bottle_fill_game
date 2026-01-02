@@ -469,8 +469,7 @@ body{
   height:100%;
 }
 
-.speech.show .speechTitle,
-.speech.show .speechText{
+.speech.show .speechTitle,{
   font-family: var(--dm-font);
   font-weight: 700;
   letter-spacing: .2px;
