@@ -883,8 +883,18 @@ function render(){
     if (state.locked[i]) bottle.classList.add("locked");
     if (state.hiddenSegs[i]) bottle.classList.add("hiddenSegs");
 
+    // Press feedback (mobile + desktop)
+    bottle.addEventListener("pointerdown", () => {
+      bottle.classList.add("pressed");
+    });
+
+    const clearPressed = () => bottle.classList.remove("pressed");
+    bottle.addEventListener("pointercancel", clearPressed);
+    bottle.addEventListener("pointerleave", clearPressed);
+
     // ONE input handler (prevents double-fire invalids on mobile)
     bottle.addEventListener("pointerup", (e) => {
+      clearPressed();
       if (e.pointerType === "mouse" && e.button !== 0) return;
       handleBottleTap(i);
     });
@@ -900,7 +910,7 @@ function render(){
       const idx = (b[s] ?? null);
 
       if (idx !== null && idx !== undefined) {
-        const sym = currentElements[idx];      // e.g. "VI", "EM", "CO"
+        const sym = currentElements[idx]; // e.g. "VI", "EM", "CN", "CO"
         const el  = ELEMENTS?.[sym];
 
         // color fill
@@ -909,7 +919,7 @@ function render(){
         // element class → enables el-EM, el-CO, etc
         if (sym) seg.classList.add(`el-${sym}`);
 
-        // role class → enables role-volatile, role-stabilizer, etc
+        // role/class class → enables role-foundational/role-structural/etc
         if (el?.role) {
           const roleSlug = el.role.toLowerCase().replace(/\s+/g, "-");
           seg.classList.add(`role-${roleSlug}`);
@@ -925,24 +935,6 @@ function render(){
     grid.appendChild(bottle);
   }
 }
-
-// Press feedback (mobile + desktop)
-bottle.addEventListener("pointerdown", () => {
-  bottle.classList.add("pressed");
-});
-
-bottle.addEventListener("pointerup", () => {
-  bottle.classList.remove("pressed");
-});
-
-bottle.addEventListener("pointercancel", () => {
-  bottle.classList.remove("pressed");
-});
-
-bottle.addEventListener("pointerleave", () => {
-  bottle.classList.remove("pressed");
-});
-
 
 /* ---------------- Input ---------------- */
 function handleBottleTap(i){
