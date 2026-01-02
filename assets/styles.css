@@ -375,6 +375,50 @@ body{
   to   { background-position: 64px 64px; }
 }
 
+/* ---------------- Bottle interaction feedback ---------------- */
+
+.bottle{
+  position: relative;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Tap/press feedback (momentary) */
+.bottle.pressed{
+  transform: translateY(1px) scale(0.995);
+  filter: brightness(1.08);
+}
+
+/* Selected bottle (persistent until second tap / pour) */
+.bottle.selected{
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,0.18),
+    0 0 0 4px rgba(0,179,255,0.20),
+    0 10px 24px rgba(0,179,255,0.20);
+}
+
+/* Optional: add a subtle ring overlay so it reads even on bright bottles */
+.bottle.selected::after{
+  content:"";
+  position:absolute;
+  inset: 8px;
+  border-radius: 22px;  /* match your bottle radius vibe */
+  border: 2px solid rgba(0,179,255,0.55);
+  pointer-events:none;
+}
+
+/* Locked still looks locked, but selection glow doesn’t vanish */
+.bottle.locked.selected{
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,0.10),
+    0 0 0 4px rgba(154,122,160,0.22),
+    0 10px 24px rgba(154,122,160,0.18);
+}
+.bottle.locked.selected::after{
+  border-color: rgba(154,122,160,0.55);
+}
+
 /* ---------- MODIFIERS BAR ---------- */
 .modBar{
   position:absolute;
