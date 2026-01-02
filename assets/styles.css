@@ -277,9 +277,39 @@ body{
   border: 0px solid rgba(220,232,255,.10);
 }
 
+/* Bottle halo only (no movement) */
+.bottle{
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* The chamber inset that holds the liquid */
 .bottle{
   padding: var(--ch-top) var(--ch-side) var(--ch-bottom) var(--ch-side);
+}
+
+/* Selected state = persistent halo */
+.bottle.selected{
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,0.14),
+    0 0 18px rgba(0,179,255,0.55),
+    0 0 40px rgba(0,179,255,0.30);
+}
+
+/* Tap feedback halo (momentary) */
+.bottle.pressed{
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,0.10),
+    0 0 16px rgba(0,179,255,0.45),
+    0 0 32px rgba(0,179,255,0.22);
+}
+
+/* Locked variant (optional – purple-ish halo so it reads as different) */
+.bottle.locked.selected{
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,0.10),
+    0 0 18px rgba(154,122,160,0.55),
+    0 0 40px rgba(154,122,160,0.30);
 }
 
 /* subtle interior “well” */
