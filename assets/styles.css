@@ -441,10 +441,10 @@ body{
 
 /* MA sprite positioning */
 .dmAvatar img, #maSprite {
-  position: relative;
+  position: absolute;
 
 /* Move left */
-transform: translate(-400px, 0);
+transform: translate(-600px, 0);
 }
 
 /* ---------- SPEECH ---------- */
