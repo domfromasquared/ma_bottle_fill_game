@@ -386,6 +386,7 @@ body{
 
 /* Tap/press feedback (momentary) */
 .bottle.pressed{
+  transform: translateY(1px) scale(0.995);
   filter: brightness(1.08);
 }
 
@@ -401,6 +402,7 @@ body{
 .bottle.selected::after{
   content:"";
   position:absolute;
+  inset: 8px;
   border-radius: 22px;  /* match your bottle radius vibe */
   border: 2px solid rgba(0,179,255,0.55);
   pointer-events:none;
