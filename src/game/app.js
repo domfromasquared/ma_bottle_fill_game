@@ -420,12 +420,24 @@ function setDMSpeech({ title, body, small }){
   return { copy };
 }
 
-function showDMOverlay(){
-  dmCharacter.classList.add("show");
-  dmCharacter.setAttribute("aria-hidden","false");
-  speech.classList.add("show");
-  speech.setAttribute("aria-hidden","false");
+function hideDMOverlay(){
+  // ✅ MOVE FOCUS FIRST (this fixes the warning)
+  const active = document.activeElement;
+  if (active && dmCharacter.contains(active)) {
+    active.blur();
+    (settings || grid || document.body).focus?.();
+  }
+
+  dmCharacter.classList.remove("show");
+  speech.classList.remove("show");
+
+  dmCharacter.inert = true;
+  speech.inert = true;
+
+  dmCharacter.setAttribute("aria-hidden","true");
+  speech.setAttribute("aria-hidden","true");
 }
+
 function hideDMOverlay(){
   dmCharacter.classList.remove("show");
   dmCharacter.setAttribute("aria-hidden","true");
