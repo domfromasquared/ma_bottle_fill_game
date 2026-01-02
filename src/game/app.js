@@ -887,16 +887,28 @@ function render(){
 });
 
     // segments
-    const segs = document.createElement("div");
-    segs.className = "segs";
+    const seg = document.createElement("div");
+seg.className = "seg";
 
-    const cap = state.capacity;
-    const b = state.bottles[i];
-    for (let s=0;s<cap;s++){
-      const seg = document.createElement("div");
-      seg.className = "seg";
-      const idx = b[s] ?? null;
-      seg.style.background = (idx === null) ? "transparent" : (currentPalette[idx] || "#fff");
+const idx = b[s] ?? null;
+
+if (idx !== null && idx !== undefined) {
+  const sym = currentElements[idx];       // e.g. "VI", "EM", "CO"
+  const el  = ELEMENTS[sym];
+
+  // color fill
+  seg.style.background = el?.color || currentPalette[idx] || "#fff";
+
+  // element class → enables el-EM, el-CO, etc
+  if (sym) seg.classList.add(`el-${sym}`);
+
+  // role class → enables role-volatile, role-stabilizer, etc
+  if (el?.role) {
+    const roleSlug = el.role.toLowerCase().replace(/\s+/g, "-");
+    seg.classList.add(`role-${roleSlug}`);
+  }
+} else {
+  seg.style.background = "transparent";
       segs.appendChild(seg);
     }
 
