@@ -924,6 +924,12 @@ function render(){
     bottle.appendChild(segs);
     grid.appendChild(bottle);
   }
+  bottle.addEventListener("pointerdown", () => bottle.classList.add("pressed"));
+const clearPressed = () => bottle.classList.remove("pressed");
+bottle.addEventListener("pointerup", clearPressed);
+bottle.addEventListener("pointercancel", clearPressed);
+bottle.addEventListener("pointerleave", clearPressed);
+
 }
 
 
