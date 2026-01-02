@@ -893,7 +893,7 @@ function render(){
     const segs = document.createElement("div");
     segs.className = "segs";
 
-    for (let s = 0; s < CAPACITY; s++){
+    for (let s = 0; s < state.capacity; s++){
       const seg = document.createElement("div");
       seg.className = "seg";
 
