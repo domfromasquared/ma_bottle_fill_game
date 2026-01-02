@@ -874,41 +874,50 @@ function doPour(from,to){
 function render(){
   grid.innerHTML = "";
 
-  for (let i=0;i<state.bottles.length;i++){
+  for (let i = 0; i < state.bottles.length; i++){
+    const b = state.bottles[i];
+
     const bottle = document.createElement("button");
     bottle.className = "bottle";
     if (state.selected === i) bottle.classList.add("selected");
     if (state.locked[i]) bottle.classList.add("locked");
     if (state.hiddenSegs[i]) bottle.classList.add("hiddenSegs");
 
+    // ONE input handler (prevents double-fire invalids on mobile)
     bottle.addEventListener("pointerup", (e) => {
-  if (e.pointerType === "mouse" && e.button !== 0) return;
-  handleBottleTap(i);
-});
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      handleBottleTap(i);
+    });
 
-    // segments
-    const seg = document.createElement("div");
-seg.className = "seg";
+    // segments container (CSS expects .bottle > .segs > .seg)
+    const segs = document.createElement("div");
+    segs.className = "segs";
 
-const idx = b[s] ?? null;
+    for (let s = 0; s < CAPACITY; s++){
+      const seg = document.createElement("div");
+      seg.className = "seg";
 
-if (idx !== null && idx !== undefined) {
-  const sym = currentElements[idx];       // e.g. "VI", "EM", "CO"
-  const el  = ELEMENTS[sym];
+      const idx = (b[s] ?? null);
 
-  // color fill
-  seg.style.background = el?.color || currentPalette[idx] || "#fff";
+      if (idx !== null && idx !== undefined) {
+        const sym = currentElements[idx];      // e.g. "VI", "EM", "CO"
+        const el  = ELEMENTS?.[sym];
 
-  // element class → enables el-EM, el-CO, etc
-  if (sym) seg.classList.add(`el-${sym}`);
+        // color fill
+        seg.style.background = (el?.color || currentPalette[idx] || "#fff");
 
-  // role class → enables role-volatile, role-stabilizer, etc
-  if (el?.role) {
-    const roleSlug = el.role.toLowerCase().replace(/\s+/g, "-");
-    seg.classList.add(`role-${roleSlug}`);
-  }
-} else {
-  seg.style.background = "transparent";
+        // element class → enables el-EM, el-CO, etc
+        if (sym) seg.classList.add(`el-${sym}`);
+
+        // role class → enables role-volatile, role-stabilizer, etc
+        if (el?.role) {
+          const roleSlug = el.role.toLowerCase().replace(/\s+/g, "-");
+          seg.classList.add(`role-${roleSlug}`);
+        }
+      } else {
+        seg.style.background = "transparent";
+      }
+
       segs.appendChild(seg);
     }
 
@@ -916,6 +925,7 @@ if (idx !== null && idx !== undefined) {
     grid.appendChild(bottle);
   }
 }
+
 
 /* ---------------- Input ---------------- */
 function handleBottleTap(i){
