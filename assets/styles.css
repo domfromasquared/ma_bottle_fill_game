@@ -416,10 +416,10 @@ body{
   border-radius: 22px;
   border: 0px solid var(--line);
   background: rgba(11,18,28,.65);
-  transform: translateX(100%);
+  transform: translateX(20%);
   transition: transform .28s ease;
   overflow:hidden;
-  z-index: 7;
+  z-index: 5;
 }
 
 .dmCharacter.show{ transform: translateX(0); }
