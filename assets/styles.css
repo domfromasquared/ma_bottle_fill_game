@@ -391,7 +391,7 @@ body{
   border: 1px solid var(--line);
   border-radius: 18px;
   padding: 10px;
-  z-index: 5;
+  z-index: 7;
 }
 
 .modSlot{
@@ -415,8 +415,8 @@ body{
   height: min(34vh, 340px);
   border-radius: 22px;
   border: 0px solid var(--line);
-  background: rgba(11,18,28,.65);
-  transform: translateX(20%);
+  background: rgba(11,18,28,.01);
+  transform: translateX(-120%);
   transition: transform .28s ease;
   overflow:hidden;
   z-index: 5;
@@ -436,7 +436,7 @@ body{
   height: 34px;
   cursor:pointer;
   font-weight: 1000;
-  z-index: 8;
+  z-index: 6;
 }
 
 /* ---------- SPEECH ---------- */
