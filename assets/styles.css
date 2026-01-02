@@ -73,7 +73,7 @@ body{
   color: var(--text);
   border-radius: 14px;
   padding: 4px 4px;
-  font-weight: 900;
+  font-weight: 1100;
   cursor:pointer;
 }
 
@@ -81,7 +81,7 @@ body{
 .bankRail{
   position: absolute;
   left: calc(var(--sal) + 6px);
-  top: calc(var(--sat) + 150px);
+  top: calc(var(--sat) + 100px);
   width: var(--railW);
   border: 1px solid var(--line);
 
@@ -274,7 +274,7 @@ body{
   border-radius: 22px 22px 26px 26px;
 
   background: transparent;
-  border: 1px solid rgba(220,232,255,.10);
+  border: 0px solid rgba(220,232,255,.10);
 }
 
 /* The chamber inset that holds the liquid */
