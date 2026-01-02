@@ -31,7 +31,7 @@
   /* Thesis spacing controls */
   --thesis-pad-y: 5px;       /* was 10px -> 10px thinner total (top+bottom) */
   --thesis-pad-x: 10px;
-  --thesis-gap-below: 10px;  /* extra padding below thesis before bottles */
+  --thesis-gap-below: 30px;  /* extra padding below thesis before bottles */
 
   /* inner chamber (tuned for vial_empty.png / vial_corked.png) */
   --ch-top: 30px;
