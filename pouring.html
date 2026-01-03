@@ -206,14 +206,12 @@ function spoutPointWorld(b){
   };
 }
 
-toWorld(b,  b.w*0.22, -b.h*0.46);
-}
-  
 function toWorld(b, lx, ly){
   const cos = Math.cos(b.angle), sin = Math.sin(b.angle);
   return {
     x: b.x + lx*cos - ly*sin,
     y: b.y + lx*sin + ly*cos
+    toWorld(b,  b.w*0.22, -b.h*0.46);
   };
 }
 // Determine if pour should happen: lip lower than surface along that side
