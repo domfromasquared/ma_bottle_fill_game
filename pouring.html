@@ -1,104 +1,349 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html>
 <head>
-<meta charset="UTF-8" />
-<title>Canvas Pour Demo</title>
-<style>
-  body {
-    background:#0b0f14;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
-  }
-  canvas {
-    background:#121821;
-    border-radius:12px;
-  }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Fluid Pour Demo</title>
+  <style>
+    html,body{height:100%;margin:0;background:#0b0f14;display:grid;place-items:center;}
+    canvas{background:#0f1620;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.6);}
+  </style>
 </head>
 <body>
-
-<canvas id="c" width="500" height="300"></canvas>
+<canvas id="c" width="900" height="520"></canvas>
 
 <script>
-const canvas = document.getElementById("c");
-const ctx = canvas.getContext("2d");
+const c = document.getElementById("c");
+const ctx = c.getContext("2d");
 
-const bottleA = { x:120, y:60, w:60, h:180, level:0.8 };
-const bottleB = { x:320, y:60, w:60, h:180, level:0.2 };
+const TAU = Math.PI * 2;
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp  = (a,b,t)=>a+(b-a)*t;
+const easeInOut = t => t<.5 ? 2*t*t : 1-(-2*t+2)**2/2;
 
-let pouring = false;
-let t = 0;
-
-function drawBottle(b){
-  // outline
-  ctx.strokeStyle = "#8fa3bf";
-  ctx.lineWidth = 2;
-  ctx.strokeRect(b.x, b.y, b.w, b.h);
-
-  // liquid
-  const liquidHeight = b.h * b.level;
-  ctx.fillStyle = "#1fbf84";
-  ctx.fillRect(
-    b.x,
-    b.y + b.h - liquidHeight,
-    b.w,
-    liquidHeight
-  );
+// Bottle model (simple rounded test tube)
+function makeBottle(x,y,w,h){
+  return {
+    x,y,w,h,
+    angle: 0,            // radians
+    fill: 0.72,          // 0..1 (height fraction)
+    color: "#18c38b",
+    slosh: { v: 0, p: 0 }, // damped oscillator state
+  };
 }
 
-function drawStream(){
-  const startX = bottleA.x + bottleA.w;
-  const startY = bottleA.y + bottleA.h * 0.25;
-  const endX   = bottleB.x;
-  const endY   = bottleB.y + bottleB.h * 0.35;
+// Scene: one source tilts and pours into target
+const src = makeBottle(260, 120, 120, 320);
+src.color = "#FFD300";
+src.fill  = 0.78;
 
-  ctx.strokeStyle = "#1fbf84";
-  ctx.lineWidth = 6;
+const dst = makeBottle(630, 150, 120, 320);
+dst.color = "#00B3FF";
+dst.fill  = 0.18;
+
+// Animation timeline
+let t = 0;
+let pouring = true;
+
+// Helpers: drawing in bottle-local space
+function withBottleTransform(b, fn){
+  ctx.save();
+  ctx.translate(b.x, b.y);
+  ctx.rotate(b.angle);
+  fn();
+  ctx.restore();
+}
+
+// Bottle outline path (local coords centered)
+function bottlePath(b){
+  const w=b.w, h=b.h;
+  const r = Math.min(w*0.20, 22);
+  const neckH = h*0.10;
+  const neckW = w*0.58;
+
+  const x0 = -w/2, y0 = -h/2;
+  const x1 =  w/2, y1 =  h/2;
+
+  // body with rounded bottom
+  ctx.beginPath();
+  // top rim
+  ctx.moveTo(-neckW/2, y0);
+  ctx.lineTo( neckW/2, y0);
+
+  // shoulder to full width
+  ctx.quadraticCurveTo( w/2, y0, x1, y0+neckH);
+
+  // right side
+  ctx.lineTo(x1, y1 - r);
+  // bottom right curve
+  ctx.quadraticCurveTo(x1, y1, x1-r, y1);
+  // bottom line
+  ctx.lineTo(x0+r, y1);
+  // bottom left curve
+  ctx.quadraticCurveTo(x0, y1, x0, y1-r);
+
+  // left side
+  ctx.lineTo(x0, y0+neckH);
+  // shoulder back to neck
+  ctx.quadraticCurveTo(-w/2, y0, -neckW/2, y0);
+
+  ctx.closePath();
+}
+
+// Compute liquid polygon inside bottle with “gravity-level surface” + slosh
+function drawLiquid(b){
+  // local bounds inside bottle
+  const w=b.w, h=b.h;
+  const padX = w*0.10;
+  const padTop = h*0.08;
+  const padBot = h*0.06;
+
+  const innerLeft  = -w/2 + padX;
+  const innerRight =  w/2 - padX;
+  const innerTop   = -h/2 + padTop;
+  const innerBot   =  h/2 - padBot;
+
+  // Base fill height in local coordinates (0 at top, + down)
+  const fillY = lerp(innerBot, innerTop, b.fill); // higher fill => smaller y
+
+  // Gravity direction in local space
+  // Global gravity is (0,1). Local gravity = rotate(-angle) * (0,1)
+  const gx =  Math.sin(b.angle);
+  const gy =  Math.cos(b.angle);
+
+  // Surface normal aligns opposite gravity; surface line is perpendicular to gravity.
+  // We represent surface as y = m x + k, where m = -gx/gy (if gy!=0)
+  let m = 0;
+  if (Math.abs(gy) > 1e-4) m = -gx/gy;
+  m = clamp(m, -2.2, 2.2);
+
+  // Slosh: add a small oscillating offset to surface slope and height
+  const sloshAmp = 10; // px
+  const slopeAmp = 0.25;
+  const wave = b.slosh.p;
+
+  // The “k” is chosen so that surface at x=0 crosses fillY, plus wave offset
+  const k = fillY + sloshAmp * wave;
+
+  // Surface endpoints across the inner width
+  const xL = innerLeft;
+  const xR = innerRight;
+  let yL = m*xL + k + slopeAmp*wave*(xL/(w/2))*18;
+  let yR = m*xR + k + slopeAmp*wave*(xR/(w/2))*18;
+
+  // Clamp surface within container
+  yL = clamp(yL, innerTop, innerBot);
+  yR = clamp(yR, innerTop, innerBot);
+
+  // Liquid polygon: surface line -> down to bottom -> back
+  ctx.save();
+  // Clip to bottle interior
+  bottlePath(b);
+  ctx.clip();
+
+  // Fill liquid
+  ctx.beginPath();
+  ctx.moveTo(xL, yL);
+  ctx.lineTo(xR, yR);
+  ctx.lineTo(xR, innerBot);
+  ctx.lineTo(xL, innerBot);
+  ctx.closePath();
+
+  ctx.fillStyle = b.color;
+  ctx.globalAlpha = 0.92;
+  ctx.fill();
+
+  // Subtle highlight band (fake refraction)
+  ctx.globalAlpha = 0.10;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(innerLeft + 10, innerTop, 12, innerBot-innerTop);
+
+  // Surface sheen
+  ctx.globalAlpha = 0.22;
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(xL, yL);
+  ctx.lineTo(xR, yR);
+  ctx.stroke();
+
+  ctx.restore();
+  ctx.restore();
+}
+
+// Draw bottle glass + rim highlights
+function drawBottle(b){
+  withBottleTransform(b, ()=>{
+    // glass fill
+    bottlePath(b);
+    ctx.fillStyle = "rgba(255,255,255,0.03)";
+    ctx.fill();
+
+    // inner liquid
+    drawLiquid(b);
+
+    // outline
+    bottlePath(b);
+    ctx.strokeStyle = "rgba(220,230,255,0.55)";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // rim highlight
+    ctx.strokeStyle = "rgba(255,255,255,0.15)";
+    ctx.lineWidth = 6;
+    ctx.stroke();
+  });
+}
+
+// Compute pour spout point in world coords (top-right lip)
+function spoutPointWorld(b){
+  // local point near top-right rim
+  const local = { x: b.w*0.18, y: -b.h*0.46 };
+  const cos = Math.cos(b.angle), sin = Math.sin(b.angle);
+  return {
+    x: b.x + local.x*cos - local.y*sin,
+    y: b.y + local.x*sin + local.y*cos
+  };
+}
+
+// Determine if pour should happen: lip lower than surface along that side
+function isPouring(b){
+  // Use angle threshold
+  return Math.abs(b.angle) > 0.25; // ~14°
+}
+
+// Draw stream between spout and target mouth
+function drawStream(a, b, color, strength){
+  if (strength <= 0) return;
+
+  const s = spoutPointWorld(a);
+  const mouth = { x: b.x - 10, y: b.y - b.h*0.30 };
+
+  const midX = (s.x + mouth.x)/2;
+  const midY = Math.min(s.y, mouth.y) + 120; // sag down
+
+  ctx.save();
+  ctx.globalAlpha = 0.85 * strength;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lerp(2, 10, strength);
   ctx.lineCap = "round";
 
   ctx.beginPath();
-  ctx.moveTo(startX, startY);
-  ctx.bezierCurveTo(
-    startX + 60, startY + 20,
-    endX - 60, endY - 20,
-    endX, endY
-  );
+  ctx.moveTo(s.x, s.y);
+  ctx.quadraticCurveTo(midX, midY, mouth.x, mouth.y);
   ctx.stroke();
-}
 
-function animate(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  if (pouring){
-    t += 0.01;
-
-    const flow = Math.min(t, 1) * 0.6;
-
-    bottleA.level = Math.max(0.2, 0.8 - flow);
-    bottleB.level = Math.min(0.8, 0.2 + flow);
-
-    drawStream();
-
-    if (t >= 1){
-      pouring = false;
-    }
+  // small droplets
+  ctx.globalAlpha = 0.35 * strength;
+  for (let i=0;i<3;i++){
+    const px = lerp(s.x, mouth.x, 0.35 + i*0.18);
+    const py = lerp(s.y, mouth.y, 0.35 + i*0.18) + 20 + i*18;
+    ctx.beginPath();
+    ctx.arc(px + (Math.random()-0.5)*6, py + (Math.random()-0.5)*6, 2.2, 0, TAU);
+    ctx.fillStyle = color;
+    ctx.fill();
   }
 
-  drawBottle(bottleA);
-  drawBottle(bottleB);
-
-  requestAnimationFrame(animate);
+  ctx.restore();
 }
 
-// start pour after a moment
-setTimeout(() => {
-  pouring = true;
-}, 600);
+// Slosh oscillator update (damped)
+function updateSlosh(b, dt){
+  // target slosh is proportional to angular velocity / acceleration
+  // here we approximate using angle changes
+  const stiffness = 18;
+  const damping = 10;
 
-animate();
+  // v += (-k p - d v + input)*dt
+  const input = clamp(b._angleVel || 0, -2, 2) * 0.55;
+  b.slosh.v += (-stiffness*b.slosh.p - damping*b.slosh.v + input) * dt;
+  b.slosh.p += b.slosh.v * dt;
+  b.slosh.p = clamp(b.slosh.p, -1.2, 1.2);
+}
+
+// Main loop
+let last = performance.now();
+function tick(now){
+  const dt = clamp((now-last)/1000, 0.0, 0.033);
+  last = now;
+
+  // timeline: tilt in, pour, tilt out
+  t += dt;
+
+  const tiltIn  = clamp(t/0.8, 0, 1);
+  const pourMid = clamp((t-0.9)/1.6, 0, 1);
+  const tiltOut = clamp((t-2.7)/0.9, 0, 1);
+
+  // Desired angles
+  const a0 = 0;
+  const aTilt = -0.62; // ~ -35°
+  let desired = a0;
+
+  if (tiltIn < 1) desired = lerp(a0, aTilt, easeInOut(tiltIn));
+  else if (tiltOut < 1) desired = aTilt;
+  else desired = lerp(aTilt, a0, easeInOut(tiltOut));
+
+  // Track angle velocity for slosh input
+  const prevA = src.angle;
+  src.angle = desired;
+  src._angleVel = (src.angle - prevA) / Math.max(dt, 1e-4);
+
+  // destination stays upright but can have tiny slosh from stream impacts
+  dst._angleVel = 0;
+
+  updateSlosh(src, dt);
+  updateSlosh(dst, dt);
+
+  // Pour logic: once tilted and pouring window active, transfer volume smoothly
+  let flowStrength = 0;
+  if (pouring && isPouring(src) && pourMid > 0 && tiltOut === 0){
+    // flow rate: based on tilt + how much above minimum
+    const tiltFactor = clamp((Math.abs(src.angle)-0.22)/0.45, 0, 1);
+    flowStrength = tiltFactor * (1 - Math.abs(0.5 - pourMid)*2*0.15);
+
+    const rate = 0.22; // fill fraction per second at full flow
+    const dFill = rate * flowStrength * dt;
+
+    // don’t over-drain or overfill
+    const canDrain = Math.max(0, src.fill - 0.08);
+    const canFill  = Math.max(0, 0.92 - dst.fill);
+    const actual = Math.min(dFill, canDrain, canFill);
+
+    src.fill -= actual;
+    dst.fill += actual;
+
+    // impact creates a tiny slosh in dst
+    dst.slosh.v += actual * 30;
+  }
+
+  // stop once mostly done
+  if (t > 3.9) pouring = false;
+
+  // render
+  ctx.clearRect(0,0,c.width,c.height);
+
+  // background vignette
+  const g = ctx.createRadialGradient(c.width/2, c.height/2, 60, c.width/2, c.height/2, 520);
+  g.addColorStop(0, "rgba(255,255,255,0.06)");
+  g.addColorStop(1, "rgba(0,0,0,0.0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,c.width,c.height);
+
+  // labels
+  ctx.fillStyle = "rgba(230,240,255,0.7)";
+  ctx.font = "20px system-ui, -apple-system, Segoe UI, Roboto";
+  ctx.fillText("Gravity + Slosh + Pour (Canvas Demo)", 24, 38);
+
+  // stream behind glass
+  drawStream(src, dst, src.color, flowStrength);
+
+  // bottles
+  drawBottle(src);
+  drawBottle(dst);
+
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
 </script>
-
 </body>
 </html>
