@@ -21,26 +21,27 @@
   --speech-plate-dark: url("./dmspeaks/speech_bubble_dark.png");
   --speech-plate-light: url("./dmspeaks/speech_bubble_light.png");
 
-  /* DM-only font */
+  /* DM-only font (speech header only) */
   --dm-font: "UnifrakturCook", serif;
 
-    /* Bottle art */
+  /* Bottle art */
   --bottle-open: url("./chemset/vial/vial_empty.png");
   --bottle-locked: url("./chemset/vial/vial_corked.png");
 
   /* Thesis spacing controls */
-  --thesis-pad-y: 5px;       /* was 10px -> 10px thinner total (top+bottom) */
+  --thesis-pad-y: 5px;
   --thesis-pad-x: 10px;
-  --thesis-gap-below: 30px;  /* extra padding below thesis before bottles */
+  --thesis-gap-below: 30px;
 
   /* inner chamber (tuned for vial_empty.png / vial_corked.png) */
   --ch-top: 30px;
-  --ch-side: 12px;   /* smaller = wider liquid (yours is too narrow) */
+  --ch-side: 12px;
   --ch-bottom: 0px;
   --ch-radius: 6px;
 }
 
-{ box-sizing:border-box; }
+*{ box-sizing:border-box; }
+
 body{
   margin:0;
   background:#0b0f14;
@@ -65,8 +66,6 @@ body{
   position: fixed;
   top: calc(env(safe-area-inset-top, 0px) + 0px);
   left: calc(env(safe-area-inset-left, 0px) + 0px);
-  right: auto;
-  bottom: auto;
   z-index: 2000;
   border: 0px solid var(--line);
   background: rgba(17,26,39,.7);
@@ -85,14 +84,13 @@ body{
   width: var(--railW);
   border: 1px solid var(--line);
 
-  /* SOLID BG (no transparency) */
+  /* SOLID BG */
   background: #0b1220;
 
   border-radius: 14px;
   padding: 10px 8px;
 
   display:flex;
-  flex-direction: row; /* default */
   align-items:center;
   cursor:pointer;
   user-select:none;
@@ -103,38 +101,33 @@ body{
     0 10px 24px rgba(0,0,0,.18);
 }
 
-/* expanded meanings panel (hidden by default) */
+/* expanded meanings panel */
 .bankExpanded{
   display:none;
   width: 300px;
-  padding: 6px 1px 6px 1px;
-  order: -1;          /* move meanings before letters */
-  margin-left: 0px; /* spacing between meanings and letters */
+  padding: 6px 1px;
+  order: -1;
+  margin-left: 0px;
 }
 
-/* Expanded state: meanings LEFT, letters RIGHT (colors preserved) */
 .bankRail.expanded{
   width: calc(var(--railW) + 240px + 40px);
   display:grid;
   grid-template-columns: 240px var(--railW);
-  align-items:left;
+  align-items:start;
   padding: 10px 8px;
   column-gap: 10px;
 }
-
 .bankRail.expanded .bankExpanded{ display:block; }
-
-/* DO NOT hide letters when expanded */
 .bankRail.expanded .bankLetters{
   display:flex;
   justify-self:end;
 }
 
-/* rows: text left, letter right (you already changed the HTML for this) */
 .bankRow{
   display:grid;
   grid-template-columns: 1fr 28px;
-  align-items:left;
+  align-items:start;
   gap:10px;
   padding: 6px 10px;
   color: var(--muted);
@@ -147,7 +140,6 @@ body{
   color: rgba(230,237,243,.72);
 }
 
-/* collapsed letters */
 .bankLetters{
   display:flex;
   flex-direction:column;
@@ -189,8 +181,6 @@ body{
 .bankLetters span[data-bank="N"].on{ color:#3fe27a; }
 .bankLetters span[data-bank="K"].on{ color:#ffd24a; }
 
-
-
 /* ---------- PLAYFIELD ---------- */
 .playfield{
   position: absolute;
@@ -201,7 +191,7 @@ body{
   padding-bottom: calc(var(--modsH) + 8px + var(--sab));
 }
 
-/* Thesis overlay bar (10px thinner total + extra gap below bottles) */
+/* Thesis overlay bar */
 .thesisBar{
   position:absolute;
   left: calc(var(--railW) + 10px);
@@ -226,13 +216,11 @@ body{
   font-size: 14px;
   line-height: 1.05;
 }
-
 .thesisSub{
   font-size: 12px;
   color: var(--muted);
   margin-top: 1px;
 }
-
 .thesisBtn{
   border: 1px solid var(--line);
   background: rgba(17,26,39,.65);
@@ -243,30 +231,22 @@ body{
   cursor:pointer;
 }
 
-/* Bottles grid
-   Padding-top ensures:
-   - thesis bar never overlaps bottles
-   - +10px extra gap below thesis bar
-*/
+/* Bottles grid */
 .grid{
   display:grid;
   grid-template-columns: repeat(5, minmax(56px, 1fr));
   gap: 10px;
-
-  /* conservative top padding to avoid overlap across devices */
   padding: calc(58px + var(--thesis-gap-below)) 4px 0 4px;
-
   align-content:start;
 }
 
-/* ---------- BOTTLES (with PNG art plates) ---------- */
+/* ---------- BOTTLES ---------- */
 .bottle{
   position:relative;
   overflow:hidden;
   user-select:none;
   touch-action: none;
 
-  /* IMPORTANT: fills from bottom */
   display:flex;
   flex-direction: column-reverse;
 
@@ -274,21 +254,14 @@ body{
   border-radius: 22px 22px 26px 26px;
 
   background: transparent;
-  border: 0px solid rgba(220,232,255,.10);
-}
-
-/* Bottle halo only (no movement) */
-.bottle{
+  border: 0;
   outline: none;
   -webkit-tap-highlight-color: transparent;
-}
 
-/* The chamber inset that holds the liquid */
-.bottle{
   padding: var(--ch-top) var(--ch-side) var(--ch-bottom) var(--ch-side);
 }
 
-/* Selected state = persistent halo */
+/* Selected state = halo only */
 .bottle.selected{
   box-shadow:
     0 0 0 2px rgba(255,255,255,0.14),
@@ -296,7 +269,7 @@ body{
     0 0 40px rgba(0,179,255,0.30);
 }
 
-/* Tap feedback halo (momentary) */
+/* Tap feedback halo */
 .bottle.pressed{
   box-shadow:
     0 0 0 2px rgba(255,255,255,0.10),
@@ -304,7 +277,6 @@ body{
     0 0 32px rgba(0,179,255,0.22);
 }
 
-/* Locked variant (optional – purple-ish halo so it reads as different) */
 .bottle.locked.selected{
   box-shadow:
     0 0 0 2px rgba(255,255,255,0.10),
@@ -312,7 +284,7 @@ body{
     0 0 40px rgba(154,122,160,0.30);
 }
 
-/* subtle interior “well” */
+/* subtle interior well */
 .bottle::before{
   content:"";
   position:absolute;
@@ -326,24 +298,25 @@ body{
   pointer-events:none;
 }
 
-/* Seg stack must be a flex column so .seg { flex:1 } actually works */
+/* Liquid stack */
 .segs{
   position: relative;
-  overflow: hidden; /* keeps pattern inside rounded corners */
+  overflow: hidden;
   display: flex;
-  flex-direction: column-reverse; /* bottom-fill */
+  flex-direction: column-reverse;
   flex: 1;
   width: 100%;
   height: 100%;
   z-index: 2;
 }
+
 .seg{
   flex: 1 0 0;
-  position: relative;   /* REQUIRED so ::after anchors to each segment */
-  overflow: hidden;     /* optional: keeps pattern inside segment edges */
+  position: relative;
+  overflow: hidden;
 }
 
-/* Round the top & bottom of the stack so it looks “contained” */
+/* Round edges */
 .bottle .segs .seg:first-child{
   border-bottom-left-radius: var(--ch-radius);
   border-bottom-right-radius: var(--ch-radius);
@@ -353,7 +326,7 @@ body{
   border-top-right-radius: var(--ch-radius);
 }
 
-/* Glass overlay art always on top */
+/* Glass overlay */
 .bottle::after{
   content:"";
   position:absolute;
@@ -364,13 +337,8 @@ body{
   pointer-events:none;
   z-index: 5;
 }
-
-/* open vs locked overlay */
 .bottle::after{ background-image: var(--bottle-open); }
 .bottle.locked::after{ background-image: var(--bottle-locked); }
-
-/* keep liquids UNDER the glass */
-.bottle .seg{ z-index: 1; }
 
 /* --------- SVG Pattern Overlay (Role-Based) --------- */
 .seg::after{
@@ -378,11 +346,10 @@ body{
   position:absolute;
   inset:0;
   pointer-events:none;
-  opacity:.90;
   background-size:64px 64px;
   background-repeat:repeat;
-  mix-blend-mode: normal; opacity: 1;
-  z-index: 2; /* above liquid fill */
+  z-index: 2;
+  opacity: .85;
 }
 
 .seg.role-volatile::after   { background-image: url("./elements/textures/pattern_ripples.svg"); animation: drift 7s linear infinite; }
@@ -427,13 +394,50 @@ body{
 .modSlot{
   flex: 1;
   height: 100%;
+  position: relative;
   border-radius: 14px;
   border: 1px dashed rgba(220,232,255,.18);
   background: rgba(17,26,39,.35);
-  color: var(--text);
-  font-weight: 1000;
-  font-size: 26px;
   cursor:pointer;
+  overflow:hidden;
+}
+
+.modIcon{
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  display:block;
+  margin: 0 auto;
+  pointer-events:none;
+}
+
+.modSlot.depleted{
+  opacity: .35;
+  filter: grayscale(1);
+}
+
+.modSlot.armed{
+  outline: 2px solid rgba(130,200,255,.9);
+  box-shadow: 0 0 18px rgba(130,200,255,.55);
+}
+
+.modBadge{
+  position:absolute;
+  top: 8px;
+  right: 10px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight: 900;
+  font-size: 12px;
+  background: rgba(10,16,24,.85);
+  border: 1px solid rgba(220,232,255,.18);
+  color: #e6edf3;
+  pointer-events:none;
 }
 
 /* ---------- DM CHARACTER ---------- */
@@ -444,7 +448,6 @@ body{
   width: min(44vw, 220px);
   height: min(34vh, 340px);
   border-radius: 22px;
-  border: 0px solid var(--line);
   background: rgba(11,18,28,.01);
   transform: translateX(-120%);
   transition: transform .28s ease;
@@ -459,7 +462,7 @@ body{
   right: 8px;
   top: 8px;
   border-radius: 999px;
-  border: 0px solid var(--line);
+  border: 0;
   background: rgba(17,26,39,.85);
   color: var(--text);
   width: 34px;
@@ -467,14 +470,6 @@ body{
   cursor:pointer;
   font-weight: 1000;
   z-index: 6;
-}
-
-/* MA sprite positioning */
-.dmAvatar img, #maSprite {
-  position: fixed;
-
-/* Move left */
-transform: translate(-2000px, 0);
 }
 
 /* ---------- SPEECH ---------- */
@@ -508,19 +503,23 @@ transform: translate(-2000px, 0);
   height:100%;
 }
 
-.speech.show .speechTitle,{
+/* ✅ ONLY HEADER uses goth font */
+.speechTitle{
   font-family: var(--dm-font);
   font-weight: 700;
   letter-spacing: .2px;
 }
 
-.speechTitle{
-  font-family: "UnifrakturCook", serif; font-weight: 700;}
-/* Body text uses default UI font */
+/* Body text stays default UI font */
 .speechText{
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; font-weight: 400; /* adjustable */ }
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  font-weight: 400;
+}
 .speechSmall{
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; font-size: 12px; color: var(--muted); }
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  color: var(--muted);
+}
 
 /* ---------- TOAST + FX ---------- */
 .toast{
