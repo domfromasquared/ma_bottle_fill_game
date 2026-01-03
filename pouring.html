@@ -206,6 +206,16 @@ function spoutPointWorld(b){
   };
 }
 
+toWorld(b,  b.w*0.22, -b.h*0.46);
+}
+  
+function toWorld(b, lx, ly){
+  const cos = Math.cos(b.angle), sin = Math.sin(b.angle);
+  return {
+    x: b.x + lx*cos - ly*sin,
+    y: b.y + lx*sin + ly*cos
+  };
+}
 // Determine if pour should happen: lip lower than surface along that side
 function isPouring(b){
   // Use angle threshold
@@ -217,10 +227,10 @@ function drawStream(a, b, color, strength){
   if (strength <= 0) return;
 
   const s = spoutPointWorld(a);
-  const mouth = { x: b.x - 10, y: b.y - b.h*0.30 };
+  const m = mouthPointWorld(b);
 
-  const midX = (s.x + mouth.x)/2;
-  const midY = Math.min(s.y, mouth.y) + 120; // sag down
+  const midX = (s.x + m.x)/2;
+  const midY = Math.max(s.y, m.y) + 120; // sag downward
 
   ctx.save();
   ctx.globalAlpha = 0.85 * strength;
@@ -230,8 +240,10 @@ function drawStream(a, b, color, strength){
 
   ctx.beginPath();
   ctx.moveTo(s.x, s.y);
-  ctx.quadraticCurveTo(midX, midY, mouth.x, mouth.y);
+  ctx.quadraticCurveTo(midX, midY, m.x, m.y);
   ctx.stroke();
+  ctx.restore();
+}
 
   // small droplets
   ctx.globalAlpha = 0.35 * strength;
