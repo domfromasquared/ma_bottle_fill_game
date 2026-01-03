@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Canvas Pour Demo</title>
+<style>
+  body {
+    background:#0b0f14;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+  }
+  canvas {
+    background:#121821;
+    border-radius:12px;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="c" width="500" height="300"></canvas>
+
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+const bottleA = { x:120, y:60, w:60, h:180, level:0.8 };
+const bottleB = { x:320, y:60, w:60, h:180, level:0.2 };
+
+let pouring = false;
+let t = 0;
+
+function drawBottle(b){
+  // outline
+  ctx.strokeStyle = "#8fa3bf";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(b.x, b.y, b.w, b.h);
+
+  // liquid
+  const liquidHeight = b.h * b.level;
+  ctx.fillStyle = "#1fbf84";
+  ctx.fillRect(
+    b.x,
+    b.y + b.h - liquidHeight,
+    b.w,
+    liquidHeight
+  );
+}
+
+function drawStream(){
+  const startX = bottleA.x + bottleA.w;
+  const startY = bottleA.y + bottleA.h * 0.25;
+  const endX   = bottleB.x;
+  const endY   = bottleB.y + bottleB.h * 0.35;
+
+  ctx.strokeStyle = "#1fbf84";
+  ctx.lineWidth = 6;
+  ctx.lineCap = "round";
+
+  ctx.beginPath();
+  ctx.moveTo(startX, startY);
+  ctx.bezierCurveTo(
+    startX + 60, startY + 20,
+    endX - 60, endY - 20,
+    endX, endY
+  );
+  ctx.stroke();
+}
+
+function animate(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  if (pouring){
+    t += 0.01;
+
+    const flow = Math.min(t, 1) * 0.6;
+
+    bottleA.level = Math.max(0.2, 0.8 - flow);
+    bottleB.level = Math.min(0.8, 0.2 + flow);
+
+    drawStream();
+
+    if (t >= 1){
+      pouring = false;
+    }
+  }
+
+  drawBottle(bottleA);
+  drawBottle(bottleB);
+
+  requestAnimationFrame(animate);
+}
+
+// start pour after a moment
+setTimeout(() => {
+  pouring = true;
+}, 600);
+
+animate();
+</script>
+
+</body>
+</html>
