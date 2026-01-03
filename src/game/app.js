@@ -875,19 +875,32 @@ function render(){
   grid.innerHTML = "";
 
   for (let i = 0; i < state.bottles.length; i++){
-    const b = state.bottles[i];
+  const b = state.bottles[i];
 
-    const bottle = document.createElement("button");
-    bottle.className = "bottle";
-    if (state.selected === i) bottle.classList.add("selected");
-    if (state.locked[i]) bottle.classList.add("locked");
-    if (state.hiddenSegs[i]) bottle.classList.add("hiddenSegs");
+  const bottle = document.createElement("button");
+  bottle.className = "bottle";
 
-    // ONE input handler (prevents double-fire invalids on mobile)
-    bottle.addEventListener("pointerup", (e) => {
-      if (e.pointerType === "mouse" && e.button !== 0) return;
-      handleBottleTap(i);
-    });
+  if (state.selected === i) bottle.classList.add("selected");
+  if (state.locked[i]) bottle.classList.add("locked");
+  if (state.hiddenSegs[i]) bottle.classList.add("hiddenSegs");
+
+  // pressed state
+  bottle.addEventListener("pointerdown", () =>
+    bottle.classList.add("pressed")
+  );
+
+  const clearPressed = () =>
+    bottle.classList.remove("pressed");
+
+  bottle.addEventListener("pointerup", clearPressed);
+  bottle.addEventListener("pointercancel", clearPressed);
+  bottle.addEventListener("pointerleave", clearPressed);
+
+  // tap handler
+  bottle.addEventListener("pointerup", (e) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    handleBottleTap(i);
+  });
 
     // segments container (CSS expects .bottle > .segs > .seg)
     const segs = document.createElement("div");
@@ -924,11 +937,6 @@ function render(){
     bottle.appendChild(segs);
     grid.appendChild(bottle);
   }
-  bottle.addEventListener("pointerdown", () => bottle.classList.add("pressed"));
-const clearPressed = () => bottle.classList.remove("pressed");
-bottle.addEventListener("pointerup", clearPressed);
-bottle.addEventListener("pointercancel", clearPressed);
-bottle.addEventListener("pointerleave", clearPressed);
 
 }
 
