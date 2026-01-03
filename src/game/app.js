@@ -21,11 +21,100 @@ const PLAYER_NAME_MAX = 14;
 const DEFAULT_PLAYER_NAME = "Acolyte";
 
 const SPEECH_THEME_KEY = "ma_speechTheme";
-
 const API_BASE_KEY = "ma_apiBase";
+
 const RUN_SEED_KEY = "ma_runSeed";
 const DM_COUNT_KEY = "ma_dmAppearCount";
 const NEXT_DM_KEY = "ma_nextDMAtLevel";
+
+const INTRO_SEEN_KEY = "ma_introSeen";
+
+/* ---------------- Player Modifiers (3-slot system) ---------------- */
+const MODIFIERS = {
+  DECOHERENCE_KEY: {
+    id: "DECOHERENCE_KEY",
+    name: "Decoherence Key",
+    icon: "assets/modifiers/decoherence_key_selector.png",
+    perLevelUses: 1,
+    tooltip: "Completion is a claim. Claims may be revoked.",
+    maLine: "Seal revoked. Reality updated.",
+    bankSignal: "Knowledge / Control",
+  },
+  TEMPORAL_RETRACTION: {
+    id: "TEMPORAL_RETRACTION",
+    name: "Temporal Retraction Vial",
+    icon: "assets/modifiers/temporal_retraction_vial_selector.png",
+    perLevelUses: 3,
+    tooltip: "Time does not forgive. It permits revision.",
+    maLine: "Time retracts. Try again—cleanly.",
+    bankSignal: "Action / Impulse Recovery",
+  },
+  EQUILIBRIUM_VESSEL: {
+    id: "EQUILIBRIUM_VESSEL",
+    name: "Equilibrium Vessel",
+    icon: "assets/modifiers/equilibrium_vessel_selector.png",
+    perLevelUses: 1,
+    tooltip: "When balance degrades, the system may intervene.",
+    maLine: "Equilibrium intervenes. Don’t get used to it.",
+    bankSignal: "Nurturing / Safety Net",
+  },
+};
+
+const MOD_SLOTS = [
+  MODIFIERS.DECOHERENCE_KEY,
+  MODIFIERS.TEMPORAL_RETRACTION,
+  MODIFIERS.EQUILIBRIUM_VESSEL,
+];
+
+const modState = {
+  usesLeft: {
+    DECOHERENCE_KEY: MODIFIERS.DECOHERENCE_KEY.perLevelUses,
+    TEMPORAL_RETRACTION: MODIFIERS.TEMPORAL_RETRACTION.perLevelUses,
+    EQUILIBRIUM_VESSEL: MODIFIERS.EQUILIBRIUM_VESSEL.perLevelUses,
+  },
+  targeting: null, // "DECOHERENCE_KEY" when armed
+};
+
+let undoStack = [];
+const MAX_UNDO = 3;
+
+function deepCloneBottles(bottles){
+  return bottles.map(b => b.slice());
+}
+
+function pushUndoSnapshot(){
+  undoStack.push({
+    bottles: deepCloneBottles(state.bottles),
+    locked: state.locked.slice(),
+    hiddenSegs: state.hiddenSegs.slice(),
+    selected: state.selected,
+    levelInvalid,
+    punishedThisLevel,
+    sigMoves: sig.moves,
+    sigInvalid: sig.invalid,
+  });
+  if (undoStack.length > MAX_UNDO) undoStack.shift();
+}
+
+function restoreUndoSnapshot(){
+  const snap = undoStack.pop();
+  if (!snap) return false;
+
+  state.bottles = deepCloneBottles(snap.bottles);
+  state.locked = snap.locked.slice();
+  state.hiddenSegs = snap.hiddenSegs.slice();
+  state.selected = snap.selected;
+
+  levelInvalid = snap.levelInvalid;
+  punishedThisLevel = snap.punishedThisLevel;
+
+  sig.moves = snap.sigMoves;
+  sig.invalid = snap.sigInvalid;
+
+  syncInfoPanel();
+  render();
+  return true;
+}
 
 /* ---------------- SIN queue ---------------- */
 function loadSinQueue(){ return getJSON(SIN_QUEUE_KEY, []); }
@@ -204,6 +293,19 @@ function inferBANK(){
 
   score.K += invalidRate > 0.12 ? 0.7 : 0;
   score.K += resetRate < 0.25 ? 0.7 : 0;
+
+  // Modifier usage telemetry (lightweight)
+  // - using Equilibrium = Nurturing bias
+  // - using Decoherence = Knowledge bias
+  // - using Temporal (especially repeatedly) = Action bias / correction behavior
+  const usedEqui = (MODIFIERS.EQUILIBRIUM_VESSEL.perLevelUses - modState.usesLeft.EQUILIBRIUM_VESSEL);
+  const usedDeco = (MODIFIERS.DECOHERENCE_KEY.perLevelUses - modState.usesLeft.DECOHERENCE_KEY);
+  const usedTemp = (MODIFIERS.TEMPORAL_RETRACTION.perLevelUses - modState.usesLeft.TEMPORAL_RETRACTION);
+
+  score.N += usedEqui ? 0.6 : 0;
+  score.K += usedDeco ? 0.6 : 0;
+  score.A += usedTemp ? 0.35 : 0;
+  score.B += (usedTemp >= 2) ? 0.2 : 0;
 
   const entries = Object.entries(score).sort((a,b)=>b[1]-a[1]);
   const [bankPrimary, top] = entries[0];
@@ -420,17 +522,39 @@ function setDMSpeech({ title, body, small }){
   return { copy };
 }
 
+/* ---------------- DM overlay helpers (accessibility-safe) ---------------- */
 function showDMOverlay(){
   dmCharacter.classList.add("show");
-  dmCharacter.setAttribute("aria-hidden","false");
   speech.classList.add("show");
-  speech.setAttribute("aria-hidden","false");
+
+  dmCharacter.removeAttribute("aria-hidden");
+  speech.removeAttribute("aria-hidden");
+
+  dmCharacter.inert = false;
+  speech.inert = false;
+
+  // focus close for keyboard users (optional)
+  try { dmClose?.focus?.(); } catch {}
 }
+
 function hideDMOverlay(){
+  // If focus is inside DM, blur BEFORE aria-hidden/inert so browsers don’t warn.
+  const ae = document.activeElement;
+  if (ae && (dmCharacter.contains(ae) || speech.contains(ae))) {
+    try { ae.blur(); } catch {}
+  }
+
   dmCharacter.classList.remove("show");
-  dmCharacter.setAttribute("aria-hidden","true");
   speech.classList.remove("show");
+
+  dmCharacter.setAttribute("aria-hidden","true");
   speech.setAttribute("aria-hidden","true");
+
+  dmCharacter.inert = true;
+  speech.inert = true;
+
+  // return focus to grid (or body)
+  try { grid?.focus?.(); } catch {}
 }
 
 /* ---------------- DM cancellation token ---------------- */
@@ -440,6 +564,131 @@ let dmToken = 0;
 let introStep = 0;          // 0 none, 1 name entry, 2 ready start quest
 let deadlockActive = false; // deadlock DM active
 function introIsActive(){ return introStep === 1 || introStep === 2; }
+
+/* ---------------- Modifier UI ---------------- */
+function setModSlotButton(btn, mod){
+  if (!btn) return;
+
+  btn.innerHTML = "";
+
+  const img = document.createElement("img");
+  img.src = mod.icon;
+  img.alt = mod.name;
+  img.draggable = false;
+  img.className = "modIcon";
+
+  const uses = modState.usesLeft[mod.id] ?? 0;
+
+  if (uses <= 0) btn.classList.add("depleted");
+  else btn.classList.remove("depleted");
+
+  btn.title = `${mod.name}\n${mod.tooltip}\nUses left: ${uses}\nBANK: ${mod.bankSignal}`;
+
+  const badge = document.createElement("div");
+  badge.className = "modBadge";
+  badge.textContent = String(uses);
+
+  btn.appendChild(img);
+  btn.appendChild(badge);
+}
+
+function renderModifiers(){
+  setModSlotButton(modSlot1, MOD_SLOTS[0]);
+  setModSlotButton(modSlot2, MOD_SLOTS[1]);
+  setModSlotButton(modSlot3, MOD_SLOTS[2]);
+
+  [modSlot1, modSlot2, modSlot3].forEach(b => b?.classList.remove("armed"));
+  if (modState.targeting === "DECOHERENCE_KEY") modSlot1?.classList.add("armed");
+}
+
+function resetModifiersForLevel(){
+  modState.usesLeft.DECOHERENCE_KEY = MODIFIERS.DECOHERENCE_KEY.perLevelUses;
+  modState.usesLeft.TEMPORAL_RETRACTION = MODIFIERS.TEMPORAL_RETRACTION.perLevelUses;
+  modState.usesLeft.EQUILIBRIUM_VESSEL = MODIFIERS.EQUILIBRIUM_VESSEL.perLevelUses;
+  modState.targeting = null;
+  undoStack = [];
+  renderModifiers();
+}
+
+function spendUse(modId){
+  const left = modState.usesLeft[modId] ?? 0;
+  if (left <= 0) return false;
+  modState.usesLeft[modId] = left - 1;
+  renderModifiers();
+  return true;
+}
+
+function maOneLiner(text){
+  // non-blocking MA “voice” (keep gameplay flowing)
+  showToast(text);
+}
+
+/* ---------------- Modifier input ---------------- */
+modSlot1?.addEventListener("click", () => {
+  if (introIsActive() || deadlockActive) return;
+  const left = modState.usesLeft.DECOHERENCE_KEY;
+  if (left <= 0){
+    showToast("Decoherence Key is spent for this level.");
+    return;
+  }
+  modState.targeting = (modState.targeting === "DECOHERENCE_KEY") ? null : "DECOHERENCE_KEY";
+  renderModifiers();
+  showToast(modState.targeting ? "Decoherence armed. Tap a locked bottle." : "Decoherence disarmed.");
+});
+
+modSlot2?.addEventListener("click", () => {
+  if (introIsActive() || deadlockActive) return;
+  const left = modState.usesLeft.TEMPORAL_RETRACTION;
+  if (left <= 0){
+    showToast("Temporal Retraction is empty for this level.");
+    return;
+  }
+  const ok = restoreUndoSnapshot();
+  if (!ok){
+    showToast("No safe state to retract to.");
+    return;
+  }
+  spendUse("TEMPORAL_RETRACTION");
+  maOneLiner(MODIFIERS.TEMPORAL_RETRACTION.maLine);
+});
+
+modSlot3?.addEventListener("click", () => {
+  if (introIsActive() || deadlockActive) return;
+  const left = modState.usesLeft.EQUILIBRIUM_VESSEL;
+  if (left <= 0){
+    showToast("Equilibrium Vessel is spent for this level.");
+    return;
+  }
+
+  // Add a neutral empty bottle
+  state.bottles.push([]);
+  state.locked.push(false);
+  state.hiddenSegs.push(false);
+
+  const to = state.bottles.length - 1;
+  let best = null;
+
+  for (let from = 0; from < state.bottles.length; from++){
+    if (from === to) continue;
+    if (!canPour(from, to)) continue;
+
+    const run = topRunCount(state.bottles[from]);
+    if (!best || run > best.run){
+      best = { from, to, run };
+    }
+  }
+
+  render(); // show new vessel immediately
+
+  if (!best){
+    showToast("Equilibrium found no legal siphon.");
+  } else {
+    doPour(best.from, best.to);
+  }
+
+  spendUse("EQUILIBRIUM_VESSEL");
+  maOneLiner(MODIFIERS.EQUILIBRIUM_VESSEL.maLine);
+});
 
 /* ---------------- Name roast (server) ---------------- */
 async function getNameRoastFromServer(name){
@@ -467,8 +716,7 @@ function localNameRoast(name){
 
 /* ---------------- Intro DM (first load) ---------------- */
 function runFirstLoadIntro(){
-if (localStorage.getItem("ma_introSeen") === "1") return false;
-  localStorage.setItem("ma_introSeen", "1");
+  if (localStorage.getItem(INTRO_SEEN_KEY) === "1") return false;
 
   introStep = 1;
   dmToken++;
@@ -522,6 +770,7 @@ Tell me… what do I call you?`,
     }
 
     const saved = setPlayerName(name);
+    localStorage.setItem(INTRO_SEEN_KEY, "1"); // ✅ set only after accepted
     syncInfoPanel();
     introStep = 2;
 
@@ -679,7 +928,7 @@ async function runDMIfAvailable(){
 
   setDMAvatar({ mood: payload.dm_mood || "encouraging", frame: payload.dm_frame, seedKey: 555 });
 
-  // Apply modifier for NEXT level build if present
+  // Applies “level-gen modifier” for NEXT level if present (server side)
   if (payload.modifier){
     pendingModifier = payload.modifier;
   }
@@ -783,14 +1032,14 @@ function generateBottlesFromRecipe(recipe){
   state.hiddenSegs = new Array(bottleCount).fill(false);
   state.stabilizer = null;
 
-  // Locked bottles (uses your open/locked PNG visuals)
+  // Locked bottles
   const lockCount = Math.min(recipe.lockedBottles || 0, bottleCount);
   for (let i=0;i<lockCount;i++){
     state.locked[i] = true;
     state.hiddenSegs[i] = true;
   }
 
-  // Stabilizer unlock mechanic after threshold
+  // Stabilizer unlock mechanic
   if (level >= STABILIZER_UNLOCK_LEVEL && lockCount > 0){
     state.stabilizer = { unlock: "UR_full", idx: 0, unlocked: false };
   }
@@ -840,6 +1089,9 @@ function doPour(from,to){
     return false;
   }
 
+  // ✅ Snapshot BEFORE committing valid pour (Temporal Retraction safety)
+  pushUndoSnapshot();
+
   const a=state.bottles[from], b=state.bottles[to];
   const color=topColor(a);
   const run=topRunCount(a);
@@ -875,37 +1127,33 @@ function render(){
   grid.innerHTML = "";
 
   for (let i = 0; i < state.bottles.length; i++){
-  const b = state.bottles[i];
+    const b = state.bottles[i];
 
-  const bottle = document.createElement("button");
-  bottle.className = "bottle";
+    const bottle = document.createElement("button");
+    bottle.className = "bottle";
+    bottle.type = "button";
 
-  if (state.selected === i) bottle.classList.add("selected");
-  if (state.locked[i]) bottle.classList.add("locked");
-  if (state.hiddenSegs[i]) bottle.classList.add("hiddenSegs");
+    if (state.selected === i) bottle.classList.add("selected");
+    if (state.locked[i]) bottle.classList.add("locked");
+    if (state.hiddenSegs[i]) bottle.classList.add("hiddenSegs");
 
-  // pressed state
-  bottle.addEventListener("pointerdown", () =>
-    bottle.classList.add("pressed")
-  );
+    // Press feedback (mobile + desktop)
+    bottle.addEventListener("pointerdown", () => bottle.classList.add("pressed"));
+    const clearPressed = () => bottle.classList.remove("pressed");
+    bottle.addEventListener("pointerup", clearPressed);
+    bottle.addEventListener("pointercancel", clearPressed);
+    bottle.addEventListener("pointerleave", clearPressed);
 
-  const clearPressed = () =>
-    bottle.classList.remove("pressed");
+    // Tap handler
+    bottle.addEventListener("pointerup", (e) => {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      handleBottleTap(i);
+    });
 
-  bottle.addEventListener("pointerup", clearPressed);
-  bottle.addEventListener("pointercancel", clearPressed);
-  bottle.addEventListener("pointerleave", clearPressed);
-
-  // tap handler
-  bottle.addEventListener("pointerup", (e) => {
-    if (e.pointerType === "mouse" && e.button !== 0) return;
-    handleBottleTap(i);
-  });
-
-    // segments container (CSS expects .bottle > .segs > .seg)
     const segs = document.createElement("div");
     segs.className = "segs";
 
+    // Fill bottom-up visually: CSS is column-reverse; we render bottom->top by indexing b[s]
     for (let s = 0; s < state.capacity; s++){
       const seg = document.createElement("div");
       seg.className = "seg";
@@ -913,16 +1161,12 @@ function render(){
       const idx = (b[s] ?? null);
 
       if (idx !== null && idx !== undefined) {
-        const sym = currentElements[idx];      // e.g. "VI", "EM", "CO"
+        const sym = currentElements[idx];
         const el  = ELEMENTS?.[sym];
 
-        // color fill
         seg.style.background = (el?.color || currentPalette[idx] || "#fff");
 
-        // element class → enables el-EM, el-CO, etc
         if (sym) seg.classList.add(`el-${sym}`);
-
-        // role class → enables role-volatile, role-stabilizer, etc
         if (el?.role) {
           const roleSlug = el.role.toLowerCase().replace(/\s+/g, "-");
           seg.classList.add(`role-${roleSlug}`);
@@ -937,14 +1181,33 @@ function render(){
     bottle.appendChild(segs);
     grid.appendChild(bottle);
   }
-
 }
-
 
 /* ---------------- Input ---------------- */
 function handleBottleTap(i){
   if (introIsActive()) return;
   if (deadlockActive) return;
+
+  // If Decoherence Key is armed, a tap on a LOCKED bottle consumes and unlocks.
+  if (modState.targeting === "DECOHERENCE_KEY"){
+    if (!state.locked[i]){
+      showToast("Tap a LOCKED bottle to revoke its seal.");
+      return;
+    }
+    if (!spendUse("DECOHERENCE_KEY")){
+      modState.targeting = null;
+      renderModifiers();
+      showToast("Decoherence Key is spent.");
+      return;
+    }
+    state.locked[i] = false;
+    state.hiddenSegs[i] = false;
+    modState.targeting = null;
+    renderModifiers();
+    render();
+    maOneLiner(MODIFIERS.DECOHERENCE_KEY.maLine);
+    return;
+  }
 
   const now = performance.now();
   if (sig.lastMoveAt) sig.moveTimes.push(now - sig.lastMoveAt);
@@ -956,7 +1219,7 @@ function handleBottleTap(i){
     return;
   }
 
-  // NEW: deselect on same-bottle tap
+  // Deselect on same bottle tap
   if (state.selected === i){
     state.selected = -1;
     render();
@@ -974,6 +1237,8 @@ function startLevel(){
   deadlockActive = false;
   punishedThisLevel = false;
   levelInvalid = 0;
+
+  resetModifiersForLevel();
 
   const recipe = buildLocalRecipe();
   applyElementPalette(recipe);
@@ -1010,7 +1275,7 @@ dmClose.addEventListener("click", () => {
   dmToken++; // cancels in-flight LLM
   hideDMOverlay();
 
-  // If intro was active, we still need a name to proceed
+  // If intro was active, do NOT auto-set intro seen; just proceed with default
   if (introIsActive()){
     setPlayerName(DEFAULT_PLAYER_NAME);
     introStep = 0;
@@ -1018,7 +1283,7 @@ dmClose.addEventListener("click", () => {
     return;
   }
 
-  // If deadlock DM was active, auto-retry (prevents stuck state)
+  // If deadlock DM was active, auto-retry
   if (deadlockActive){
     deadlockActive = false;
     sig.resets++;
@@ -1033,13 +1298,11 @@ function factoryResetGame(){
   );
   if (!ok) return;
 
-  // MA reset line
   try{
     dmToken++;
     showDMOverlay();
     setSpeechTheme("dark");
     setDMAvatar({ mood:"satisfied", seedKey: 7777 });
-
     setDMSpeech({
       title: "Factory Reset",
       body:
@@ -1054,13 +1317,13 @@ Try not to disappoint me twice.`,
   } catch {}
 
   setTimeout(() => {
-    localStorage.removeItem("ma_playerName");
-    localStorage.removeItem("ma_introSeen");
-    localStorage.removeItem("ma_runSeed");
-    localStorage.removeItem("ma_dmAppearCount");
-    localStorage.removeItem("ma_nextDMAtLevel");
-    localStorage.removeItem("ma_sinQueue");
-    localStorage.removeItem("ma_speechTheme");
+    localStorage.removeItem(PLAYER_NAME_KEY);
+    localStorage.removeItem(INTRO_SEEN_KEY);
+    localStorage.removeItem(RUN_SEED_KEY);
+    localStorage.removeItem(DM_COUNT_KEY);
+    localStorage.removeItem(NEXT_DM_KEY);
+    localStorage.removeItem(SIN_QUEUE_KEY);
+    localStorage.removeItem(SPEECH_THEME_KEY);
     location.reload();
   }, 650);
 }
@@ -1072,14 +1335,14 @@ function boot(){
   setSpeechTheme(getSpeechTheme());
   syncInfoPanel();
 
-  // If player already named, do normal start
+  // Start gameplay first (board exists), then intro overlays if needed
   startLevel();
 
-  // If new player, run intro (overrides name)
-  // Run on next tick to avoid any immediate hide calls
   setTimeout(() => {
-    if (!getPlayerName() || getPlayerName() === DEFAULT_PLAYER_NAME && !localStorage.getItem("ma_introSeen")){
-      runFirstLoadIntro();
+    const seen = localStorage.getItem(INTRO_SEEN_KEY) === "1";
+    const name = getPlayerName();
+    if (!seen || !name || name === DEFAULT_PLAYER_NAME){
+      if (!seen) runFirstLoadIntro();
     }
   }, 0);
 }
