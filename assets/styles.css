@@ -522,77 +522,97 @@ body{
 
 /* ---------------- DM Speech Bubble (double size + raised) ---------------- */
 
-/* The bubble wrapper / panel */
-#speech,
-.speech {
-  /* Double-ish size */
-  width: min(92vw, 760px);     /* was ~380px-ish; now up to 760 */
-  height: min(45vw, 350px;
-  max-width: 92vw;
-  max-height: 45vw;
+/* Notes fixed:
+   - missing parenthesis in height
+   - conflicting width/height max rules cleaned
+   - overflow should be hidden (bubble should clip text)
+   - use aspect-ratio so it scales consistently across devices
+   - safer positioning: above DM with clamp(), not vh guesswork
+   - theme background-image should be url(...) not raw var() unless var already contains url()
+   - mobile media query had bottom:58vh (puts it offscreen); replaced with clamp()
+*/
 
-  /* raise it above DM */
+/* Bubble panel */
+#speech,
+.speech{
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  bottom: 6vh;               /* raised; adjust if needed */
   z-index: 40;
 
-  /* ensure the background image scales correctly */
-  background-size: 100% 100%;
+  /* Size: “double-ish” but responsive */
+  width: clamp(320px, 92vw, 760px);
+  aspect-ratio: 760 / 350;              /* keep bubble proportions */
+  height: auto;                          /* derived from aspect ratio */
+  max-width: 92vw;
+
+  /* Raise above DM (consistent across devices) */
+  bottom: clamp(220px, 20vh, 520px);
+
+  /* Background bubble image */
   background-repeat: no-repeat;
   background-position: center;
+  background-size: 100% 100%;
 
-  /* padding inside bubble shape */
-  padding: 24px 88px 100px 88px;  /* generous padding */
+  /* Inner padding (tuned to bubble shape) */
+  padding: clamp(18px, 2.2vw, 26px)
+           clamp(56px, 8vw, 88px)
+           clamp(22px, 3.4vw, 44px)
+           clamp(56px, 8vw, 88px);
   box-sizing: border-box;
 
-  /* prevent content from leaking outside */
-  overflow: visible;
+  /* Keep text inside the plate */
+  overflow: hidden;
+
+  /* Optional: helps text feel centered in the bubble area */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
 }
 
-
-/* theme switch (your JS sets speech.dataset.theme) */
+/* Theme switch (JS sets speech.dataset.theme)
+   IMPORTANT: your CSS vars must be set like:
+   --speech-plate-dark: url("assets/dmspeaks/speech_bubble_dark.png");
+   --speech-plate-light: url("assets/dmspeaks/speech_bubble_light.png");
+*/
 .speech[data-theme="dark"]{  background-image: var(--speech-plate-dark); }
 .speech[data-theme="light"]{ background-image: var(--speech-plate-light); }
 
-/* Text blocks: start big, JS will shrink if needed */
+/* Title (DM goth font ONLY goes here) */
 #questTitle,
-.questTitle {
-  font-size: 26px;
-  line-height: 1.1;
-  margin-bottom: 10px;
+.questTitle{
+  font-size: clamp(18px, 2.6vw, 28px);
+  line-height: 1.08;
+  margin: 0 0 10px 0;
+  /* font-family: var(--dm-font);  <-- keep this here if you want goth title only */
 }
 
+/* Body text */
 #speechText,
-.speechText {
-  font-size: 16px;
+.speechText{
+  font-size: clamp(13px, 1.9vw, 16px);
   line-height: 1.35;
+  margin: 0;
+  overflow: hidden;
 }
 
+/* Small footer */
 #speechSmall,
-.speechSmall {
-  font-size: 13px;
+.speechSmall{
+  font-size: clamp(11px, 1.6vw, 13px);
   line-height: 1.25;
-  margin-top: 10px;
+  margin: 10px 0 0 0;
   opacity: 0.85;
 }
 
 /* Mobile tuning */
-@media (max-width: 420px) {
+@media (max-width: 420px){
   #speech,
-  .speech {
+  .speech{
     width: 94vw;
-    height: 45vw;
-    padding: 28px 60px 30px 60px;
-    bottom: 58vh; /* keep it above DM on short screens */
+    bottom: clamp(200px, 22vh, 420px);
+    padding: 18px 52px 22px 52px;
   }
-  #questTitle,
-  .questTitle { font-size: 22px; }
-  #speechText,
-  .speechText { font-size: 15px; }
-  #speechSmall,
-  .speechSmall { font-size: 12px; }
 }
 
 /* ---------- TOAST + FX ---------- */
