@@ -582,6 +582,7 @@ body{
   #speech,
   .speech {
     width: 94vw;
+    height: 45vw;
     padding: 28px 60px 30px 60px;
     bottom: 58vh; /* keep it above DM on short screens */
   }
