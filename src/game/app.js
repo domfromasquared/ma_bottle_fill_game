@@ -30,9 +30,9 @@ const NEXT_DM_KEY = "ma_nextDMAtLevel";
 const INTRO_SEEN_KEY = "ma_introSeen";
 
 /* ---------------- Anim constants ---------------- */
-const MOVE_ANIM_MS = 520;
+const MOVE_ANIM_MS = 1560;
 const TILT_MAX_DEG = 28; // visual tilt for gravity surface
-const INPUT_LOCK_PADDING_MS = 40;
+const INPUT_LOCK_PADDING_MS = 120;
 
 /* ---------------- Player Modifiers (3-slot system) ---------------- */
 const MODIFIERS = {
