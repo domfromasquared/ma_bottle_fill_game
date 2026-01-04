@@ -542,7 +542,7 @@ body{
   background-position: center;
 
   /* padding inside bubble shape */
-  padding: 34px 44px 30px 44px;  /* generous padding */
+  padding: 34px 88px 300px 88px;  /* generous padding */
   box-sizing: border-box;
 
   /* prevent content from leaking outside */
@@ -581,7 +581,7 @@ body{
   #speech,
   .speech {
     width: 94vw;
-    padding: 28px 30px 26px 30px;
+    padding: 28px 60px 80px 60px;
     bottom: 58vh; /* keep it above DM on short screens */
   }
   #questTitle,
