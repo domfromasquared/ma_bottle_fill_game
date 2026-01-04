@@ -34,7 +34,7 @@
   /* Thesis spacing controls */
   --thesis-pad-y: 5px;
   --thesis-pad-x: 10px;
-  --thesis-gap-below: 70px;
+  --thesis-gap-below: 50px;
 
   /* inner chamber (tuned for vial_empty.png / vial_corked.png) */
   --ch-top: 30px;
@@ -75,7 +75,7 @@ body{
   color: var(--text);
   border-radius: 14px;
   padding: 4px 4px;
-  font-weight: 1100;
+  font-weight: 2100;
   cursor:pointer;
 }
 
