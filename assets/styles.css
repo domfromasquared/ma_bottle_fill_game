@@ -549,17 +549,10 @@ body{
   overflow: hidden;
 }
 
-/* If you have separate light/dark PNGs applied via [data-theme] keep them */
-.speech[data-theme="dark"] {
-  /* example only:
-  background-image: url("assets/dmspeaks/speech_bubble_dark.png");
-  */
-}
-.speech[data-theme="light"] {
-  /* example only:
-  background-image: url("assets/dmspeaks/speech_bubble_light.png");
-  */
-}
+
+/* theme switch (your JS sets speech.dataset.theme) */
+.speech[data-theme="dark"]{  background-image: var(--speech-plate-dark); }
+.speech[data-theme="light"]{ background-image: var(--speech-plate-light); }
 
 /* Text blocks: start big, JS will shrink if needed */
 #questTitle,
