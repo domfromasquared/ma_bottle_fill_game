@@ -40,19 +40,23 @@
     <button class="settingsFab" id="devBtn" aria-label="Settings">⚙️</button>
 
     <!-- BOTTLES GRID -->
-    <section class="playfield" aria-label="Bottles Grid">
+<section class="playfield" aria-label="Bottles Grid">
+  <!-- ✅ NEW: centered frame that caps width on wide devices -->
+  <div class="playfieldFrame">
 
-      <!-- Thesis Bar (top overlay) -->
-      <div class="thesisBar" id="thesisBar">
-        <div class="thesisLeft">
-          <div class="thesisLabel" id="thesisLabel">Thesis: —</div>
-          <div class="thesisSub" id="thesisSub">—</div>
-        </div>
-        <button class="thesisBtn" id="glossaryBtn" aria-label="Open Glossary">Glossary</button>
+    <!-- Thesis Bar (top overlay) -->
+    <div class="thesisBar" id="thesisBar">
+      <div class="thesisLeft">
+        <div class="thesisLabel" id="thesisLabel">Thesis: —</div>
+        <div class="thesisSub" id="thesisSub">—</div>
       </div>
+      <button class="thesisBtn" id="glossaryBtn" aria-label="Open Glossary">Glossary</button>
+    </div>
 
-      <div class="grid" id="grid"></div>
-    </section>
+    <div class="grid" id="grid"></div>
+
+  </div>
+</section>
 
     <!-- MODIFIERS (bottom bar) -->
     <nav class="modBar" aria-label="Modifiers">
