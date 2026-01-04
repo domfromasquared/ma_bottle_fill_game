@@ -1882,7 +1882,7 @@ function drawBottleLiquid(i) {
       const pat = ctx.createPattern(img, "repeat");
       if (pat) {
         ctx.save();
-        ctx.globalAlpha = 0.38;
+        ctx.globalAlpha = 1.0;
         ctx.fillStyle = pat;
         ctx.fillRect(0, yBottom, w, cellH);
         ctx.restore();
