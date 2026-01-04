@@ -34,6 +34,41 @@ const MOVE_ANIM_MS = 700;
 const TILT_MAX_DEG = 28; // visual tilt for gravity surface
 const INPUT_LOCK_PADDING_MS = 30;
 
+/* ---------------- Instability system ---------------- */
+/**
+ * Untouched full+mixed bottles destabilize after a move-threshold.
+ * - "Untouched" counts ONLY valid pours (applyPourState).
+ * - Locked bottles are immune.
+ * - Modifiers do NOT count as moves (we don't tick here).
+ * - Early game: warnings exist, but no collapse (training mode).
+ */
+const INSTABILITY_ENABLE_LEVEL = 8;     // warnings begin (training mode)
+const INSTABILITY_COLLAPSE_LEVEL = 14; // collapse can fail the level
+
+// escalation: stage1..3 show visuals; stage4 collapses (if enabled)
+const INSTABILITY_STAGE_MAX = 3;
+const INSTABILITY_COLLAPSE_STAGE = 4;
+
+// stage thresholds: stage1 at X, stage2 at X+3, stage3 at X+5, collapse at X+7
+const STAGE_OFFSETS = [0, 0, 3, 5, 7];
+
+// mostly-solved mercy default (thesis may enable it)
+const MOSTLY_SOLVED_ENABLED_DEFAULT = false;
+
+// per-level tracking
+let levelMoveIndex = 0;
+let lastTouchedMove = [];
+let untouchedMoves = [];
+let instabilityStage = [];
+let warnedStage2 = [];
+let warnedStage3 = [];
+let instabilityEnabledThisLevel = false;
+let collapseEnabledThisLevel = false;
+let mostlySolvedEnabledThisLevel = MOSTLY_SOLVED_ENABLED_DEFAULT;
+
+// deterministic-ish random salt (no LLM)
+let instabilityLineSalt = 0;
+
 /* ---------------- Player Modifiers (3-slot system) ---------------- */
 const MODIFIERS = {
   DECOHERENCE_KEY: {
@@ -118,6 +153,7 @@ function restoreUndoSnapshot(){
 
   syncInfoPanel();
   render();
+  redrawAllBottles();
   return true;
 }
 
@@ -432,6 +468,285 @@ function hasAnyPlayableMove(){
   return false;
 }
 
+/* ---------------- Instability helpers ---------------- */
+function countDistinctColors(b){
+  const set = new Set(b);
+  return set.size;
+}
+
+function isBottleSolvedOrEmpty(i){
+  const b = state.bottles[i] || [];
+  if (!b.length) return true;
+  if (b.length !== state.capacity) return false;
+  return b.every(x => x === b[0]);
+}
+
+// only full+mixed destabilize
+function isBottleFullAndMixed(i){
+  if (state.locked[i]) return false; // immune
+  const b = state.bottles[i] || [];
+  if (b.length !== state.capacity) return false;
+  return countDistinctColors(b) >= 2;
+}
+
+// optional mercy: nearly uniform counts as stable (thesis-dependent)
+function isBottleMostlySolved(i){
+  const b = state.bottles[i] || [];
+  if (b.length !== state.capacity) return false;
+  const counts = new Map();
+  for (const c of b) counts.set(c, (counts.get(c) || 0) + 1);
+  let max = 0;
+  for (const v of counts.values()) max = Math.max(max, v);
+  return max >= (state.capacity - 1);
+}
+
+function thesisAdjust(){
+  // thresholdMoves = base + floor(level/2) + (bottleCount - colors)
+  const cfg = computeLevelConfig();
+  const base = 10;
+  let threshold = base + Math.floor(level / 2) + (cfg.bottleCount - cfg.colors);
+
+  // DM adjusts via thesis (safe deterministic heuristics):
+  // volatile-heavy -> harsher, clarity/structure -> kinder
+  const hasHO = currentElements.includes("HO");
+  const hasVI = currentElements.includes("VI");
+  const hasCO = currentElements.includes("CO") || currentElements.includes("CN");
+  const hasUR = currentElements.includes("UR") || currentElements.includes("CL");
+
+  if (hasHO || hasVI || hasCO) threshold -= 2;
+  if (hasUR) threshold += 1;
+
+  threshold = Math.max(6, Math.min(28, threshold));
+
+  // mostly-solved mercy only when thesis/behavior allows it
+  const { bankPrimary } = inferBANK();
+  const allowMercy = hasUR || bankPrimary === "B";
+  return { threshold, allowMercy };
+}
+
+function computeStageForUntouched(movesUntouched, threshold){
+  if (movesUntouched < threshold + STAGE_OFFSETS[1]) return 0;
+  if (movesUntouched < threshold + STAGE_OFFSETS[2]) return 1;
+  if (movesUntouched < threshold + STAGE_OFFSETS[3]) return 2;
+  if (movesUntouched < threshold + STAGE_OFFSETS[4]) return 3;
+  return 4;
+}
+
+function initInstabilityForLevel(){
+  levelMoveIndex = 0;
+  instabilityLineSalt = 0;
+
+  const n = state.bottles.length;
+  lastTouchedMove = new Array(n).fill(0);
+  untouchedMoves = new Array(n).fill(0);
+  instabilityStage = new Array(n).fill(0);
+  warnedStage2 = new Array(n).fill(false);
+  warnedStage3 = new Array(n).fill(false);
+
+  instabilityEnabledThisLevel = level >= INSTABILITY_ENABLE_LEVEL;
+  collapseEnabledThisLevel = level >= INSTABILITY_COLLAPSE_LEVEL;
+
+  const adj = thesisAdjust();
+  mostlySolvedEnabledThisLevel = adj.allowMercy;
+
+  for (let i=0;i<n;i++) lastTouchedMove[i] = 0;
+}
+
+function markTouched(i){
+  if (i < 0) return;
+  lastTouchedMove[i] = levelMoveIndex;
+  untouchedMoves[i] = 0;
+}
+
+function pickLine(arr){
+  const r = makeRng(hashSeed(runSeed, level, 77771, instabilityLineSalt++));
+  return arr[r.int(0, arr.length - 1)];
+}
+
+// NO LLM response banks
+const MA_UNSTABLE_WARN_2 = {
+  A: [
+    "You ignore a full mixed bottle for ten moves and call it ‘momentum’? Adorable.",
+    "Speed without attention breeds instability. Touch it—now.",
+    "Your pace is impressive. Your discipline is not."
+  ],
+  B: [
+    "Structure decays when you abandon it. Stabilize the unattended bottle.",
+    "Order is maintained—never assumed. Return to the neglected vial.",
+    "You left a mixed system unattended. Blueprint failure."
+  ],
+  N: [
+    "That bottle is shaking because it’s been neglected. Calm it down.",
+    "Stability requires care. Don’t abandon a mixed vial.",
+    "You’re close. But you’re leaving chaos unattended."
+  ],
+  K: [
+    "A mixed full bottle left untouched becomes unstable. Yes, it’s your fault.",
+    "Predictable. Neglected systems degrade. Intervene.",
+    "You can compute anything except consequences."
+  ],
+};
+
+const MA_UNSTABLE_WARN_3 = {
+  A: [
+    "Final warning. That vial is about to blow your ‘strategy’ apart.",
+    "You’ve got one job: stabilize the mixed bottle before it collapses.",
+    "This is not a race. It’s a ritual. Stabilize it."
+  ],
+  B: [
+    "Critical instability. A neglected mixed vial will collapse the level.",
+    "Blueprints fail at the unattended step. Fix the unstable bottle.",
+    "Your plan is leaking. Stabilize the vial—now."
+  ],
+  N: [
+    "It’s critical. Please—stabilize the unstable bottle before it breaks the run.",
+    "One vial is screaming for attention. Calm it down.",
+    "Care first. Then elegance. Stabilize it."
+  ],
+  K: [
+    "Critical. The unattended mixture is about to collapse the level.",
+    "You created a failure condition and then watched it shake. Genius.",
+    "Stabilize it. Or enjoy the collapse."
+  ],
+};
+
+function showMAWarning(stage){
+  if (introIsActive() || deadlockActive) return;
+
+  const { bankPrimary } = inferBANK();
+  setBankRail(bankPrimary);
+
+  const line =
+    stage === 2
+      ? pickLine(MA_UNSTABLE_WARN_2[bankPrimary] || MA_UNSTABLE_WARN_2.K)
+      : pickLine(MA_UNSTABLE_WARN_3[bankPrimary] || MA_UNSTABLE_WARN_3.K);
+
+  // UI feedback per your preference: DM warnings + glow.
+  showToast(line);
+
+  // Optional quick DM pop (non-blocking) — feels “alive” without pausing.
+  try{
+    dmToken++;
+    showDMOverlay();
+    setSpeechTheme("dark");
+    setDMAvatar({ mood: stage === 2 ? "annoyed" : "furious", seedKey: 8800 + stage });
+    setDMSpeech({
+      title: stage === 2 ? "Instability rising." : "Critical instability.",
+      body: line,
+      small: "Stabilize the untouched mixed vial: make it SOLID or EMPTY."
+    });
+
+    const my = dmToken;
+    setTimeout(() => {
+      if (dmToken !== my) return;
+      if (!introIsActive() && !deadlockActive) hideDMOverlay();
+    }, stage === 2 ? 1600 : 2200);
+  } catch {}
+}
+
+function showInstabilityFailDM(){
+  if (deadlockActive) return;
+  deadlockActive = true;
+
+  const { bankPrimary } = inferBANK();
+  setBankRail(bankPrimary);
+
+  showDMOverlay();
+  setSpeechTheme("dark");
+  setDMAvatar({ mood:"furious", seedKey: 9901 });
+
+  setDMSpeech({
+    title: "Collapse.",
+    body:
+`You left a full mixed vial unattended long enough to destabilize the entire protocol.
+
+Retry the level.
+
+And this time—touch the problem before it becomes the problem.`,
+    small: `BANK: ${bankPrimary} · Press Retry Level (or ✕ to auto-retry).`
+  });
+
+  const row = document.createElement("div");
+  row.style.display = "flex";
+  row.style.gap = "10px";
+  row.style.alignItems = "center";
+  row.style.marginTop = "10px";
+
+  const retryBtn = makePrimaryBtn("Retry Level");
+  retryBtn.addEventListener("click", () => {
+    deadlockActive = false;
+    sig.resets++;
+    hideDMOverlay();
+    startLevel();
+  });
+
+  row.appendChild(retryBtn);
+  speechText.appendChild(row);
+}
+
+function tickInstabilityAfterValidMove(){
+  if (!instabilityEnabledThisLevel) return;
+
+  const adj = thesisAdjust();
+  const threshold = adj.threshold;
+
+  let collapseNow = false;
+
+  for (let i = 0; i < state.bottles.length; i++){
+    if (state.locked[i]) {
+      instabilityStage[i] = 0;
+      untouchedMoves[i] = 0;
+      continue;
+    }
+
+    if (isBottleSolvedOrEmpty(i)) {
+      instabilityStage[i] = 0;
+      untouchedMoves[i] = 0;
+      continue;
+    }
+
+    if (mostlySolvedEnabledThisLevel && isBottleMostlySolved(i)) {
+      instabilityStage[i] = 0;
+      untouchedMoves[i] = 0;
+      continue;
+    }
+
+    if (!isBottleFullAndMixed(i)) {
+      instabilityStage[i] = 0;
+      untouchedMoves[i] = 0;
+      continue;
+    }
+
+    const untouched = levelMoveIndex - (lastTouchedMove[i] || 0);
+    untouchedMoves[i] = untouched;
+
+    const stage = computeStageForUntouched(untouched, threshold);
+    const prev = instabilityStage[i] || 0;
+    instabilityStage[i] = stage;
+
+    if (stage >= 2 && prev < 2 && !warnedStage2[i]) {
+      warnedStage2[i] = true;
+      showMAWarning(2);
+    }
+    if (stage >= 3 && prev < 3 && !warnedStage3[i]) {
+      warnedStage3[i] = true;
+      showMAWarning(3);
+    }
+
+    if (stage >= INSTABILITY_COLLAPSE_STAGE && collapseEnabledThisLevel) {
+      collapseNow = true;
+    }
+  }
+
+  // re-render to apply unstable classes
+  render();
+  redrawAllBottles();
+
+  if (collapseNow){
+    showInstabilityFailDM();
+  }
+}
+
 /* ---------------- UI ---------------- */
 function syncInfoPanel(){
   infoLevel.textContent = String(level);
@@ -664,6 +979,7 @@ modSlot3?.addEventListener("click", () => {
     return;
   }
 
+  // NOTE: modifiers do NOT count as a move — we do not tick instability here.
   state.bottles.push([]);
   state.locked.push(false);
   state.hiddenSegs.push(false);
@@ -682,11 +998,11 @@ modSlot3?.addEventListener("click", () => {
   }
 
   render();
+  redrawAllBottles();
 
   if (!best){
     showToast("Equilibrium found no legal siphon.");
   } else {
-    // no pour-stream animation; this still moves pieces.
     doPour(best.from, best.to);
   }
 
@@ -1063,6 +1379,7 @@ function checkStabilizerUnlock(){
     state.stabilizer.unlocked = true;
     showToast("Clarity unlocked. Now stop panicking.");
     render();
+    redrawAllBottles();
   }
 }
 
@@ -1074,9 +1391,6 @@ let rafResize = 0;
 
 function getRoleTextureUrl(role){
   const r = String(role || "").toLowerCase();
-  // 7 classes / 7 textures: you can remap here to match canon exactly.
-  // Keep paths consistent with your repo:
-  // assets/elements/textures/pattern_*.svg
   if (r.includes("volatile")) return "assets/elements/textures/pattern_ripples.svg";
   if (r.includes("catalyst")) return "assets/elements/textures/pattern_streaks.svg";
   if (r.includes("stabilizer")) return "assets/elements/textures/pattern_noise.svg";
@@ -1087,7 +1401,6 @@ function getRoleTextureUrl(role){
   return "assets/elements/textures/pattern_grid.svg";
 }
 
-// simple pattern cache
 const patternImgCache = new Map(); // url -> HTMLImageElement
 function getPatternImage(url){
   if (patternImgCache.has(url)) return patternImgCache.get(url);
@@ -1121,25 +1434,17 @@ function drawBottleLiquid(i){
 
   ctx.clearRect(0,0,w,h);
 
-  // hide segs for locked bottles if you want (your old hiddenSegs)
   if (state.hiddenSegs[i]) return;
 
   const b = state.bottles[i] || [];
   const cap = state.capacity;
 
-  // draw from bottom -> top into equal-height cells
   const cellH = h / cap;
   const tilt = bottleTiltRad[i] || 0;
-
-  // gravity surface slant amplitude
   const slant = Math.tan(tilt) * (w * 0.18);
 
-  // If empty, done
   if (!b.length) return;
 
-  // Determine top filled index in this bottle (visual top)
-  // We store pieces bottom->top? Your bottle arrays treat topColor as last item.
-  // So b[0] is bottom and b[b.length-1] is top.
   for (let s = 0; s < cap; s++){
     const idx = b[s] ?? null;
     if (idx === null || idx === undefined) continue;
@@ -1154,19 +1459,14 @@ function drawBottleLiquid(i){
     const yBottom = h - (s+1) * cellH;
     const yTop = h - s * cellH;
 
-    // base fill
     ctx.fillStyle = fill;
     ctx.fillRect(0, yBottom, w, cellH);
 
-    // top-surface physics: only apply to the TOPMOST filled segment
     const isTopMost = (s === b.length - 1);
     if (isTopMost && Math.abs(tilt) > 0.001){
       ctx.save();
-      ctx.globalAlpha = 1;
       ctx.beginPath();
 
-      // slanted top polygon (liquid surface)
-      // left and right top points shift opposite based on tilt direction
       const sgn = tilt >= 0 ? 1 : -1;
       const dx = Math.max(-cellH*0.6, Math.min(cellH*0.6, slant));
 
@@ -1183,16 +1483,11 @@ function drawBottleLiquid(i){
       ctx.closePath();
 
       ctx.clip();
-
-      // redraw fill for clipped shape so the surface looks slanted
       ctx.fillStyle = fill;
       ctx.fillRect(0, yBottom, w, cellH + Math.abs(dx) + 2);
-
       ctx.restore();
     }
 
-    // texture overlay (subtle)
-    // If image not loaded yet, it will show next redraw.
     if (img && img.complete && img.naturalWidth > 0){
       const pat = ctx.createPattern(img, "repeat");
       if (pat){
@@ -1205,7 +1500,6 @@ function drawBottleLiquid(i){
     }
   }
 
-  // slight inner highlight vignette
   ctx.save();
   ctx.globalAlpha = 0.22;
   const g = ctx.createLinearGradient(0,0,w,0);
@@ -1222,7 +1516,6 @@ function redrawAllBottles(){
 }
 
 function requestRedraw(){
-  // single-batch redraw to avoid spamming on resize
   if (rafResize) cancelAnimationFrame(rafResize);
   rafResize = requestAnimationFrame(() => {
     rafResize = 0;
@@ -1238,7 +1531,6 @@ let levelInvalid = 0;
 let punishedThisLevel = false;
 
 function applyPourState(from,to){
-  // Validity already checked before calling this.
   pushUndoSnapshot();
 
   const a=state.bottles[from], b=state.bottles[to];
@@ -1249,8 +1541,15 @@ function applyPourState(from,to){
 
   for(let i=0;i<amount;i++) b.push(a.pop());
 
+  // valid pour = a move
   sig.moves++;
   syncInfoPanel();
+
+  // Instability counts ONLY valid pours
+  levelMoveIndex++;
+  markTouched(from);
+  markTouched(to);
+  tickInstabilityAfterValidMove();
 
   checkStabilizerUnlock();
 
@@ -1261,6 +1560,7 @@ function applyPourState(from,to){
   }
 
   render();
+  redrawAllBottles();
 
   if (!isSolved() && !hasAnyPlayableMove()){
     showOutOfMovesDM();
@@ -1273,7 +1573,6 @@ function invalidWiggle(i){
   const el = bottleEls[i];
   if (!el) return;
   el.classList.remove("wiggle");
-  // force restart
   void el.offsetWidth;
   el.classList.add("wiggle");
   setTimeout(()=> el.classList.remove("wiggle"), 380);
@@ -1286,42 +1585,35 @@ async function animateTransferThenPour(from,to){
 
   lockInput(MOVE_ANIM_MS + INPUT_LOCK_PADDING_MS);
 
-  // compute delta
   const a = aEl.getBoundingClientRect();
   const b = bEl.getBoundingClientRect();
   const dx = (b.left + b.width*0.5) - (a.left + a.width*0.5);
   const dy = (b.top + b.height*0.25) - (a.top + a.height*0.25);
 
-  // tilt direction toward target
   const dir = dx >= 0 ? 1 : -1;
   const tiltDeg = dir * TILT_MAX_DEG;
   const tiltRad = tiltDeg * Math.PI / 180;
 
-  // animate using WAAPI (clean + reliable)
-  // Phase 1: move + tilt
   const keyframes = [
-  { transform: `translate3d(0,0,0) rotate(0deg)`, offset: 0 },
-  { transform: `translate3d(${dx}px,${dy}px,0) rotate(${tiltDeg}deg)`, offset: 0.38 },
-  { transform: `translate3d(${dx}px,${dy}px,0) rotate(${tiltDeg}deg)`, offset: 0.70 },
-  { transform: `translate3d(0,0,0) rotate(0deg)`, offset: 1 },
-];
+    { transform: `translate3d(0,0,0) rotate(0deg)`, offset: 0 },
+    { transform: `translate3d(${dx}px,${dy}px,0) rotate(${tiltDeg}deg)`, offset: 0.38 },
+    { transform: `translate3d(${dx}px,${dy}px,0) rotate(${tiltDeg}deg)`, offset: 0.70 },
+    { transform: `translate3d(0,0,0) rotate(0deg)`, offset: 1 },
+  ];
   const timing = {
     duration: MOVE_ANIM_MS,
     easing: "cubic-bezier(.15,.9,.15,1)",
     fill: "none"
   };
 
-  // “physics inside bottle”: update slant while tilted
   const t0 = performance.now();
   const dur = MOVE_ANIM_MS;
 
   const anim = aEl.animate(keyframes, timing);
 
-  // drive internal slosh by setting bottleTiltRad[from] across the timeline
   let raf = 0;
   const tick = (now) => {
     const t = (now - t0) / dur;
-    // ease in/out tilt window (peak around middle)
     const peak = Math.sin(Math.max(0, Math.min(1, t)) * Math.PI);
     bottleTiltRad[from] = tiltRad * peak;
     drawBottleLiquid(from);
@@ -1335,7 +1627,6 @@ async function animateTransferThenPour(from,to){
   bottleTiltRad[from] = 0;
   drawBottleLiquid(from);
 
-  // NOW apply the state change (no pour-stream animation, just the result)
   applyPourState(from,to);
 }
 
@@ -1358,6 +1649,12 @@ function render(){
     if (state.locked[i]) bottle.classList.add("locked");
     if (state.hiddenSegs[i]) bottle.classList.add("hiddenSegs");
 
+    // Instability visuals (locked immune enforced by tick/init)
+    const stg = instabilityStage[i] || 0;
+    if (stg === 1) bottle.classList.add("unstable1");
+    if (stg === 2) bottle.classList.add("unstable2");
+    if (stg >= 3) bottle.classList.add("unstable3");
+
     // Press feedback (mobile + desktop)
     bottle.addEventListener("pointerdown", () => bottle.classList.add("pressed"));
     const clearPressed = () => bottle.classList.remove("pressed");
@@ -1365,13 +1662,11 @@ function render(){
     bottle.addEventListener("pointercancel", clearPressed);
     bottle.addEventListener("pointerleave", clearPressed);
 
-    // Tap handler
     bottle.addEventListener("pointerup", (e) => {
       if (e.pointerType === "mouse" && e.button !== 0) return;
       handleBottleTap(i);
     });
 
-    // Canvas liquid (absolute chamber)
     const canvas = document.createElement("canvas");
     canvas.className = "liquidCanvas";
     canvas.setAttribute("aria-hidden","true");
@@ -1381,7 +1676,6 @@ function render(){
     grid.appendChild(bottle);
   }
 
-  // draw after DOM in place
   requestAnimationFrame(() => {
     redrawAllBottles();
   });
@@ -1411,6 +1705,7 @@ function handleBottleTap(i){
     modState.targeting = null;
     renderModifiers();
     render();
+    redrawAllBottles();
     maOneLiner(MODIFIERS.DECOHERENCE_KEY.maLine);
     return;
   }
@@ -1422,24 +1717,24 @@ function handleBottleTap(i){
   if (state.selected < 0){
     state.selected = i;
     render();
+    redrawAllBottles();
     return;
   }
 
-  // Deselect on same bottle tap
   if (state.selected === i){
     state.selected = -1;
     render();
+    redrawAllBottles();
     return;
   }
 
   const from = state.selected;
   const to = i;
 
-  // clear selection immediately for clean UI
   state.selected = -1;
   render();
+  redrawAllBottles();
 
-  // invalid move -> wiggle source bottle (and target) + invalid scoring
   if (!canPour(from,to)){
     sig.invalid++;
     levelInvalid++;
@@ -1463,7 +1758,6 @@ function handleBottleTap(i){
     return;
   }
 
-  // valid move -> animate bottle movement/tilt (liquid physics inside), then apply state
   animateTransferThenPour(from,to);
 }
 
@@ -1482,6 +1776,11 @@ function startLevel(){
   generateBottlesFromRecipe(recipe);
   render();
   syncInfoPanel();
+
+  // init instability AFTER bottles exist
+  initInstabilityForLevel();
+  render();
+  redrawAllBottles();
 
   runDMIfAvailable();
 }
@@ -1562,18 +1861,12 @@ Try not to disappoint me twice.`,
 }
 
 factoryResetBtn?.addEventListener("click", factoryResetGame);
+
 retryLevelBtn?.addEventListener("click", () => {
-  // close settings first so it doesn't sit on top of the restarted level
   try { settings?.close?.(); } catch {}
-
-  // count as a reset for BANK telemetry (optional but recommended)
   sig.resets++;
-
-  // clear any blocking overlays/states
   deadlockActive = false;
   introStep = 0;
-
-  // restart the current level
   startLevel();
 });
 
