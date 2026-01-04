@@ -222,6 +222,14 @@ const modSlot1 = qs("modSlot1");
 const modSlot2 = qs("modSlot2");
 const modSlot3 = qs("modSlot3");
 
+const modOverlay = qs("modOverlay");
+const modOverlayImg = qs("modOverlayImg");
+const modOverlayName = qs("modOverlayName");
+const modOverlayDesc = qs("modOverlayDesc");
+const modOverlayUse = qs("modOverlayUse");
+const modOverlayCancel = qs("modOverlayCancel");
+const modOverlayClose = qs("modOverlayClose");
+
 const retryLevelBtn = qs("retryLevelBtn");
 const factoryResetBtn = qs("factoryResetBtn");
 
