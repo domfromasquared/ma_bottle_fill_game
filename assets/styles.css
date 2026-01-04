@@ -542,7 +542,7 @@ body{
   background-position: center;
 
   /* padding inside bubble shape */
-  padding: 34px 88px 600px 88px;  /* generous padding */
+  padding: 24px 88px 1000px 88px;  /* generous padding */
   box-sizing: border-box;
 
   /* prevent content from leaking outside */
