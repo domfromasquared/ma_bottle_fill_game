@@ -372,7 +372,8 @@ function setDMAvatar({ mood, frame, seedKey }) {
 
 /* ---------------- BANK inference ---------------- */
 const sig = { moves: 0, invalid: 0, resets: 0, moveTimes: [], lastMoveAt: 0 };
-const avg = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
+const avg = (arr) =>
+  arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
 
 function inferBANK() {
   const pace = avg(sig.moveTimes.slice(-12));
@@ -393,11 +394,13 @@ function inferBANK() {
   score.K += resetRate < 0.25 ? 0.7 : 0;
 
   const usedEqui =
-    MODIFIERS.EQUILIBRIUM_VESSEL.perLevelUses - modState.usesLeft.EQUILIBRIUM_VESSEL;
+    MODIFIERS.EQUILIBRIUM_VESSEL.perLevelUses -
+    modState.usesLeft.EQUILIBRIUM_VESSEL;
   const usedDeco =
     MODIFIERS.DECOHERENCE_KEY.perLevelUses - modState.usesLeft.DECOHERENCE_KEY;
   const usedTemp =
-    MODIFIERS.TEMPORAL_RETRACTION.perLevelUses - modState.usesLeft.TEMPORAL_RETRACTION;
+    MODIFIERS.TEMPORAL_RETRACTION.perLevelUses -
+    modState.usesLeft.TEMPORAL_RETRACTION;
 
   score.N += usedEqui ? 0.6 : 0;
   score.K += usedDeco ? 0.6 : 0;
@@ -428,7 +431,9 @@ function inferSinTags() {
 function setBankRail(bankPrimary) {
   const spans = bankRail.querySelectorAll(".bankLetters span");
   spans.forEach((s) => s.classList.remove("on"));
-  const on = bankRail.querySelector(`.bankLetters span[data-bank="${bankPrimary}"]`);
+  const on = bankRail.querySelector(
+    `.bankLetters span[data-bank="${bankPrimary}"]`
+  );
   if (on) on.classList.add("on");
 }
 
@@ -578,7 +583,10 @@ function computeLevelConfig() {
   const m = pendingModifier || null;
   if (m) {
     base.colors = Math.max(3, Math.min(8, base.colors + (m.colorsDelta || 0)));
-    base.capacity = Math.max(3, Math.min(6, base.capacity + (m.capacityDelta || 0)));
+    base.capacity = Math.max(
+      3,
+      Math.min(6, base.capacity + (m.capacityDelta || 0))
+    );
     base.emptyBottles = Math.max(
       1,
       Math.min(4, base.emptyBottles + (m.emptyBottlesDelta || 0))
@@ -591,7 +599,8 @@ function computeLevelConfig() {
       0,
       Math.min(2, base.wildcardSlots + (m.wildcardSlotsDelta || 0))
     );
-    base.bottleCount = base.colors + base.emptyBottles + (m.bottleCountDelta || 0);
+    base.bottleCount =
+      base.colors + base.emptyBottles + (m.bottleCountDelta || 0);
   }
   if (!base.bottleCount) base.bottleCount = base.colors + base.emptyBottles;
   return base;
@@ -720,7 +729,10 @@ function showMAWarning(stage) {
     dmToken++;
     showDMOverlay();
     setSpeechTheme("dark");
-    setDMAvatar({ mood: stage === 2 ? "annoyed" : "furious", seedKey: 8800 + stage });
+    setDMAvatar({
+      mood: stage === 2 ? "annoyed" : "furious",
+      seedKey: 8800 + stage,
+    });
     setDMSpeech({
       title: stage === 2 ? "Instability rising." : "Critical instability.",
       body: line,
@@ -750,6 +762,57 @@ function makePrimaryBtn(label) {
   return btn;
 }
 
+/* ---------------- Speech auto-fit (shrink to fit bubble) ---------------- */
+function shrinkTextToFitBubble() {
+  const bubble = speech;
+  if (!bubble) return;
+  if (!questTitle || !speechText || !speechSmall) return;
+
+  // Ensure bubble has a deterministic height so "fit" is meaningful.
+  // Assumes your bubble art is ~780x440 (ratio ~0.564).
+  const rect = bubble.getBoundingClientRect();
+  if (rect.width > 0) {
+    const targetH = Math.round(rect.width * 0.564);
+    // Only set if not explicitly set by CSS (or if zero).
+    const currentH = parseFloat(getComputedStyle(bubble).height || "0");
+    if (!currentH || Math.abs(currentH - targetH) > 2) {
+      bubble.style.height = `${targetH}px`;
+    }
+  }
+
+  // Reset base sizes (your CSS can override, this is the starting point)
+  questTitle.style.fontSize = "26px";
+  speechText.style.fontSize = "16px";
+  speechSmall.style.fontSize = "13px";
+
+  // Give layout a tick to settle
+  const fits = () => bubble.scrollHeight <= bubble.clientHeight;
+
+  if (fits()) return;
+
+  let title = 26,
+    body = 16,
+    small = 13;
+
+  const minTitle = 16,
+    minBody = 12,
+    minSmall = 10;
+
+  for (let k = 0; k < 40; k++) {
+    if (fits()) break;
+
+    // shrink priority: body → title → small
+    if (body > minBody) body -= 0.5;
+    else if (title > minTitle) title -= 0.5;
+    else if (small > minSmall) small -= 0.5;
+    else break;
+
+    questTitle.style.fontSize = `${title}px`;
+    speechText.style.fontSize = `${body}px`;
+    speechSmall.style.fontSize = `${small}px`;
+  }
+}
+
 function setDMSpeech({ title, body, small }) {
   questTitle.textContent = title || "—";
   speechSmall.textContent = small || "";
@@ -758,6 +821,10 @@ function setDMSpeech({ title, body, small }) {
   copy.style.whiteSpace = "pre-wrap";
   copy.textContent = body || "";
   speechText.appendChild(copy);
+
+  // shrink-to-fit after content is in the DOM
+  requestAnimationFrame(() => shrinkTextToFitBubble());
+
   return { copy };
 }
 
@@ -806,6 +873,94 @@ function introIsActive() {
   return introStep === 1 || introStep === 2;
 }
 
+/* ---------------- Fail-state modifier offering ---------------- */
+function getFailModSuggestion() {
+  // Prefer Temporal if we have undo states
+  if (
+    (modState?.usesLeft?.TEMPORAL_RETRACTION ?? 0) > 0 &&
+    (undoStack?.length ?? 0) > 0
+  ) {
+    return MODIFIERS.TEMPORAL_RETRACTION;
+  }
+
+  // Then Equilibrium (adds a vessel + tries a legal siphon)
+  if ((modState?.usesLeft?.EQUILIBRIUM_VESSEL ?? 0) > 0) {
+    return MODIFIERS.EQUILIBRIUM_VESSEL;
+  }
+
+  // Then Decoherence (only if there are locked bottles)
+  if (
+    (modState?.usesLeft?.DECOHERENCE_KEY ?? 0) > 0 &&
+    (state?.locked?.some(Boolean) ?? false)
+  ) {
+    return MODIFIERS.DECOHERENCE_KEY;
+  }
+
+  return null;
+}
+
+function useFailMod(mod) {
+  if (!mod) return false;
+
+  if (mod.id === "TEMPORAL_RETRACTION") {
+    const ok = restoreUndoSnapshot();
+    if (!ok) {
+      showToast("No safe state to retract to.");
+      return false;
+    }
+    spendUse("TEMPORAL_RETRACTION");
+    maOneLiner(MODIFIERS.TEMPORAL_RETRACTION.maLine);
+    // If undo created new moves, clear deadlock if it exists
+    deadlockActive = false;
+    return true;
+  }
+
+  if (mod.id === "EQUILIBRIUM_VESSEL") {
+    if (!spendUse("EQUILIBRIUM_VESSEL")) return false;
+
+    // modifiers do NOT count as a move — we do not tick instability here.
+    state.bottles.push([]);
+    state.locked.push(false);
+    state.hiddenSegs.push(false);
+
+    const to = state.bottles.length - 1;
+    let best = null;
+
+    for (let from = 0; from < state.bottles.length; from++) {
+      if (from === to) continue;
+      if (!canPour(from, to)) continue;
+
+      const run = topRunCount(state.bottles[from]);
+      if (!best || run > best.run) best = { from, to, run };
+    }
+
+    render();
+    redrawAllBottles();
+
+    if (!best) {
+      showToast("Equilibrium found no legal siphon.");
+    } else {
+      animateTransferThenPour(best.from, best.to);
+    }
+
+    maOneLiner(MODIFIERS.EQUILIBRIUM_VESSEL.maLine);
+    deadlockActive = false;
+    return true;
+  }
+
+  if (mod.id === "DECOHERENCE_KEY") {
+    // IMPORTANT: do NOT spend here (spend happens on successful unlock tap),
+    // because your unlock flow already calls spendUse().
+    modState.targeting = "DECOHERENCE_KEY";
+    renderModifiers();
+    showToast("Decoherence armed. Tap a LOCKED bottle.");
+    deadlockActive = false;
+    return true;
+  }
+
+  return false;
+}
+
 function showInstabilityFailDM() {
   if (deadlockActive) return;
   deadlockActive = true;
@@ -817,6 +972,11 @@ function showInstabilityFailDM() {
   setSpeechTheme("dark");
   setDMAvatar({ mood: "furious", seedKey: 9901 });
 
+  const suggested = getFailModSuggestion();
+  const hint = suggested
+    ? `BANK: ${bankPrimary} · Use a Modifier or Retry Level (✕ to auto-retry).`
+    : `BANK: ${bankPrimary} · Press Retry Level (or ✕ to auto-retry).`;
+
   setDMSpeech({
     title: "Collapse.",
     body: `You left a full mixed vial unattended long enough to destabilize the entire protocol.
@@ -824,7 +984,7 @@ function showInstabilityFailDM() {
 Retry the level.
 
 And this time—touch the problem before it becomes the problem.`,
-    small: `BANK: ${bankPrimary} · Press Retry Level (or ✕ to auto-retry).`,
+    small: hint,
   });
 
   const row = document.createElement("div");
@@ -832,6 +992,19 @@ And this time—touch the problem before it becomes the problem.`,
   row.style.gap = "10px";
   row.style.alignItems = "center";
   row.style.marginTop = "10px";
+
+  if (suggested) {
+    const modBtn = makePrimaryBtn(`Use ${suggested.name}`);
+    modBtn.addEventListener("click", () => {
+      openModOverlay(suggested, "Use", () => {
+        // close DM, resume level
+        hideDMOverlay();
+        deadlockActive = false;
+        useFailMod(suggested);
+      });
+    });
+    row.appendChild(modBtn);
+  }
 
   const retryBtn = makePrimaryBtn("Retry Level");
   retryBtn.addEventListener("click", () => {
@@ -843,6 +1016,9 @@ And this time—touch the problem before it becomes the problem.`,
 
   row.appendChild(retryBtn);
   speechText.appendChild(row);
+
+  // re-fit after buttons added
+  requestAnimationFrame(() => shrinkTextToFitBubble());
 }
 
 function tickInstabilityAfterValidMove() {
@@ -917,7 +1093,9 @@ function renderThesisBar(thesisKey) {
     return;
   }
   thesisLabel.textContent = `Thesis: ${thesis.name}`;
-  thesisSub.textContent = `Must include: ${(thesis.must_include || []).join(", ") || "—"} · Must exclude: ${(thesis.must_exclude || []).join(", ") || "—"}`;
+  thesisSub.textContent = `Must include: ${
+    (thesis.must_include || []).join(", ") || "—"
+  } · Must exclude: ${(thesis.must_exclude || []).join(", ") || "—"}`;
   infoThesis.textContent = thesis.name;
 }
 
@@ -992,8 +1170,10 @@ function renderModifiers() {
 
 function resetModifiersForLevel() {
   modState.usesLeft.DECOHERENCE_KEY = MODIFIERS.DECOHERENCE_KEY.perLevelUses;
-  modState.usesLeft.TEMPORAL_RETRACTION = MODIFIERS.TEMPORAL_RETRACTION.perLevelUses;
-  modState.usesLeft.EQUILIBRIUM_VESSEL = MODIFIERS.EQUILIBRIUM_VESSEL.perLevelUses;
+  modState.usesLeft.TEMPORAL_RETRACTION =
+    MODIFIERS.TEMPORAL_RETRACTION.perLevelUses;
+  modState.usesLeft.EQUILIBRIUM_VESSEL =
+    MODIFIERS.EQUILIBRIUM_VESSEL.perLevelUses;
   modState.targeting = null;
   undoStack = [];
   renderModifiers();
@@ -1259,6 +1439,8 @@ Ready?`,
 
     row2.appendChild(startBtn);
     speechText.appendChild(row2);
+
+    requestAnimationFrame(() => shrinkTextToFitBubble());
   };
 
   submitBtn.addEventListener("click", submit);
@@ -1271,6 +1453,8 @@ Ready?`,
   speechText.appendChild(row);
 
   setTimeout(() => input.focus(), 200);
+
+  requestAnimationFrame(() => shrinkTextToFitBubble());
   return true;
 }
 
@@ -1318,10 +1502,15 @@ function showOutOfMovesDM() {
   setSpeechTheme("dark");
   setDMAvatar({ mood: react.mood, seedKey: 5050 });
 
+  const suggested = getFailModSuggestion();
+  const hint = suggested
+    ? `BANK: ${bankPrimary} · Use a Modifier or Retry Level (✕ to auto-retry).`
+    : `BANK: ${bankPrimary} · Press Retry Level (or ✕ to auto-retry).`;
+
   setDMSpeech({
     title: react.title,
     body: react.body,
-    small: `BANK: ${bankPrimary} · Press Retry Level (or ✕ to auto-retry).`,
+    small: hint,
   });
 
   const row = document.createElement("div");
@@ -1329,6 +1518,18 @@ function showOutOfMovesDM() {
   row.style.gap = "10px";
   row.style.alignItems = "center";
   row.style.marginTop = "10px";
+
+  if (suggested) {
+    const modBtn = makePrimaryBtn(`Use ${suggested.name}`);
+    modBtn.addEventListener("click", () => {
+      openModOverlay(suggested, "Use", () => {
+        hideDMOverlay();
+        deadlockActive = false;
+        useFailMod(suggested);
+      });
+    });
+    row.appendChild(modBtn);
+  }
 
   const retryBtn = makePrimaryBtn("Retry Level");
   retryBtn.addEventListener("click", () => {
@@ -1340,6 +1541,8 @@ function showOutOfMovesDM() {
 
   row.appendChild(retryBtn);
   speechText.appendChild(row);
+
+  requestAnimationFrame(() => shrinkTextToFitBubble());
 }
 
 /* ---------------- Quest-node DM (LLM) ---------------- */
@@ -1368,7 +1571,8 @@ async function runDMIfAvailable() {
   const act = Math.max(1, Math.floor((level - 1) / 5) + 1);
 
   const wantModifier = true;
-  const foreshadowOnly = level >= FORESHADOW_START_LEVEL && level < STABILIZER_UNLOCK_LEVEL;
+  const foreshadowOnly =
+    level >= FORESHADOW_START_LEVEL && level < STABILIZER_UNLOCK_LEVEL;
 
   let payload;
   try {
@@ -1411,7 +1615,11 @@ async function runDMIfAvailable() {
     return;
   }
 
-  setDMAvatar({ mood: payload.dm_mood || "encouraging", frame: payload.dm_frame, seedKey: 555 });
+  setDMAvatar({
+    mood: payload.dm_mood || "encouraging",
+    frame: payload.dm_frame,
+    seedKey: 555,
+  });
 
   if (payload.modifier) pendingModifier = payload.modifier;
 
@@ -1421,7 +1629,9 @@ async function runDMIfAvailable() {
 
   setDMSpeech({
     title: payload.quest_title || "Quest",
-    body: `${payload.dm_intro || ""}\n\n${payload.dm_midpoint || ""}\n\n${payload.dm_verdict || ""}`,
+    body: `${payload.dm_intro || ""}\n\n${payload.dm_midpoint || ""}\n\n${
+      payload.dm_verdict || ""
+    }`,
     small: isMajorDM(dmAppearCount) ? "Major node." : "Minor node.",
   });
 }
@@ -1506,7 +1716,9 @@ function checkStabilizerUnlock() {
   if (urIndex < 0) return;
 
   const cap = state.capacity;
-  const hasFullUR = state.bottles.some((b) => b.length === cap && b.every((x) => x === urIndex));
+  const hasFullUR = state.bottles.some(
+    (b) => b.length === cap && b.every((x) => x === urIndex)
+  );
   if (hasFullUR) {
     const idx = state.stabilizer.idx;
     state.locked[idx] = false;
@@ -1526,13 +1738,20 @@ let rafResize = 0;
 
 function getRoleTextureUrl(role) {
   const r = String(role || "").toLowerCase();
-  if (r.includes("volatile")) return "assets/elements/textures/pattern_ripples.svg";
-  if (r.includes("catalyst")) return "assets/elements/textures/pattern_streaks.svg";
-  if (r.includes("stabilizer")) return "assets/elements/textures/pattern_noise.svg";
-  if (r.includes("foundational")) return "assets/elements/textures/pattern_grid.svg";
-  if (r.includes("structural")) return "assets/elements/textures/pattern_hatch.svg";
-  if (r.includes("transmission")) return "assets/elements/textures/pattern_chevrons.svg";
-  if (r.includes("conversion")) return "assets/elements/textures/pattern_bubbles.svg";
+  if (r.includes("volatile"))
+    return "assets/elements/textures/pattern_ripples.svg";
+  if (r.includes("catalyst"))
+    return "assets/elements/textures/pattern_streaks.svg";
+  if (r.includes("stabilizer"))
+    return "assets/elements/textures/pattern_noise.svg";
+  if (r.includes("foundational"))
+    return "assets/elements/textures/pattern_grid.svg";
+  if (r.includes("structural"))
+    return "assets/elements/textures/pattern_hatch.svg";
+  if (r.includes("transmission"))
+    return "assets/elements/textures/pattern_chevrons.svg";
+  if (r.includes("conversion"))
+    return "assets/elements/textures/pattern_bubbles.svg";
   return "assets/elements/textures/pattern_grid.svg";
 }
 
@@ -1731,8 +1950,14 @@ async function animateTransferThenPour(from, to) {
 
   const keyframes = [
     { transform: `translate3d(0,0,0) rotate(0deg)`, offset: 0 },
-    { transform: `translate3d(${dx}px,${dy}px,0) rotate(${tiltDeg}deg)`, offset: 0.38 },
-    { transform: `translate3d(${dx}px,${dy}px,0) rotate(${tiltDeg}deg)`, offset: 0.70 },
+    {
+      transform: `translate3d(${dx}px,${dy}px,0) rotate(${tiltDeg}deg)`,
+      offset: 0.38,
+    },
+    {
+      transform: `translate3d(${dx}px,${dy}px,0) rotate(${tiltDeg}deg)`,
+      offset: 0.7,
+    },
     { transform: `translate3d(0,0,0) rotate(0deg)`, offset: 1 },
   ];
   const timing = {
