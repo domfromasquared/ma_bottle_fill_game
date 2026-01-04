@@ -3,7 +3,7 @@ import { getJSON, setJSON, setNum } from "../utils/storage.js";
 import { makeRng, hashSeed, randInt } from "../utils/rng.js";
 import { singleFlight } from "../utils/singleFlight.js";
 import { postJSON } from "../utils/http.js";
-import { makeToaster, qs, playPourFX } from "../utils/ui.js";
+import { makeToaster, qs } from "../utils/ui.js";
 
 /* ---------------- Constants ---------------- */
 const FORESHADOW_START_LEVEL = 10;
@@ -28,6 +28,11 @@ const DM_COUNT_KEY = "ma_dmAppearCount";
 const NEXT_DM_KEY = "ma_nextDMAtLevel";
 
 const INTRO_SEEN_KEY = "ma_introSeen";
+
+/* ---------------- Anim constants ---------------- */
+const MOVE_ANIM_MS = 520;
+const TILT_MAX_DEG = 28; // visual tilt for gravity surface
+const INPUT_LOCK_PADDING_MS = 40;
 
 /* ---------------- Player Modifiers (3-slot system) ---------------- */
 const MODIFIERS = {
@@ -148,7 +153,6 @@ function ensurePlayerName(){
 /* ---------------- DOM ---------------- */
 const statusOut = qs("statusOut");
 const grid = qs("grid");
-const pourFX = qs("pourFX");
 const showToast = makeToaster(qs("toast"));
 
 const settings = qs("settings");
@@ -294,10 +298,6 @@ function inferBANK(){
   score.K += invalidRate > 0.12 ? 0.7 : 0;
   score.K += resetRate < 0.25 ? 0.7 : 0;
 
-  // Modifier usage telemetry (lightweight)
-  // - using Equilibrium = Nurturing bias
-  // - using Decoherence = Knowledge bias
-  // - using Temporal (especially repeatedly) = Action bias / correction behavior
   const usedEqui = (MODIFIERS.EQUILIBRIUM_VESSEL.perLevelUses - modState.usesLeft.EQUILIBRIUM_VESSEL);
   const usedDeco = (MODIFIERS.DECOHERENCE_KEY.perLevelUses - modState.usesLeft.DECOHERENCE_KEY);
   const usedTemp = (MODIFIERS.TEMPORAL_RETRACTION.perLevelUses - modState.usesLeft.TEMPORAL_RETRACTION);
@@ -533,12 +533,10 @@ function showDMOverlay(){
   dmCharacter.inert = false;
   speech.inert = false;
 
-  // focus close for keyboard users (optional)
   try { dmClose?.focus?.(); } catch {}
 }
 
 function hideDMOverlay(){
-  // If focus is inside DM, blur BEFORE aria-hidden/inert so browsers don’t warn.
   const ae = document.activeElement;
   if (ae && (dmCharacter.contains(ae) || speech.contains(ae))) {
     try { ae.blur(); } catch {}
@@ -553,7 +551,6 @@ function hideDMOverlay(){
   dmCharacter.inert = true;
   speech.inert = true;
 
-  // return focus to grid (or body)
   try { grid?.focus?.(); } catch {}
 }
 
@@ -564,6 +561,13 @@ let dmToken = 0;
 let introStep = 0;          // 0 none, 1 name entry, 2 ready start quest
 let deadlockActive = false; // deadlock DM active
 function introIsActive(){ return introStep === 1 || introStep === 2; }
+
+/* ---------------- Input lock during animations ---------------- */
+let inputLocked = false;
+function lockInput(ms){
+  inputLocked = true;
+  setTimeout(()=>{ inputLocked = false; }, Math.max(0, ms|0));
+}
 
 /* ---------------- Modifier UI ---------------- */
 function setModSlotButton(btn, mod){
@@ -619,13 +623,12 @@ function spendUse(modId){
 }
 
 function maOneLiner(text){
-  // non-blocking MA “voice” (keep gameplay flowing)
   showToast(text);
 }
 
 /* ---------------- Modifier input ---------------- */
 modSlot1?.addEventListener("click", () => {
-  if (introIsActive() || deadlockActive) return;
+  if (introIsActive() || deadlockActive || inputLocked) return;
   const left = modState.usesLeft.DECOHERENCE_KEY;
   if (left <= 0){
     showToast("Decoherence Key is spent for this level.");
@@ -637,7 +640,7 @@ modSlot1?.addEventListener("click", () => {
 });
 
 modSlot2?.addEventListener("click", () => {
-  if (introIsActive() || deadlockActive) return;
+  if (introIsActive() || deadlockActive || inputLocked) return;
   const left = modState.usesLeft.TEMPORAL_RETRACTION;
   if (left <= 0){
     showToast("Temporal Retraction is empty for this level.");
@@ -653,14 +656,13 @@ modSlot2?.addEventListener("click", () => {
 });
 
 modSlot3?.addEventListener("click", () => {
-  if (introIsActive() || deadlockActive) return;
+  if (introIsActive() || deadlockActive || inputLocked) return;
   const left = modState.usesLeft.EQUILIBRIUM_VESSEL;
   if (left <= 0){
     showToast("Equilibrium Vessel is spent for this level.");
     return;
   }
 
-  // Add a neutral empty bottle
   state.bottles.push([]);
   state.locked.push(false);
   state.hiddenSegs.push(false);
@@ -678,11 +680,12 @@ modSlot3?.addEventListener("click", () => {
     }
   }
 
-  render(); // show new vessel immediately
+  render();
 
   if (!best){
     showToast("Equilibrium found no legal siphon.");
   } else {
+    // no pour-stream animation; this still moves pieces.
     doPour(best.from, best.to);
   }
 
@@ -770,7 +773,7 @@ Tell me… what do I call you?`,
     }
 
     const saved = setPlayerName(name);
-    localStorage.setItem(INTRO_SEEN_KEY, "1"); // ✅ set only after accepted
+    localStorage.setItem(INTRO_SEEN_KEY, "1");
     syncInfoPanel();
     introStep = 2;
 
@@ -864,6 +867,8 @@ function showOutOfMovesDM(){
 }
 
 /* ---------------- Quest-node DM (LLM) ---------------- */
+let pendingModifier = null;
+
 async function runDMIfAvailable(){
   if (!isDMLevel(level)) return;
 
@@ -928,7 +933,6 @@ async function runDMIfAvailable(){
 
   setDMAvatar({ mood: payload.dm_mood || "encouraging", frame: payload.dm_frame, seedKey: 555 });
 
-  // Applies “level-gen modifier” for NEXT level if present (server side)
   if (payload.modifier){
     pendingModifier = payload.modifier;
   }
@@ -945,7 +949,6 @@ async function runDMIfAvailable(){
 }
 
 /* ---------------- Level generation ---------------- */
-let pendingModifier = null;
 let currentThesisKey = null;
 
 function computeLevelConfig(){
@@ -1032,14 +1035,12 @@ function generateBottlesFromRecipe(recipe){
   state.hiddenSegs = new Array(bottleCount).fill(false);
   state.stabilizer = null;
 
-  // Locked bottles
   const lockCount = Math.min(recipe.lockedBottles || 0, bottleCount);
   for (let i=0;i<lockCount;i++){
     state.locked[i] = true;
     state.hiddenSegs[i] = true;
   }
 
-  // Stabilizer unlock mechanic
   if (level >= STABILIZER_UNLOCK_LEVEL && lockCount > 0){
     state.stabilizer = { unlock: "UR_full", idx: 0, unlocked: false };
   }
@@ -1064,32 +1065,179 @@ function checkStabilizerUnlock(){
   }
 }
 
+/* ---------------- Canvas liquid rendering ---------------- */
+const bottleEls = [];
+const bottleCanvases = [];
+const bottleTiltRad = []; // per-bottle tilt used for gravity surface
+let rafResize = 0;
+
+function getRoleTextureUrl(role){
+  const r = String(role || "").toLowerCase();
+  // 7 classes / 7 textures: you can remap here to match canon exactly.
+  // Keep paths consistent with your repo:
+  // assets/elements/textures/pattern_*.svg
+  if (r.includes("volatile")) return "assets/elements/textures/pattern_ripples.svg";
+  if (r.includes("catalyst")) return "assets/elements/textures/pattern_streaks.svg";
+  if (r.includes("stabilizer")) return "assets/elements/textures/pattern_noise.svg";
+  if (r.includes("foundational")) return "assets/elements/textures/pattern_grid.svg";
+  if (r.includes("structural")) return "assets/elements/textures/pattern_hatch.svg";
+  if (r.includes("transmission")) return "assets/elements/textures/pattern_chevrons.svg";
+  if (r.includes("conversion")) return "assets/elements/textures/pattern_bubbles.svg";
+  return "assets/elements/textures/pattern_grid.svg";
+}
+
+// simple pattern cache
+const patternImgCache = new Map(); // url -> HTMLImageElement
+function getPatternImage(url){
+  if (patternImgCache.has(url)) return patternImgCache.get(url);
+  const img = new Image();
+  img.decoding = "async";
+  img.loading = "eager";
+  img.src = url;
+  patternImgCache.set(url, img);
+  return img;
+}
+
+function resizeCanvasToCSS(canvas){
+  const rect = canvas.getBoundingClientRect();
+  const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+  const w = Math.max(1, Math.floor(rect.width * dpr));
+  const h = Math.max(1, Math.floor(rect.height * dpr));
+  if (canvas.width !== w || canvas.height !== h){
+    canvas.width = w;
+    canvas.height = h;
+  }
+  return { w, h, dpr };
+}
+
+function drawBottleLiquid(i){
+  const canvas = bottleCanvases[i];
+  if (!canvas) return;
+
+  const { w, h } = resizeCanvasToCSS(canvas);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  ctx.clearRect(0,0,w,h);
+
+  // hide segs for locked bottles if you want (your old hiddenSegs)
+  if (state.hiddenSegs[i]) return;
+
+  const b = state.bottles[i] || [];
+  const cap = state.capacity;
+
+  // draw from bottom -> top into equal-height cells
+  const cellH = h / cap;
+  const tilt = bottleTiltRad[i] || 0;
+
+  // gravity surface slant amplitude
+  const slant = Math.tan(tilt) * (w * 0.18);
+
+  // If empty, done
+  if (!b.length) return;
+
+  // Determine top filled index in this bottle (visual top)
+  // We store pieces bottom->top? Your bottle arrays treat topColor as last item.
+  // So b[0] is bottom and b[b.length-1] is top.
+  for (let s = 0; s < cap; s++){
+    const idx = b[s] ?? null;
+    if (idx === null || idx === undefined) continue;
+
+    const sym = currentElements[idx];
+    const el = ELEMENTS?.[sym];
+    const fill = el?.color || currentPalette[idx] || "#fff";
+    const role = el?.role || "";
+    const texUrl = getRoleTextureUrl(role);
+    const img = getPatternImage(texUrl);
+
+    const yBottom = h - (s+1) * cellH;
+    const yTop = h - s * cellH;
+
+    // base fill
+    ctx.fillStyle = fill;
+    ctx.fillRect(0, yBottom, w, cellH);
+
+    // top-surface physics: only apply to the TOPMOST filled segment
+    const isTopMost = (s === b.length - 1);
+    if (isTopMost && Math.abs(tilt) > 0.001){
+      ctx.save();
+      ctx.globalAlpha = 1;
+      ctx.beginPath();
+
+      // slanted top polygon (liquid surface)
+      // left and right top points shift opposite based on tilt direction
+      const sgn = tilt >= 0 ? 1 : -1;
+      const dx = Math.max(-cellH*0.6, Math.min(cellH*0.6, slant));
+
+      const xL = 0;
+      const xR = w;
+
+      const yL = yTop + (sgn > 0 ? Math.abs(dx) : 0);
+      const yR = yTop + (sgn > 0 ? 0 : Math.abs(dx));
+
+      ctx.moveTo(xL, yBottom);
+      ctx.lineTo(xL, yL);
+      ctx.lineTo(xR, yR);
+      ctx.lineTo(xR, yBottom);
+      ctx.closePath();
+
+      ctx.clip();
+
+      // redraw fill for clipped shape so the surface looks slanted
+      ctx.fillStyle = fill;
+      ctx.fillRect(0, yBottom, w, cellH + Math.abs(dx) + 2);
+
+      ctx.restore();
+    }
+
+    // texture overlay (subtle)
+    // If image not loaded yet, it will show next redraw.
+    if (img && img.complete && img.naturalWidth > 0){
+      const pat = ctx.createPattern(img, "repeat");
+      if (pat){
+        ctx.save();
+        ctx.globalAlpha = 0.38;
+        ctx.fillStyle = pat;
+        ctx.fillRect(0, yBottom, w, cellH);
+        ctx.restore();
+      }
+    }
+  }
+
+  // slight inner highlight vignette
+  ctx.save();
+  ctx.globalAlpha = 0.22;
+  const g = ctx.createLinearGradient(0,0,w,0);
+  g.addColorStop(0, "rgba(255,255,255,.10)");
+  g.addColorStop(0.5, "rgba(255,255,255,.02)");
+  g.addColorStop(1, "rgba(0,0,0,.10)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,w,h);
+  ctx.restore();
+}
+
+function redrawAllBottles(){
+  for (let i=0;i<state.bottles.length;i++) drawBottleLiquid(i);
+}
+
+function requestRedraw(){
+  // single-batch redraw to avoid spamming on resize
+  if (rafResize) cancelAnimationFrame(rafResize);
+  rafResize = requestAnimationFrame(() => {
+    rafResize = 0;
+    redrawAllBottles();
+  });
+}
+
+window.addEventListener("resize", requestRedraw, { passive: true });
+window.addEventListener("orientationchange", requestRedraw, { passive: true });
+
 /* ---------------- Pour + win ---------------- */
 let levelInvalid = 0;
 let punishedThisLevel = false;
 
-function doPour(from,to){
-  if(!canPour(from,to)){
-    sig.invalid++;
-    levelInvalid++;
-    syncInfoPanel();
-
-    if (!punishedThisLevel && levelInvalid >= INVALID_POUR_PUNISH_THRESHOLD){
-      punishedThisLevel = true;
-      const a = state.bottles[from] || [];
-      const ci = a.length ? topColor(a) : null;
-      const sym = (ci !== null && ci !== undefined) ? currentElements[ci] : null;
-      const el = sym ? ELEMENTS[sym] : null;
-      const punishTag = el?.punishes || "sloppiness";
-      showToast(`${el?.symbol || sym || "??"} punishes: ${punishTag}`);
-      pushSinTag(punishTag);
-    } else {
-      showToast("Invalid pour");
-    }
-    return false;
-  }
-
-  // ✅ Snapshot BEFORE committing valid pour (Temporal Retraction safety)
+function applyPourState(from,to){
+  // Validity already checked before calling this.
   pushUndoSnapshot();
 
   const a=state.bottles[from], b=state.bottles[to];
@@ -1102,8 +1250,6 @@ function doPour(from,to){
 
   sig.moves++;
   syncInfoPanel();
-
-  playPourFX(pourFX, from, to, currentPalette[color] || "#fff", amount);
 
   checkStabilizerUnlock();
 
@@ -1122,16 +1268,90 @@ function doPour(from,to){
   return true;
 }
 
+function invalidWiggle(i){
+  const el = bottleEls[i];
+  if (!el) return;
+  el.classList.remove("wiggle");
+  // force restart
+  void el.offsetWidth;
+  el.classList.add("wiggle");
+  setTimeout(()=> el.classList.remove("wiggle"), 380);
+}
+
+async function animateTransferThenPour(from,to){
+  const aEl = bottleEls[from];
+  const bEl = bottleEls[to];
+  if (!aEl || !bEl) return applyPourState(from,to);
+
+  lockInput(MOVE_ANIM_MS + INPUT_LOCK_PADDING_MS);
+
+  // compute delta
+  const a = aEl.getBoundingClientRect();
+  const b = bEl.getBoundingClientRect();
+  const dx = (b.left + b.width*0.5) - (a.left + a.width*0.5);
+  const dy = (b.top + b.height*0.25) - (a.top + a.height*0.25);
+
+  // tilt direction toward target
+  const dir = dx >= 0 ? 1 : -1;
+  const tiltDeg = dir * TILT_MAX_DEG;
+  const tiltRad = tiltDeg * Math.PI / 180;
+
+  // animate using WAAPI (clean + reliable)
+  // Phase 1: move + tilt
+  const keyframes = [
+    { transform: `translate3d(0,0,0) rotate(0deg)` },
+    { transform: `translate3d(${dx}px,${dy}px,0) rotate(${tiltDeg}deg)` },
+    { transform: `translate3d(${dx}px,${dy}px,0) rotate(${tiltDeg}deg)` },
+    { transform: `translate3d(0,0,0) rotate(0deg)` },
+  ];
+  const timing = {
+    duration: MOVE_ANIM_MS,
+    easing: "cubic-bezier(.2,.85,.2,1)",
+    fill: "none"
+  };
+
+  // “physics inside bottle”: update slant while tilted
+  const t0 = performance.now();
+  const dur = MOVE_ANIM_MS;
+
+  const anim = aEl.animate(keyframes, timing);
+
+  // drive internal slosh by setting bottleTiltRad[from] across the timeline
+  let raf = 0;
+  const tick = (now) => {
+    const t = (now - t0) / dur;
+    // ease in/out tilt window (peak around middle)
+    const peak = Math.sin(Math.max(0, Math.min(1, t)) * Math.PI);
+    bottleTiltRad[from] = tiltRad * peak;
+    drawBottleLiquid(from);
+    raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
+
+  try { await anim.finished; } catch {}
+
+  if (raf) cancelAnimationFrame(raf);
+  bottleTiltRad[from] = 0;
+  drawBottleLiquid(from);
+
+  // NOW apply the state change (no pour-stream animation, just the result)
+  applyPourState(from,to);
+}
+
 /* ---------------- Render bottles ---------------- */
 function render(){
   grid.innerHTML = "";
+  bottleEls.length = 0;
+  bottleCanvases.length = 0;
+  bottleTiltRad.length = 0;
 
   for (let i = 0; i < state.bottles.length; i++){
-    const b = state.bottles[i];
-
     const bottle = document.createElement("button");
     bottle.className = "bottle";
     bottle.type = "button";
+
+    bottleEls[i] = bottle;
+    bottleTiltRad[i] = 0;
 
     if (state.selected === i) bottle.classList.add("selected");
     if (state.locked[i]) bottle.classList.add("locked");
@@ -1150,48 +1370,33 @@ function render(){
       handleBottleTap(i);
     });
 
-    const segs = document.createElement("div");
-    segs.className = "segs";
+    // Canvas liquid (absolute chamber)
+    const canvas = document.createElement("canvas");
+    canvas.className = "liquidCanvas";
+    canvas.setAttribute("aria-hidden","true");
+    bottleCanvases[i] = canvas;
 
-    // Fill bottom-up visually: CSS is column-reverse; we render bottom->top by indexing b[s]
-    for (let s = 0; s < state.capacity; s++){
-      const seg = document.createElement("div");
-      seg.className = "seg";
-
-      const idx = (b[s] ?? null);
-
-      if (idx !== null && idx !== undefined) {
-        const sym = currentElements[idx];
-        const el  = ELEMENTS?.[sym];
-
-        seg.style.background = (el?.color || currentPalette[idx] || "#fff");
-
-        if (sym) seg.classList.add(`el-${sym}`);
-        if (el?.role) {
-          const roleSlug = el.role.toLowerCase().replace(/\s+/g, "-");
-          seg.classList.add(`role-${roleSlug}`);
-        }
-      } else {
-        seg.style.background = "transparent";
-      }
-
-      segs.appendChild(seg);
-    }
-
-    bottle.appendChild(segs);
+    bottle.appendChild(canvas);
     grid.appendChild(bottle);
   }
+
+  // draw after DOM in place
+  requestAnimationFrame(() => {
+    redrawAllBottles();
+  });
 }
 
 /* ---------------- Input ---------------- */
 function handleBottleTap(i){
   if (introIsActive()) return;
   if (deadlockActive) return;
+  if (inputLocked) return;
 
-  // If Decoherence Key is armed, a tap on a LOCKED bottle consumes and unlocks.
+  // Decoherence Key armed: tap locked bottle consumes and unlocks
   if (modState.targeting === "DECOHERENCE_KEY"){
     if (!state.locked[i]){
       showToast("Tap a LOCKED bottle to revoke its seal.");
+      invalidWiggle(i);
       return;
     }
     if (!spendUse("DECOHERENCE_KEY")){
@@ -1228,8 +1433,37 @@ function handleBottleTap(i){
 
   const from = state.selected;
   const to = i;
+
+  // clear selection immediately for clean UI
   state.selected = -1;
-  doPour(from,to);
+  render();
+
+  // invalid move -> wiggle source bottle (and target) + invalid scoring
+  if (!canPour(from,to)){
+    sig.invalid++;
+    levelInvalid++;
+    syncInfoPanel();
+
+    invalidWiggle(from);
+    invalidWiggle(to);
+
+    if (!punishedThisLevel && levelInvalid >= INVALID_POUR_PUNISH_THRESHOLD){
+      punishedThisLevel = true;
+      const a = state.bottles[from] || [];
+      const ci = a.length ? topColor(a) : null;
+      const sym = (ci !== null && ci !== undefined) ? currentElements[ci] : null;
+      const el = sym ? ELEMENTS[sym] : null;
+      const punishTag = el?.punishes || "sloppiness";
+      showToast(`${el?.symbol || sym || "??"} punishes: ${punishTag}`);
+      pushSinTag(punishTag);
+    } else {
+      showToast("Invalid pour");
+    }
+    return;
+  }
+
+  // valid move -> animate bottle movement/tilt (liquid physics inside), then apply state
+  animateTransferThenPour(from,to);
 }
 
 /* ---------------- Level flow ---------------- */
@@ -1248,7 +1482,6 @@ function startLevel(){
   render();
   syncInfoPanel();
 
-  // DM node may pop on this level
   runDMIfAvailable();
 }
 
@@ -1272,10 +1505,9 @@ bankRail.addEventListener("click", () => {
 
 /* ---------------- DM close: ALWAYS WORKS ---------------- */
 dmClose.addEventListener("click", () => {
-  dmToken++; // cancels in-flight LLM
+  dmToken++;
   hideDMOverlay();
 
-  // If intro was active, do NOT auto-set intro seen; just proceed with default
   if (introIsActive()){
     setPlayerName(DEFAULT_PLAYER_NAME);
     introStep = 0;
@@ -1283,7 +1515,6 @@ dmClose.addEventListener("click", () => {
     return;
   }
 
-  // If deadlock DM was active, auto-retry
   if (deadlockActive){
     deadlockActive = false;
     sig.resets++;
@@ -1324,6 +1555,7 @@ Try not to disappoint me twice.`,
     localStorage.removeItem(NEXT_DM_KEY);
     localStorage.removeItem(SIN_QUEUE_KEY);
     localStorage.removeItem(SPEECH_THEME_KEY);
+    localStorage.removeItem(API_BASE_KEY);
     location.reload();
   }, 650);
 }
@@ -1335,7 +1567,6 @@ function boot(){
   setSpeechTheme(getSpeechTheme());
   syncInfoPanel();
 
-  // Start gameplay first (board exists), then intro overlays if needed
   startLevel();
 
   setTimeout(() => {
