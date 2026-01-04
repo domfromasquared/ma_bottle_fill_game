@@ -709,10 +709,10 @@ async function getNameRoastFromServer(name){
 function localNameRoast(name){
   const n = String(name || "").trim();
   const refs = [
-    `“${n}”? That name walks in like it’s about to pitch a mastermind with no slides.`,
-    `“${n}”… bold. Very “main character energy” and “supporting character execution.”`,
-    `“${n}”? That sounds like a legend in their own group chat.`,
-    `“${n}”… fine. Just don’t pour like you’re guessing.`,
+    `“${n}”? And you felt comfortable submitting that.`,
+    `“${n}”… We’ll unpack that later.`,
+    `“${n}”… We’ll compensate for this decision.`,
+    `“${n}”… Yes. That tracks.`,
   ];
   return refs[Math.floor(Math.random() * refs.length)];
 }
@@ -1299,11 +1299,11 @@ async function animateTransferThenPour(from,to){
   // animate using WAAPI (clean + reliable)
   // Phase 1: move + tilt
   const keyframes = [
-    { transform: `translate3d(0,0,0) rotate(0deg)` },
-    { transform: `translate3d(${dx}px,${dy}px,0) rotate(${tiltDeg}deg)` },
-    { transform: `translate3d(${dx}px,${dy}px,0) rotate(${tiltDeg}deg)` },
-    { transform: `translate3d(0,0,0) rotate(0deg)` },
-  ];
+  { transform: `translate3d(0,0,0) rotate(0deg)`, offset: 0 },
+  { transform: `translate3d(${dx}px,${dy}px,0) rotate(${tiltDeg}deg)`, offset: 0.38 },
+  { transform: `translate3d(${dx}px,${dy}px,0) rotate(${tiltDeg}deg)`, offset: 0.70 },
+  { transform: `translate3d(0,0,0) rotate(0deg)`, offset: 1 },
+];
   const timing = {
     duration: MOVE_ANIM_MS,
     easing: "cubic-bezier(.2,.85,.2,1)",
