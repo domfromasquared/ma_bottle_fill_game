@@ -1307,7 +1307,7 @@ async function animateTransferThenPour(from,to){
 ];
   const timing = {
     duration: MOVE_ANIM_MS,
-    easing: "cubic-bezier(.2,.85,.2,1)",
+    easing: "cubic-bezier(.15,.9,.15,1)",
     fill: "none"
   };
 
