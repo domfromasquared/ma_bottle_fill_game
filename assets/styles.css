@@ -835,3 +835,27 @@ body{
 @media (min-width: 900px){
   .grid{ gap: 14px; }
 }
+
+/* ---------------- Playfield Background ---------------- */
+.playfield{
+  position: relative;
+  overflow: hidden; /* keeps bg from bleeding */
+}
+
+.playfield::before{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("../BG/game_bg_000.png");
+  background-size: cover;          /* fill available area */
+  background-position: center;     /* keep focal centered */
+  background-repeat: no-repeat;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Ensure playfield content sits above background */
+.playfield > *{
+  position: relative;
+  z-index: 1;
+}
