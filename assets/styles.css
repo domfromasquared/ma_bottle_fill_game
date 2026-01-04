@@ -34,11 +34,11 @@
   /* Thesis spacing controls */
   --thesis-pad-y: 5px;
   --thesis-pad-x: 10px;
-  --thesis-gap-below: 30px;
+  --thesis-gap-below: 70px;
 
   /* inner chamber (tuned for vial_empty.png / vial_corked.png) */
   --ch-top: 30px;
-  --ch-side: 50px;
+  --ch-side: 150px;
   --ch-bottom: 0px;
   --ch-radius: 6px;
 }
