@@ -534,7 +534,7 @@ body{
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  bottom: 56vh;               /* raised; adjust if needed */
+  bottom: 26vh;               /* raised; adjust if needed */
   z-index: 40;
 
   /* ensure the background image scales correctly */
