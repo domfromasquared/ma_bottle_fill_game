@@ -342,7 +342,7 @@ function ensureDMImg() {
     img.style.position = "absolute";
     img.style.left = "150%";
     img.style.bottom = "0";
-    img.style.transform = "translateX(-150%)";
+    img.style.transform = "translateX(-50%)";
     img.style.width = "140%";
     img.style.height = "auto";
     img.style.objectFit = "contain";
