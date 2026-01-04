@@ -340,7 +340,7 @@ function ensureDMImg() {
 
     // center + ground the sprite
     img.style.position = "absolute";
-    img.style.left = "50%";
+    img.style.left = "150%";
     img.style.bottom = "0";
     img.style.transform = "translateX(-150%)";
     img.style.width = "140%";
