@@ -286,10 +286,14 @@ function ensureDMImg(){
     img = document.createElement("img");
     img.alt = "Marketing Alchemist";
     img.decoding = "async";
-    img.loading = "eager";
+    imo.loading = "eager";
     img.draggable = false;
-    img.style.width = "150%";
-    img.style.height = "150%";
+    img.style.position = "absolute";
+    img.style.transform = "translateX(-50%)";
+    img.style.left = "50%";
+    img.style.bottom = "0";
+    img.style.width = "140%";
+    img.style.height = "auto";
     img.style.objectFit = "contain";
     img.style.pointerEvents = "none";
     dmCharacter.appendChild(img);
