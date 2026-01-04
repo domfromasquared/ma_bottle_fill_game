@@ -497,9 +497,9 @@ body{
   height: min(34vh, 340px);
   border-radius: 22px;
   background: rgba(11,18,28,.01);
-  transform: translateX(-120%);
+  transform: translateX(-50%);
   transition: transform .28s ease;
-  overflow:hidden;
+  overflow:auto;
   z-index: 5;
 }
 
