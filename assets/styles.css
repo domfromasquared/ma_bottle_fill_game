@@ -1,3 +1,9 @@
+/* =========================
+   The Balance Protocol — CSS (MATCHES YOUR HTML)
+   NOTE: This CSS file is loaded from ./assets/styles.css
+   Therefore all asset urls must be relative to /assets/
+   ========================= */
+
 :root{
   color-scheme: dark;
 
@@ -20,17 +26,17 @@
   --text: #e6edf3;
   --muted: #aab6ca;
 
-  /* --- FIXED PATHS (these were wrong) --- */
-  /* DM speech bubble plates (files are in assets/dmspeaks/) */
-  --speech-plate-dark: url("assets/dmspeaks/speech_bubble_dark.png");
-  --speech-plate-light: url("assets/dmspeaks/speech_bubble_light.png");
+  /* ✅ Correct paths FROM /assets/styles.css */
+  --speech-plate-dark: url("./dmspeaks/speech_bubble_dark.png");
+  --speech-plate-light: url("./dmspeaks/speech_bubble_light.png");
+  --game-bg: url("./BG/game_bg_000.png");
 
   /* DM-only font (speech header only) */
   --dm-font: "UnifrakturCook", serif;
 
-  /* Bottle art (files are in assets/chemset/) */
-  --bottle-open: url("assets/chemset/vial/vial_empty.png");
-  --bottle-locked: url("assets/chemset/vial/vial_corked.png");
+  /* Bottle art */
+  --bottle-open: url("./chemset/vial/vial_empty.png");
+  --bottle-locked: url("./chemset/vial/vial_corked.png");
 
   /* Thesis spacing controls */
   --thesis-pad-y: 5px;
@@ -49,9 +55,14 @@
 
   /* Speech sizing */
   --speechW: clamp(320px, 72vw, 760px);
+
+  /* Slide timing */
+  --dm-slide-ms: 280ms;
 }
 
 *{ box-sizing:border-box; }
+
+html, body{ height: 100%; }
 
 body{
   margin:0;
@@ -95,7 +106,6 @@ body{
   width: var(--railW);
   border: 1px solid var(--line);
 
-  /* SOLID BG */
   background: #0b1220;
 
   border-radius: 14px;
@@ -112,7 +122,6 @@ body{
     0 10px 24px rgba(0,0,0,.18);
 }
 
-/* expanded meanings panel */
 .bankExpanded{
   display:none;
   width: 300px;
@@ -197,24 +206,23 @@ body{
   position: absolute;
   inset: 0;
 
-  /* keep rail breathing room */
   padding-left: calc(var(--railW) + 10px);
   padding-right: 0;
   padding-top: 0;
-
-  /* reserve room for modifiers bar */
   padding-bottom: calc(var(--modsH) + 8px + var(--sab));
 
-  /* IMPORTANT for background + stacking */
   overflow: hidden;
+
+  /* ensure pseudo background is behind everything */
+  z-index: 0;
 }
 
-/* --- FIX: game background behind playfield --- */
+/* ✅ game bg sits behind the playfield content */
 .playfield::before{
   content: "";
   position: absolute;
   inset: 0;
-  background-image: url("assets/BG/game_bg_000.png");
+  background-image: var(--game-bg);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -222,10 +230,13 @@ body{
   pointer-events: none;
 }
 
-/* Ensure playfield contents sit above bg */
-.playfield > *{
+/* ✅ you HAVE playfieldFrame in HTML — define it */
+.playfieldFrame{
   position: relative;
-  z-index: 1;
+  height: 100%;
+  width: min(100%, var(--maxW));
+  margin: 0 auto;
+  z-index: 1; /* above bg */
 }
 
 /* Thesis overlay bar */
@@ -278,7 +289,6 @@ body{
   grid-template-columns: repeat(5, minmax(56px, 1fr));
   gap: 10px;
 
-  /* thesis height + gap below thesis */
   padding: calc(58px + var(--thesis-gap-below)) 4px 0 4px;
   align-content:start;
 }
@@ -304,7 +314,6 @@ body{
   will-change: transform;
 }
 
-/* Selected state = halo only */
 .bottle.selected{
   box-shadow:
     0 0 0 2px rgba(255,255,255,0.14),
@@ -312,7 +321,6 @@ body{
     0 0 40px rgba(0,179,255,0.30);
 }
 
-/* Tap feedback halo */
 .bottle.pressed{
   box-shadow:
     0 0 0 2px rgba(255,255,255,0.10),
@@ -327,10 +335,7 @@ body{
     0 0 40px rgba(154,122,160,0.30);
 }
 
-/* Invalid wiggle */
-.bottle.wiggle{
-  animation: wiggle .32s ease-in-out 1;
-}
+.bottle.wiggle{ animation: wiggle .32s ease-in-out 1; }
 @keyframes wiggle{
   0%{ transform: translate3d(0,0,0) rotate(0deg); }
   20%{ transform: translate3d(-4px,0,0) rotate(-2deg); }
@@ -340,7 +345,6 @@ body{
   100%{ transform: translate3d(0,0,0) rotate(0deg); }
 }
 
-/* subtle interior well */
 .bottle::before{
   content:"";
   position:absolute;
@@ -354,7 +358,6 @@ body{
   pointer-events:none;
 }
 
-/* CANVAS LIQUID — absolute chamber, always under bottle glass */
 .liquidCanvas{
   position:absolute;
   top: var(--ch-top);
@@ -368,7 +371,6 @@ body{
   pointer-events:none;
 }
 
-/* Glass overlay */
 .bottle::after{
   content:"";
   position:absolute;
@@ -381,54 +383,6 @@ body{
 }
 .bottle::after{ background-image: var(--bottle-open); }
 .bottle.locked::after{ background-image: var(--bottle-locked); }
-
-/* ---------- INSTABILITY (untouched mixed full bottles) ---------- */
-.bottle.unstable1{
-  box-shadow:
-    0 0 0 2px rgba(255,255,255,0.10),
-    0 0 14px rgba(255, 190, 90, 0.40),
-    0 0 28px rgba(255, 190, 90, 0.22);
-}
-.bottle.unstable2{
-  box-shadow:
-    0 0 0 2px rgba(255,255,255,0.12),
-    0 0 16px rgba(255, 132, 60, 0.55),
-    0 0 34px rgba(255, 132, 60, 0.30);
-}
-.bottle.unstable3{
-  box-shadow:
-    0 0 0 2px rgba(255,255,255,0.14),
-    0 0 18px rgba(255, 70, 70, 0.70),
-    0 0 44px rgba(255, 70, 70, 0.38);
-}
-
-/* escalating shake (subtle -> violent) */
-.bottle.unstable1{ animation: unstable1 1.25s ease-in-out infinite; }
-.bottle.unstable2{ animation: unstable2 0.85s ease-in-out infinite; }
-.bottle.unstable3{ animation: unstable3 0.55s ease-in-out infinite; }
-
-@keyframes unstable1{
-  0%,100%{ transform: translate3d(0,0,0) rotate(0deg); }
-  25%{ transform: translate3d(-0.6px,0,0) rotate(-0.3deg); }
-  50%{ transform: translate3d(0.6px,0,0) rotate(0.3deg); }
-  75%{ transform: translate3d(-0.4px,0,0) rotate(-0.2deg); }
-}
-@keyframes unstable2{
-  0%,100%{ transform: translate3d(0,0,0) rotate(0deg); }
-  20%{ transform: translate3d(-1.2px,0,0) rotate(-0.6deg); }
-  40%{ transform: translate3d(1.2px,0,0) rotate(0.6deg); }
-  60%{ transform: translate3d(-1.0px,0,0) rotate(-0.5deg); }
-  80%{ transform: translate3d(1.0px,0,0) rotate(0.5deg); }
-}
-@keyframes unstable3{
-  0%,100%{ transform: translate3d(0,0,0) rotate(0deg); }
-  15%{ transform: translate3d(-2.0px,0,0) rotate(-1.1deg); }
-  30%{ transform: translate3d(2.0px,0,0) rotate(1.1deg); }
-  45%{ transform: translate3d(-1.7px,0,0) rotate(-0.9deg); }
-  60%{ transform: translate3d(1.7px,0,0) rotate(0.9deg); }
-  75%{ transform: translate3d(-1.3px,0,0) rotate(-0.7deg); }
-  90%{ transform: translate3d(1.3px,0,0) rotate(0.7deg); }
-}
 
 /* ---------- MODIFIERS BAR ---------- */
 .modBar{
@@ -511,10 +465,12 @@ body{
   border-radius: 22px;
   background: rgba(11,18,28,.01);
 
-  /* slide-in from left */
   transform: translateX(-150%);
-  transition: transform .28s ease;
-  overflow: hidden;
+  transition: transform var(--dm-slide-ms) ease;
+
+  /* ✅ don't clip the oversized DM sprite */
+  overflow: visible;
+
   z-index: 8;
 }
 
@@ -535,27 +491,18 @@ body{
   z-index: 6;
 }
 
-/* ---------------- DM Speech Bubble (moves WITH DM) ---------------- */
-/* Key changes:
-   - speech is anchored next to the DM (left aligned), not screen-centered
-   - speech uses the SAME slide transform pattern as DM
-   - safe-area + tail-safe content column so text never dips into the tail
-*/
-
+/* ---------------- SPEECH BUBBLE (slides with DM) ---------------- */
 #speech,
 .speech{
   position: absolute;
 
-  /* anchor to DM (to the right of it) */
   left: calc(var(--sal) + var(--pad) + var(--dmW) + 12px);
-
-  /* raise just above DM area */
   bottom: calc(var(--sab) + var(--pad) + var(--modsH) + 8px + clamp(180px, 22vh, 420px));
 
   z-index: 9;
 
   width: var(--speechW);
-  max-width: calc(100vw - (var(--sal) + var(--sar) + var(--pad)*2 + var(--dmW) + 18px));
+  max-width: calc(100vw - (var(--sal) + var(--sar) + (var(--pad)*2) + var(--dmW) + 18px));
 
   aspect-ratio: 760 / 350;
   height: auto;
@@ -564,48 +511,45 @@ body{
   background-position: center;
   background-size: 100% 100%;
 
-  /* bubble padding (tail-safe bottom is handled by .speechInner too) */
-  padding: clamp(18px, 2.2vw, 26px)
-           clamp(56px, 8vw, 88px)
-           clamp(18px, 2.8vw, 34px)
-           clamp(56px, 8vw, 88px);
+  /* ✅ tail-safe bottom padding */
+  padding:
+    clamp(18px, 2.2vw, 26px)
+    clamp(56px, 8vw, 88px)
+    clamp(64px, 7vw, 96px)
+    clamp(56px, 8vw, 88px);
 
-  box-sizing: border-box;
   overflow: hidden;
 
   display: flex;
   flex-direction: column;
 
-  /* slide with DM */
   transform: translateX(-150%);
-  transition: transform .28s ease;
+  transition: transform var(--dm-slide-ms) ease;
 }
 
-/* When JS adds .show to speech (same as DM), it slides in */
-.speech.show,
-#speech.show{
+#speech.show,
+.speech.show{
   transform: translateX(0);
 }
 
-/* Theme switch (JS sets speech.dataset.theme) */
-.speech[data-theme="dark"]{  background-image: var(--speech-plate-dark); }
+/* ✅ Theme applies to BOTH id and class */
+#speech[data-theme="dark"],
+.speech[data-theme="dark"]{ background-image: var(--speech-plate-dark); }
+
+#speech[data-theme="light"],
 .speech[data-theme="light"]{ background-image: var(--speech-plate-light); }
 
-/* Safe content column so text never falls into the tail */
+/* keep inner column stable */
 .speechInner{
   width: 100%;
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-
-  /* reserve vertical room for the tail area */
-  padding-bottom: clamp(56px, 7vw, 92px);
+  display:flex;
+  flex-direction:column;
+  min-height: 0;
 }
 
-/* Title = goth font */
-#questTitle,
-.questTitle{
+/* Title = goth */
+#questTitle{
   font-family: var(--dm-font);
   font-size: clamp(18px, 2.6vw, 30px);
   line-height: 1.08;
@@ -614,18 +558,17 @@ body{
   text-shadow: 0 1px 2px rgba(0,0,0,.35);
 }
 
-/* Body text */
-#speechText,
-.speechText{
+/* Body */
+#speechText{
   font-size: clamp(13px, 1.9vw, 16px);
   line-height: 1.35;
   margin: 0;
+  min-height: 0;
   overflow: hidden;
 }
 
-/* Footer text stays pushed up and clean */
-#speechSmall,
-.speechSmall{
+/* Footer pushed up */
+#speechSmall{
   margin-top: auto;
   padding-top: 10px;
   font-size: clamp(11px, 1.6vw, 13px);
@@ -633,7 +576,7 @@ body{
   opacity: 0.85;
 }
 
-/* Mobile tuning: keep speech on-screen */
+/* Mobile */
 @media (max-width: 420px){
   #speech,
   .speech{
@@ -641,7 +584,7 @@ body{
     width: 94vw;
     max-width: 94vw;
     bottom: calc(var(--sab) + var(--pad) + var(--modsH) + 8px + clamp(190px, 26vh, 420px));
-    padding: 18px 52px 18px 52px;
+    padding: 18px 52px 72px 52px;
   }
 }
 
@@ -674,7 +617,7 @@ body{
   z-index: 9;
 }
 
-/* -------- MOD OVERLAY (full-card) -------- */
+/* -------- MOD OVERLAY -------- */
 .modOverlay{
   border: 0;
   padding: 0;
