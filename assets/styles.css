@@ -581,7 +581,7 @@ body{
   #speech,
   .speech {
     width: 94vw;
-    padding: 28px 60px 80px 60px;
+    padding: 28px 60px 280px 60px;
     bottom: 58vh; /* keep it above DM on short screens */
   }
   #questTitle,
