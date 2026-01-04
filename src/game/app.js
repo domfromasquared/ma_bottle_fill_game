@@ -1168,6 +1168,20 @@ function renderModifiers() {
   if (modState.targeting === "DECOHERENCE_KEY") modSlot1?.classList.add("armed");
 }
 
+/* ---------- Decoherence toggle helpers (FIX) ---------- */
+function isDecoArmed() {
+  return modState.targeting === "DECOHERENCE_KEY";
+}
+function toggleDecoherence() {
+  modState.targeting = isDecoArmed() ? null : "DECOHERENCE_KEY";
+  renderModifiers();
+  showToast(
+    isDecoArmed()
+      ? "Decoherence disarmed."
+      : "Decoherence armed. Tap a locked bottle."
+  );
+}
+
 function resetModifiersForLevel() {
   modState.usesLeft.DECOHERENCE_KEY = MODIFIERS.DECOHERENCE_KEY.perLevelUses;
   modState.usesLeft.TEMPORAL_RETRACTION =
@@ -1211,7 +1225,14 @@ function openModOverlay(mod, useLabel, onUse) {
   modOverlayImg.alt = mod.name;
   modOverlayName.textContent = mod.name;
   modOverlayDesc.textContent = mod.tooltip;
+
+  // Default label
   modOverlayUse.textContent = useLabel || "Use";
+
+  // Decoherence: swap label dynamically based on armed state (FIX)
+  if (mod?.id === "DECOHERENCE_KEY") {
+    modOverlayUse.textContent = isDecoArmed() ? "Disarm" : "Arm";
+  }
 
   const cancel = () => closeModOverlay();
 
@@ -1244,11 +1265,12 @@ modSlot1?.addEventListener("click", () => {
     return;
   }
 
-  openModOverlay(MODIFIERS.DECOHERENCE_KEY, "Arm", () => {
-    modState.targeting = "DECOHERENCE_KEY";
-    renderModifiers();
-    showToast("Decoherence armed. Tap a locked bottle.");
-  });
+  // Toggle arm/disarm (FIX)
+  openModOverlay(
+    MODIFIERS.DECOHERENCE_KEY,
+    isDecoArmed() ? "Disarm" : "Arm",
+    () => toggleDecoherence()
+  );
 });
 
 modSlot2?.addEventListener("click", () => {
@@ -1778,6 +1800,20 @@ function resizeCanvasToCSS(canvas) {
   return { w, h, dpr };
 }
 
+/* ---------- Bottle alpha mask (CANVAS CLIP FIX) ---------- */
+const bottleAlphaImg = new Image();
+bottleAlphaImg.src = "assets/chemset/vial/vial_alpha.png";
+bottleAlphaImg.decoding = "async";
+bottleAlphaImg.loading = "eager";
+
+function applyBottleAlphaMask(ctx, w, h) {
+  if (!bottleAlphaImg.complete || !bottleAlphaImg.naturalWidth) return;
+  ctx.save();
+  ctx.globalCompositeOperation = "destination-in";
+  ctx.drawImage(bottleAlphaImg, 0, 0, w, h);
+  ctx.restore();
+}
+
 function drawBottleLiquid(i) {
   const canvas = bottleCanvases[i];
   if (!canvas) return;
@@ -1864,6 +1900,9 @@ function drawBottleLiquid(i) {
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, w, h);
   ctx.restore();
+
+  // FINAL CLIP: enforce bottle interior alpha shape (FIX)
+  applyBottleAlphaMask(ctx, w, h);
 }
 
 function redrawAllBottles() {
