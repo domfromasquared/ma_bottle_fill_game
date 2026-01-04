@@ -362,6 +362,61 @@ body{
 .bottle::after{ background-image: var(--bottle-open); }
 .bottle.locked::after{ background-image: var(--bottle-locked); }
 
+/* ---------- INSTABILITY (untouched mixed full bottles) ---------- */
+.bottle.unstable1{
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,0.10),
+    0 0 14px rgba(255, 190, 90, 0.40),
+    0 0 28px rgba(255, 190, 90, 0.22);
+}
+.bottle.unstable2{
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,0.12),
+    0 0 16px rgba(255, 132, 60, 0.55),
+    0 0 34px rgba(255, 132, 60, 0.30);
+}
+.bottle.unstable3{
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,0.14),
+    0 0 18px rgba(255, 70, 70, 0.70),
+    0 0 44px rgba(255, 70, 70, 0.38);
+}
+
+/* escalating shake (subtle -> violent) */
+.bottle.unstable1{ animation: unstable1 1.25s ease-in-out infinite; }
+.bottle.unstable2{ animation: unstable2 0.85s ease-in-out infinite; }
+.bottle.unstable3{ animation: unstable3 0.55s ease-in-out infinite; }
+
+@keyframes unstable1{
+  0%,100%{ transform: translate3d(0,0,0) rotate(0deg); }
+  25%{ transform: translate3d(-0.6px,0,0) rotate(-0.3deg); }
+  50%{ transform: translate3d(0.6px,0,0) rotate(0.3deg); }
+  75%{ transform: translate3d(-0.4px,0,0) rotate(-0.2deg); }
+}
+@keyframes unstable2{
+  0%,100%{ transform: translate3d(0,0,0) rotate(0deg); }
+  20%{ transform: translate3d(-1.2px,0,0) rotate(-0.6deg); }
+  40%{ transform: translate3d(1.2px,0,0) rotate(0.6deg); }
+  60%{ transform: translate3d(-1.0px,0,0) rotate(-0.5deg); }
+  80%{ transform: translate3d(1.0px,0,0) rotate(0.5deg); }
+}
+@keyframes unstable3{
+  0%,100%{ transform: translate3d(0,0,0) rotate(0deg); }
+  15%{ transform: translate3d(-2.0px,0,0) rotate(-1.1deg); }
+  30%{ transform: translate3d(2.0px,0,0) rotate(1.1deg); }
+  45%{ transform: translate3d(-1.7px,0,0) rotate(-0.9deg); }
+  60%{ transform: translate3d(1.7px,0,0) rotate(0.9deg); }
+  75%{ transform: translate3d(-1.3px,0,0) rotate(-0.7deg); }
+  90%{ transform: translate3d(1.3px,0,0) rotate(0.7deg); }
+}
+
+/* if also selected, keep your selection halo dominant */
+.bottle.selected.unstable1,
+.bottle.selected.unstable2,
+.bottle.selected.unstable3{
+  animation: inherit; /* keep shaking */
+}
+
 /* ---------- MODIFIERS BAR ---------- */
 .modBar{
   position:absolute;
