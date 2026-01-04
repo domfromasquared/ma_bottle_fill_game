@@ -103,7 +103,7 @@ body{
   color: var(--text);
   border-radius: 14px;
   padding: 1px 1px;
-  font-weight: 4100;
+  font-weight: 10000;
   cursor:pointer;
 }
 
