@@ -527,6 +527,7 @@ body{
 .speech {
   /* Double-ish size */
   width: min(92vw, 760px);     /* was ~380px-ish; now up to 760 */
+  height: 350px;
   max-width: 92vw;
 
   /* raise it above DM */
@@ -542,7 +543,7 @@ body{
   background-position: center;
 
   /* padding inside bubble shape */
-  padding: 24px 88px 1000px 88px;  /* generous padding */
+  padding: 24px 88px 100px 88px;  /* generous padding */
   box-sizing: border-box;
 
   /* prevent content from leaking outside */
