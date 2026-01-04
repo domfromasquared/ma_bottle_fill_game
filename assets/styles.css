@@ -12,6 +12,9 @@
   --modsH: 84px;
   --railW: 30px;
 
+  /* ✅ NEW: cap the playfield width so horizontal UI doesn't stretch forever */
+  --maxW: 860px;
+
   --card: rgba(15, 23, 36, .92);
   --line: rgba(220,232,255,.12);
   --text: #e6edf3;
@@ -185,17 +188,33 @@ body{
 .playfield{
   position: absolute;
   inset: 0;
+
+  /* keep rail breathing room */
   padding-left: calc(var(--railW) + 10px);
   padding-right: 0;
   padding-top: 0;
+
+  /* reserve room for modifiers bar */
   padding-bottom: calc(var(--modsH) + 8px + var(--sab));
+}
+
+/* ✅ NEW: centered content frame so wide screens don’t stretch UI */
+.playfieldFrame{
+  position: relative;
+  height: 100%;
+  width: min(100%, var(--maxW));
+  margin: 0 auto;
 }
 
 /* Thesis overlay bar */
 .thesisBar{
   position:absolute;
-  left: calc(var(--railW) + 10px);
-  right: calc(var(--sar) + var(--pad));
+
+  /* ✅ NEW: center within frame + cap width */
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(100%, var(--maxW));
+
   top: calc(var(--sat) + 16px);
 
   display:flex;
@@ -233,9 +252,14 @@ body{
 
 /* Bottles grid */
 .grid{
+  width: min(100%, var(--maxW));
+  margin: 0 auto;
+
   display:grid;
   grid-template-columns: repeat(5, minmax(56px, 1fr));
   gap: 10px;
+
+  /* thesis height + gap below thesis */
   padding: calc(58px + var(--thesis-gap-below)) 4px 0 4px;
   align-content:start;
 }
@@ -245,7 +269,10 @@ body{
   position:relative;
   overflow:hidden;
   user-select:none;
-  touch-action: none;
+
+  /* touch behavior controlled in JS with pointer events;
+     keep taps responsive but prevent browser gestures inside bottle */
+  touch-action: manipulation;
 
   display:flex;
   flex-direction: column-reverse;
@@ -376,14 +403,19 @@ body{
 /* ---------- MODIFIERS BAR ---------- */
 .modBar{
   position:absolute;
-  left: calc(var(--sal) + var(--pad));
-  right: calc(var(--sar) + var(--pad));
+
+  /* ✅ NEW: center + cap width so it doesn't stretch on wide devices */
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(100%, var(--maxW));
+
   bottom: calc(var(--sab) + var(--pad));
   height: var(--modsH);
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
+
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+
   background: rgba(11,18,28,.78);
   border: 1px solid var(--line);
   border-radius: 18px;
@@ -392,7 +424,6 @@ body{
 }
 
 .modSlot{
-  flex: 1;
   height: 100%;
   position: relative;
   border-radius: 14px;
@@ -400,6 +431,11 @@ body{
   background: rgba(17,26,39,.35);
   cursor:pointer;
   overflow:hidden;
+
+  /* ✅ NEW: stop weird inner stretching, keep consistent padding */
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
 
 .modIcon{
@@ -407,7 +443,6 @@ body{
   height: 64px;
   object-fit: contain;
   display:block;
-  margin: 0 auto;
   pointer-events:none;
 }
 
@@ -647,3 +682,10 @@ body{
 
 .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
 .sr{ position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
+
+/* ---------- OPTIONAL: improve wide layouts ---------- */
+@media (min-width: 900px){
+  .grid{
+    gap: 14px;
+  }
+}
