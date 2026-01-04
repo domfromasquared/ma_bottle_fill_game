@@ -20,16 +20,17 @@
   --text: #e6edf3;
   --muted: #aab6ca;
 
-  /* DM speech bubble plates */
-  --speech-plate-dark: url("./dmspeaks/speech_bubble_dark.png");
-  --speech-plate-light: url("./dmspeaks/speech_bubble_light.png");
+  /* --- FIXED PATHS (these were wrong) --- */
+  /* DM speech bubble plates (files are in assets/dmspeaks/) */
+  --speech-plate-dark: url("assets/dmspeaks/speech_bubble_dark.png");
+  --speech-plate-light: url("assets/dmspeaks/speech_bubble_light.png");
 
   /* DM-only font (speech header only) */
   --dm-font: "UnifrakturCook", serif;
 
-  /* Bottle art */
-  --bottle-open: url("./chemset/vial/vial_empty.png");
-  --bottle-locked: url("./chemset/vial/vial_corked.png");
+  /* Bottle art (files are in assets/chemset/) */
+  --bottle-open: url("assets/chemset/vial/vial_empty.png");
+  --bottle-locked: url("assets/chemset/vial/vial_corked.png");
 
   /* Thesis spacing controls */
   --thesis-pad-y: 5px;
@@ -41,6 +42,13 @@
   --ch-side: 12px;
   --ch-bottom: 0px;
   --ch-radius: 6px;
+
+  /* DM sizing (so speech can track it) */
+  --dmW: clamp(160px, 44vw, 220px);
+  --dmH: clamp(220px, 34vh, 340px);
+
+  /* Speech sizing */
+  --speechW: clamp(320px, 72vw, 760px);
 }
 
 *{ box-sizing:border-box; }
@@ -196,14 +204,28 @@ body{
 
   /* reserve room for modifiers bar */
   padding-bottom: calc(var(--modsH) + 8px + var(--sab));
+
+  /* IMPORTANT for background + stacking */
+  overflow: hidden;
 }
 
-/* centered content frame so wide screens don’t stretch UI */
-.playfieldFrame{
+/* --- FIX: game background behind playfield --- */
+.playfield::before{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("assets/BG/game_bg_000.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Ensure playfield contents sit above bg */
+.playfield > *{
   position: relative;
-  height: 100%;
-  width: min(100%, var(--maxW));
-  margin: 0 auto;
+  z-index: 1;
 }
 
 /* Thesis overlay bar */
@@ -276,10 +298,8 @@ body{
   outline: none;
   -webkit-tap-highlight-color: transparent;
 
-  /* IMPORTANT: do NOT pad the button itself — canvas chamber is absolute */
   padding: 0;
 
-  /* allow animating bottle movement without reflow */
   transform: translate3d(0,0,0);
   will-change: transform;
 }
@@ -410,13 +430,6 @@ body{
   90%{ transform: translate3d(1.3px,0,0) rotate(0.7deg); }
 }
 
-/* if also selected, keep your selection halo dominant */
-.bottle.selected.unstable1,
-.bottle.selected.unstable2,
-.bottle.selected.unstable3{
-  animation: inherit; /* keep shaking */
-}
-
 /* ---------- MODIFIERS BAR ---------- */
 .modBar{
   position:absolute;
@@ -493,14 +506,16 @@ body{
   position:absolute;
   left: calc(var(--sal) + var(--pad));
   bottom: calc(var(--sab) + var(--pad) + var(--modsH) + 8px);
-  width: min(44vw, 220px);
-  height: min(34vh, 340px);
+  width: var(--dmW);
+  height: var(--dmH);
   border-radius: 22px;
   background: rgba(11,18,28,.01);
+
+  /* slide-in from left */
   transform: translateX(-150%);
   transition: transform .28s ease;
-  overflow:auto;
-  z-index: 5;
+  overflow: hidden;
+  z-index: 8;
 }
 
 .dmCharacter.show{ transform: translateX(0); }
@@ -520,71 +535,83 @@ body{
   z-index: 6;
 }
 
-/* ---------------- DM Speech Bubble (double size + raised) ---------------- */
-
-/* Notes fixed:
-   - missing parenthesis in height
-   - conflicting width/height max rules cleaned
-   - overflow should be hidden (bubble should clip text)
-   - use aspect-ratio so it scales consistently across devices
-   - safer positioning: above DM with clamp(), not vh guesswork
-   - theme background-image should be url(...) not raw var() unless var already contains url()
-   - mobile media query had bottom:58vh (puts it offscreen); replaced with clamp()
+/* ---------------- DM Speech Bubble (moves WITH DM) ---------------- */
+/* Key changes:
+   - speech is anchored next to the DM (left aligned), not screen-centered
+   - speech uses the SAME slide transform pattern as DM
+   - safe-area + tail-safe content column so text never dips into the tail
 */
 
-/* Bubble panel */
 #speech,
 .speech{
   position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 40;
 
-  /* Size: “double-ish” but responsive */
-  width: clamp(320px, 92vw, 760px);
-  aspect-ratio: 760 / 350;              /* keep bubble proportions */
-  height: auto;                          /* derived from aspect ratio */
-  max-width: 92vw;
+  /* anchor to DM (to the right of it) */
+  left: calc(var(--sal) + var(--pad) + var(--dmW) + 12px);
 
-  /* Raise above DM (consistent across devices) */
-  bottom: clamp(220px, 20vh, 520px);
+  /* raise just above DM area */
+  bottom: calc(var(--sab) + var(--pad) + var(--modsH) + 8px + clamp(180px, 22vh, 420px));
 
-  /* Background bubble image */
+  z-index: 9;
+
+  width: var(--speechW);
+  max-width: calc(100vw - (var(--sal) + var(--sar) + var(--pad)*2 + var(--dmW) + 18px));
+
+  aspect-ratio: 760 / 350;
+  height: auto;
+
   background-repeat: no-repeat;
   background-position: center;
   background-size: 100% 100%;
 
-  /* Inner padding (tuned to bubble shape) */
+  /* bubble padding (tail-safe bottom is handled by .speechInner too) */
   padding: clamp(18px, 2.2vw, 26px)
            clamp(56px, 8vw, 88px)
-           clamp(22px, 3.4vw, 44px)
+           clamp(18px, 2.8vw, 34px)
            clamp(56px, 8vw, 88px);
-  box-sizing: border-box;
 
-  /* Keep text inside the plate */
+  box-sizing: border-box;
   overflow: hidden;
 
-  /* Optional: helps text feel centered in the bubble area */
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+
+  /* slide with DM */
+  transform: translateX(-150%);
+  transition: transform .28s ease;
 }
 
-/* Theme switch (JS sets speech.dataset.theme)
-   IMPORTANT: your CSS vars must be set like:
-   --speech-plate-dark: url("assets/dmspeaks/speech_bubble_dark.png");
-   --speech-plate-light: url("assets/dmspeaks/speech_bubble_light.png");
-*/
+/* When JS adds .show to speech (same as DM), it slides in */
+.speech.show,
+#speech.show{
+  transform: translateX(0);
+}
+
+/* Theme switch (JS sets speech.dataset.theme) */
 .speech[data-theme="dark"]{  background-image: var(--speech-plate-dark); }
 .speech[data-theme="light"]{ background-image: var(--speech-plate-light); }
 
-/* Title (DM goth font ONLY goes here) */
+/* Safe content column so text never falls into the tail */
+.speechInner{
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+
+  /* reserve vertical room for the tail area */
+  padding-bottom: clamp(56px, 7vw, 92px);
+}
+
+/* Title = goth font */
 #questTitle,
 .questTitle{
-  font-size: clamp(18px, 2.6vw, 28px);
+  font-family: var(--dm-font);
+  font-size: clamp(18px, 2.6vw, 30px);
   line-height: 1.08;
   margin: 0 0 10px 0;
-  /* font-family: var(--dm-font);  <-- keep this here if you want goth title only */
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 2px rgba(0,0,0,.35);
 }
 
 /* Body text */
@@ -596,22 +623,25 @@ body{
   overflow: hidden;
 }
 
-/* Small footer */
+/* Footer text stays pushed up and clean */
 #speechSmall,
 .speechSmall{
+  margin-top: auto;
+  padding-top: 10px;
   font-size: clamp(11px, 1.6vw, 13px);
   line-height: 1.25;
-  margin: 10px 0 0 0;
   opacity: 0.85;
 }
 
-/* Mobile tuning */
+/* Mobile tuning: keep speech on-screen */
 @media (max-width: 420px){
   #speech,
   .speech{
+    left: calc(var(--sal) + var(--pad) + 6px);
     width: 94vw;
-    bottom: clamp(200px, 22vh, 420px);
-    padding: 18px 52px 22px 52px;
+    max-width: 94vw;
+    bottom: calc(var(--sab) + var(--pad) + var(--modsH) + 8px + clamp(190px, 26vh, 420px));
+    padding: 18px 52px 18px 52px;
   }
 }
 
@@ -850,28 +880,4 @@ body{
 
 @media (min-width: 900px){
   .grid{ gap: 14px; }
-}
-
-/* ---------------- Playfield Background ---------------- */
-.playfield{
-  position: relative;
-  overflow: hidden; /* keeps bg from bleeding */
-}
-
-.playfield::before{
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: url("../BG/game_bg_000.png");
-  background-size: cover;          /* fill available area */
-  background-position: center;     /* keep focal centered */
-  background-repeat: no-repeat;
-  z-index: 0;
-  pointer-events: none;
-}
-
-/* Ensure playfield content sits above background */
-.playfield > *{
-  position: relative;
-  z-index: 1;
 }
