@@ -38,6 +38,15 @@
   --bottle-open: url("./chemset/vial/vial_empty.png");
   --bottle-locked: url("./chemset/vial/vial_corked.png");
 
+  /* Alpha mask for vial inner shape */
+  --vial-alpha: url("./chemset/vial/vial_alpha.png");
+
+  /* Fine-tune mask fit (pixels in CSS space) */
+  --alpha-pad-x: 0px;   /* shrink mask inward */
+  --alpha-pad-y: 0px;
+  --alpha-off-x: 0px;   /* move mask around */
+  --alpha-off-y: 0px;
+
   /* Thesis spacing controls */
   --thesis-pad-y: 5px;
   --thesis-pad-x: 10px;
