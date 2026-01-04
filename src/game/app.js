@@ -1807,9 +1807,20 @@ function applyAlphaMask(ctx, bottleEl, w, h, dpr) {
 
   const imgW = vialAlphaImg.naturalWidth;
   const imgH = vialAlphaImg.naturalHeight;
-  const { dx, dy, dw, dh } = computeContainBottomBox(w, h, imgW, imgH);
 
-  // Fine-tune using CSS vars (CSS px -> canvas px)
+  // chamber in canvas px
+  const chTop = cssVarPx(bottleEl, "--ch-top", 0) * dpr;
+  const chSide = cssVarPx(bottleEl, "--ch-side", 0) * dpr;
+  const chBottom = cssVarPx(bottleEl, "--ch-bottom", 0) * dpr;
+
+  const innerX = chSide;
+  const innerY = chTop;
+  const innerW = Math.max(1, w - chSide * 2);
+  const innerH = Math.max(1, h - chTop - chBottom);
+
+  // Fit alpha to chamber using "contain + bottom"
+  const { dx, dy, dw, dh } = computeContainBottomBox(innerW, innerH, imgW, imgH);
+
   const padX = cssVarPx(bottleEl, "--alpha-pad-x", 0) * dpr;
   const padY = cssVarPx(bottleEl, "--alpha-pad-y", 0) * dpr;
   const offX = cssVarPx(bottleEl, "--alpha-off-x", 0) * dpr;
@@ -1817,6 +1828,10 @@ function applyAlphaMask(ctx, bottleEl, w, h, dpr) {
 
   ctx.save();
   ctx.globalCompositeOperation = "destination-in";
+
+  // translate so 0,0 is chamber top-left
+  ctx.translate(innerX, innerY);
+
   ctx.drawImage(
     vialAlphaImg,
     0,
@@ -1828,6 +1843,7 @@ function applyAlphaMask(ctx, bottleEl, w, h, dpr) {
     Math.max(1, dw - padX * 2),
     Math.max(1, dh - padY * 2)
   );
+
   ctx.restore();
 }
 
