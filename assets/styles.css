@@ -527,14 +527,15 @@ body{
 .speech {
   /* Double-ish size */
   width: min(92vw, 760px);     /* was ~380px-ish; now up to 760 */
-  height: 350px;
+  height: min(45vw, 350px;
   max-width: 92vw;
+  max-height: 45vw;
 
   /* raise it above DM */
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  bottom: 26vh;               /* raised; adjust if needed */
+  bottom: 6vh;               /* raised; adjust if needed */
   z-index: 40;
 
   /* ensure the background image scales correctly */
@@ -547,7 +548,7 @@ body{
   box-sizing: border-box;
 
   /* prevent content from leaking outside */
-  overflow: hidden;
+  overflow: visible;
 }
 
 
