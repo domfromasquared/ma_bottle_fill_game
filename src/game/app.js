@@ -768,26 +768,20 @@ function shrinkTextToFitBubble() {
   if (!bubble) return;
   if (!questTitle || !speechText || !speechSmall) return;
 
-  // Ensure bubble has a deterministic height so "fit" is meaningful.
-  // Assumes your bubble art is ~780x440 (ratio ~0.564).
   const rect = bubble.getBoundingClientRect();
   if (rect.width > 0) {
     const targetH = Math.round(rect.width * 0.564);
-    // Only set if not explicitly set by CSS (or if zero).
     const currentH = parseFloat(getComputedStyle(bubble).height || "0");
     if (!currentH || Math.abs(currentH - targetH) > 2) {
       bubble.style.height = `${targetH}px`;
     }
   }
 
-  // Reset base sizes (your CSS can override, this is the starting point)
   questTitle.style.fontSize = "26px";
   speechText.style.fontSize = "16px";
   speechSmall.style.fontSize = "13px";
 
-  // Give layout a tick to settle
   const fits = () => bubble.scrollHeight <= bubble.clientHeight;
-
   if (fits()) return;
 
   let title = 26,
@@ -801,7 +795,6 @@ function shrinkTextToFitBubble() {
   for (let k = 0; k < 40; k++) {
     if (fits()) break;
 
-    // shrink priority: body → title → small
     if (body > minBody) body -= 0.5;
     else if (title > minTitle) title -= 0.5;
     else if (small > minSmall) small -= 0.5;
@@ -822,9 +815,7 @@ function setDMSpeech({ title, body, small }) {
   copy.textContent = body || "";
   speechText.appendChild(copy);
 
-  // shrink-to-fit after content is in the DOM
   requestAnimationFrame(() => shrinkTextToFitBubble());
-
   return { copy };
 }
 
@@ -875,7 +866,6 @@ function introIsActive() {
 
 /* ---------------- Fail-state modifier offering ---------------- */
 function getFailModSuggestion() {
-  // Prefer Temporal if we have undo states
   if (
     (modState?.usesLeft?.TEMPORAL_RETRACTION ?? 0) > 0 &&
     (undoStack?.length ?? 0) > 0
@@ -883,12 +873,10 @@ function getFailModSuggestion() {
     return MODIFIERS.TEMPORAL_RETRACTION;
   }
 
-  // Then Equilibrium (adds a vessel + tries a legal siphon)
   if ((modState?.usesLeft?.EQUILIBRIUM_VESSEL ?? 0) > 0) {
     return MODIFIERS.EQUILIBRIUM_VESSEL;
   }
 
-  // Then Decoherence (only if there are locked bottles)
   if (
     (modState?.usesLeft?.DECOHERENCE_KEY ?? 0) > 0 &&
     (state?.locked?.some(Boolean) ?? false)
@@ -910,7 +898,6 @@ function useFailMod(mod) {
     }
     spendUse("TEMPORAL_RETRACTION");
     maOneLiner(MODIFIERS.TEMPORAL_RETRACTION.maLine);
-    // If undo created new moves, clear deadlock if it exists
     deadlockActive = false;
     return true;
   }
@@ -918,7 +905,6 @@ function useFailMod(mod) {
   if (mod.id === "EQUILIBRIUM_VESSEL") {
     if (!spendUse("EQUILIBRIUM_VESSEL")) return false;
 
-    // modifiers do NOT count as a move — we do not tick instability here.
     state.bottles.push([]);
     state.locked.push(false);
     state.hiddenSegs.push(false);
@@ -949,8 +935,6 @@ function useFailMod(mod) {
   }
 
   if (mod.id === "DECOHERENCE_KEY") {
-    // IMPORTANT: do NOT spend here (spend happens on successful unlock tap),
-    // because your unlock flow already calls spendUse().
     modState.targeting = "DECOHERENCE_KEY";
     renderModifiers();
     showToast("Decoherence armed. Tap a LOCKED bottle.");
@@ -997,7 +981,6 @@ And this time—touch the problem before it becomes the problem.`,
     const modBtn = makePrimaryBtn(`Use ${suggested.name}`);
     modBtn.addEventListener("click", () => {
       openModOverlay(suggested, "Use", () => {
-        // close DM, resume level
         hideDMOverlay();
         deadlockActive = false;
         useFailMod(suggested);
@@ -1017,7 +1000,6 @@ And this time—touch the problem before it becomes the problem.`,
   row.appendChild(retryBtn);
   speechText.appendChild(row);
 
-  // re-fit after buttons added
   requestAnimationFrame(() => shrinkTextToFitBubble());
 }
 
@@ -1226,10 +1208,7 @@ function openModOverlay(mod, useLabel, onUse) {
   modOverlayName.textContent = mod.name;
   modOverlayDesc.textContent = mod.tooltip;
 
-  // Default label
   modOverlayUse.textContent = useLabel || "Use";
-
-  // Decoherence: swap label dynamically based on armed state (FIX)
   if (mod?.id === "DECOHERENCE_KEY") {
     modOverlayUse.textContent = isDecoArmed() ? "Disarm" : "Arm";
   }
@@ -1265,7 +1244,6 @@ modSlot1?.addEventListener("click", () => {
     return;
   }
 
-  // Toggle arm/disarm (FIX)
   openModOverlay(
     MODIFIERS.DECOHERENCE_KEY,
     isDecoArmed() ? "Disarm" : "Arm",
@@ -1303,7 +1281,6 @@ modSlot3?.addEventListener("click", () => {
   }
 
   openModOverlay(MODIFIERS.EQUILIBRIUM_VESSEL, "Deploy", () => {
-    // NOTE: modifiers do NOT count as a move — we do not tick instability here.
     state.bottles.push([]);
     state.locked.push(false);
     state.hiddenSegs.push(false);
@@ -1325,7 +1302,6 @@ modSlot3?.addEventListener("click", () => {
     if (!best) {
       showToast("Equilibrium found no legal siphon.");
     } else {
-      // use the SAME pour path (animation + applyPourState)
       animateTransferThenPour(best.from, best.to);
     }
 
@@ -1487,26 +1463,30 @@ function dmReactionForBANK(bankPrimary) {
       return {
         mood: "annoyed",
         title: "Out of moves.",
-        body: "Action without aim.\nYou brute-forced the ritual into a wall.\n\nRetry. Fewer clicks. More intent.",
+        body:
+          "Action without aim.\nYou brute-forced the ritual into a wall.\n\nRetry. Fewer clicks. More intent.",
       };
     case "B":
       return {
         mood: "disappointed",
         title: "Protocol failure.",
-        body: "Blueprint ignored.\nYou tried to solve chaos without structure.\n\nRetry. Plan two pours ahead. Minimum.",
+        body:
+          "Blueprint ignored.\nYou tried to solve chaos without structure.\n\nRetry. Plan two pours ahead. Minimum.",
       };
     case "N":
       return {
         mood: "encouraging",
         title: "No moves left.",
-        body: "Breathe.\n\nYou’re close — but you protected the wrong stacks.\n\nRetry. Calm hands. Clean pours.",
+        body:
+          "Breathe.\n\nYou’re close — but you protected the wrong stacks.\n\nRetry. Calm hands. Clean pours.",
       };
     case "K":
     default:
       return {
         mood: "amused",
         title: "No legal pours remain.",
-        body: "Ah. Classic.\n\nYou constructed a perfectly unsolvable state.\n\nRetry — and respect constraints before you pour.",
+        body:
+          "Ah. Classic.\n\nYou constructed a perfectly unsolvable state.\n\nRetry — and respect constraints before you pour.",
       };
   }
 }
@@ -1800,25 +1780,63 @@ function resizeCanvasToCSS(canvas) {
   return { w, h, dpr };
 }
 
-/* ---------- Bottle alpha mask (CANVAS CLIP FIX) ---------- */
-const bottleAlphaImg = new Image();
-bottleAlphaImg.src = "assets/chemset/vial/vial_alpha.png";
-bottleAlphaImg.decoding = "async";
-bottleAlphaImg.loading = "eager";
+/* ---------- Alpha mask: match bottle art "contain + center bottom" ---------- */
+const VIAL_ALPHA_URL = "assets/chemset/vial/vial_alpha.png";
+const vialAlphaImg = new Image();
+vialAlphaImg.decoding = "async";
+vialAlphaImg.loading = "eager";
+vialAlphaImg.src = VIAL_ALPHA_URL;
 
-function applyBottleAlphaMask(ctx, w, h) {
-  if (!bottleAlphaImg.complete || !bottleAlphaImg.naturalWidth) return;
+function cssVarPx(el, name, fallback = 0) {
+  const v = getComputedStyle(el).getPropertyValue(name).trim();
+  const n = parseFloat(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function computeContainBottomBox(canvasW, canvasH, imgW, imgH) {
+  const scale = Math.min(canvasW / imgW, canvasH / imgH);
+  const dw = imgW * scale;
+  const dh = imgH * scale;
+  const dx = (canvasW - dw) * 0.5; // center X
+  const dy = canvasH - dh; // bottom align
+  return { dx, dy, dw, dh, scale };
+}
+
+function applyAlphaMask(ctx, bottleEl, w, h, dpr) {
+  if (!vialAlphaImg.complete || vialAlphaImg.naturalWidth <= 0) return;
+
+  const imgW = vialAlphaImg.naturalWidth;
+  const imgH = vialAlphaImg.naturalHeight;
+  const { dx, dy, dw, dh } = computeContainBottomBox(w, h, imgW, imgH);
+
+  // Fine-tune using CSS vars (CSS px -> canvas px)
+  const padX = cssVarPx(bottleEl, "--alpha-pad-x", 0) * dpr;
+  const padY = cssVarPx(bottleEl, "--alpha-pad-y", 0) * dpr;
+  const offX = cssVarPx(bottleEl, "--alpha-off-x", 0) * dpr;
+  const offY = cssVarPx(bottleEl, "--alpha-off-y", 0) * dpr;
+
   ctx.save();
   ctx.globalCompositeOperation = "destination-in";
-  ctx.drawImage(bottleAlphaImg, 0, 0, w, h);
+  ctx.drawImage(
+    vialAlphaImg,
+    0,
+    0,
+    imgW,
+    imgH,
+    dx + offX + padX,
+    dy + offY + padY,
+    Math.max(1, dw - padX * 2),
+    Math.max(1, dh - padY * 2)
+  );
   ctx.restore();
 }
 
 function drawBottleLiquid(i) {
   const canvas = bottleCanvases[i];
-  if (!canvas) return;
+  const bottleEl = bottleEls[i];
+  if (!canvas || !bottleEl) return;
 
-  const { w, h } = resizeCanvasToCSS(canvas);
+  const { w, h, dpr } = resizeCanvasToCSS(canvas);
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
@@ -1828,12 +1846,21 @@ function drawBottleLiquid(i) {
 
   const b = state.bottles[i] || [];
   const cap = state.capacity;
-  const cellH = h / cap;
-
   if (!b.length) return;
 
+  // Draw into chamber rect (based on CSS vars) so fill height feels correct
+  const chTop = cssVarPx(bottleEl, "--ch-top", 0) * dpr;
+  const chSide = cssVarPx(bottleEl, "--ch-side", 0) * dpr;
+  const chBottom = cssVarPx(bottleEl, "--ch-bottom", 0) * dpr;
+
+  const innerX = chSide;
+  const innerY = chTop;
+  const innerW = Math.max(1, w - chSide * 2);
+  const innerH = Math.max(1, h - chTop - chBottom);
+  const cellH = innerH / cap;
+
   const tilt = bottleTiltRad[i] || 0;
-  const slant = Math.tan(tilt) * (w * 0.18);
+  const slant = Math.tan(tilt) * (innerW * 0.18);
 
   for (let s = 0; s < cap; s++) {
     const idx = b[s] ?? null;
@@ -1846,12 +1873,12 @@ function drawBottleLiquid(i) {
     const texUrl = getRoleTextureUrl(role);
     const img = getPatternImage(texUrl);
 
-    const yBottom = h - (s + 1) * cellH;
-    const yTop = h - s * cellH;
+    const yBottom = innerY + (innerH - (s + 1) * cellH);
+    const yTop = innerY + (innerH - s * cellH);
 
     // base fill
     ctx.fillStyle = fill;
-    ctx.fillRect(0, yBottom, w, cellH);
+    ctx.fillRect(innerX, yBottom, innerW, cellH);
 
     // top surface tilt illusion ONLY for top-most filled segment
     const isTopMost = s === b.length - 1;
@@ -1865,26 +1892,26 @@ function drawBottleLiquid(i) {
       const yL = yTop + (sgn > 0 ? Math.abs(dx) : 0);
       const yR = yTop + (sgn > 0 ? 0 : Math.abs(dx));
 
-      ctx.moveTo(0, yBottom);
-      ctx.lineTo(0, yL);
-      ctx.lineTo(w, yR);
-      ctx.lineTo(w, yBottom);
+      ctx.moveTo(innerX, yBottom);
+      ctx.lineTo(innerX, yL);
+      ctx.lineTo(innerX + innerW, yR);
+      ctx.lineTo(innerX + innerW, yBottom);
       ctx.closePath();
       ctx.clip();
 
       ctx.fillStyle = fill;
-      ctx.fillRect(0, yBottom, w, cellH + Math.abs(dx) + 2);
+      ctx.fillRect(innerX, yBottom, innerW, cellH + Math.abs(dx) + 2);
       ctx.restore();
     }
 
-    // texture overlay
+    // texture overlay (FULL OPACITY per your request)
     if (img && img.complete && img.naturalWidth > 0) {
       const pat = ctx.createPattern(img, "repeat");
       if (pat) {
         ctx.save();
         ctx.globalAlpha = 1.0;
         ctx.fillStyle = pat;
-        ctx.fillRect(0, yBottom, w, cellH);
+        ctx.fillRect(innerX, yBottom, innerW, cellH);
         ctx.restore();
       }
     }
@@ -1901,8 +1928,8 @@ function drawBottleLiquid(i) {
   ctx.fillRect(0, 0, w, h);
   ctx.restore();
 
-  // FINAL CLIP: enforce bottle interior alpha shape (FIX)
-  applyBottleAlphaMask(ctx, w, h);
+  // ✅ FINAL CLIP: enforce vial_alpha silhouette aligned to bottle art
+  applyAlphaMask(ctx, bottleEl, w, h, dpr);
 }
 
 function redrawAllBottles() {
@@ -1938,7 +1965,6 @@ function applyPourState(from, to) {
   sig.moves++;
   syncInfoPanel();
 
-  // Instability counts ONLY valid pours
   levelMoveIndex++;
   markTouched(from);
   markTouched(to);
@@ -2087,7 +2113,6 @@ function handleBottleTap(i) {
   if (deadlockActive) return;
   if (inputLocked) return;
 
-  // Decoherence Key armed: tap locked bottle consumes and unlocks
   if (modState.targeting === "DECOHERENCE_KEY") {
     if (!state.locked[i]) {
       showToast("Tap a LOCKED bottle to revoke its seal.");
@@ -2175,7 +2200,6 @@ function startLevel() {
 
   generateBottlesFromRecipe(recipe);
 
-  // init instability AFTER bottles exist, BEFORE first render
   initInstabilityForLevel();
 
   render();
@@ -2278,7 +2302,6 @@ function boot() {
 
   startLevel();
 
-  // Run intro deterministically (only if not seen)
   setTimeout(() => {
     const seen = localStorage.getItem(INTRO_SEEN_KEY) === "1";
     if (!seen) runFirstLoadIntro();
