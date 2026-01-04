@@ -186,6 +186,7 @@ const modSlot1 = qs("modSlot1");
 const modSlot2 = qs("modSlot2");
 const modSlot3 = qs("modSlot3");
 
+const retryLevelBtn = qs("retryLevelBtn");
 const factoryResetBtn = qs("factoryResetBtn");
 
 /* ---------------- Speech theme ---------------- */
@@ -1561,6 +1562,20 @@ Try not to disappoint me twice.`,
 }
 
 factoryResetBtn?.addEventListener("click", factoryResetGame);
+retryLevelBtn?.addEventListener("click", () => {
+  // close settings first so it doesn't sit on top of the restarted level
+  try { settings?.close?.(); } catch {}
+
+  // count as a reset for BANK telemetry (optional but recommended)
+  sig.resets++;
+
+  // clear any blocking overlays/states
+  deadlockActive = false;
+  introStep = 0;
+
+  // restart the current level
+  startLevel();
+});
 
 /* ---------------- Boot ---------------- */
 function boot(){
