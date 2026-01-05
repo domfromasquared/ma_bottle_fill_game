@@ -40,6 +40,7 @@
 
   /* Alpha mask for vial inner shape */
   --vial-alpha: url("./chemset/vial/vial_alpha.png");
+  --vial-alpha-feedback: url("./chemset/vial/vial_alpha_feedback.png");
 
   /* Fine-tune mask fit (pixels in CSS space) */
   --alpha-pad-x: 0px;   /* shrink mask inward */
@@ -391,6 +392,63 @@ body{
 }
 .bottle::after{ background-image: var(--bottle-open); }
 .bottle.locked::after{ background-image: var(--bottle-locked); }
+
+/* Shape-masked feedback halo layer */
+.bottleHalo{
+  position:absolute;
+  inset:0;
+  z-index: 4;              /* above liquid (z=2) but below bottle art (::after z=5) */
+  pointer-events:none;
+
+  /* create solid pixels to glow */
+  background: rgba(255,255,255,1);
+
+  /* mask to bottle silhouette (same alignment as your bottle art: contain + center bottom) */
+  -webkit-mask-image: var(--vial-alpha-feedback);
+  mask-image: var(--vial-alpha-feedback);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center bottom;
+  mask-position: center bottom;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+
+  opacity: 0;              /* off by default */
+}
+
+/* TURN OFF the rectangle box-shadow glow (so it doesn’t fight the halo) */
+.bottle.selected,
+.bottle.pressed,
+.bottle.locked.selected{
+  box-shadow: none;
+}
+
+/* Selected = blue halo (matches your old glow color) :contentReference[oaicite:3]{index=3} */
+.bottle.selected .bottleHalo{
+  opacity: 1;
+  filter:
+    drop-shadow(0 0 0 rgba(255,255,255,0.14))
+    drop-shadow(0 0 18px rgba(0,179,255,0.55))
+    drop-shadow(0 0 40px rgba(0,179,255,0.30));
+}
+
+/* Pressed = slightly softer */
+.bottle.pressed .bottleHalo{
+  opacity: 1;
+  filter:
+    drop-shadow(0 0 0 rgba(255,255,255,0.10))
+    drop-shadow(0 0 16px rgba(0,179,255,0.45))
+    drop-shadow(0 0 32px rgba(0,179,255,0.22));
+}
+
+/* Locked+Selected = purple halo :contentReference[oaicite:4]{index=4} */
+.bottle.locked.selected .bottleHalo{
+  opacity: 1;
+  filter:
+    drop-shadow(0 0 0 rgba(255,255,255,0.10))
+    drop-shadow(0 0 18px rgba(154,122,160,0.55))
+    drop-shadow(0 0 40px rgba(154,122,160,0.30));
+}
 
 /* ---------- MODIFIERS BAR ---------- */
 .modBar{
