@@ -53,8 +53,8 @@
   --thesis-gap-below: 50px;
 
   /* inner chamber (tuned for vial_empty.png / vial_corked.png) */
-  --ch-top: 30px;
-  --ch-side: 14px;
+  --ch-top: 27px;
+  --ch-side: 13px;
   --ch-bottom: 0px;
   --ch-radius: 6px;
 
