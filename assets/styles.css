@@ -53,10 +53,10 @@
   --thesis-gap-below: 50px;
 
   /* inner chamber (tuned for vial_empty.png / vial_corked.png) */
-  --ch-top: 27px;
-  --ch-side: 13px;
+  --ch-top: 0px;
+  --ch-side: 0px;
   --ch-bottom: 0px;
-  --ch-radius: 6px;
+  --ch-radius: 0px;
 
   /* DM sizing (so speech can track it) */
   --dmW: clamp(160px, 44vw, 220px);
