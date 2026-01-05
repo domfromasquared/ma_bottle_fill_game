@@ -54,7 +54,7 @@
 
   /* inner chamber (tuned for vial_empty.png / vial_corked.png) */
   --ch-top: 30px;
-  --ch-side: 12px;
+  --ch-side: 14px;
   --ch-bottom: 0px;
   --ch-radius: 6px;
 
