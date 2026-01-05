@@ -103,7 +103,7 @@ body{
   color: var(--text);
   border-radius: 14px;
   padding: 1px 1px;
-  font-size: 40px;
+  font-size: 25px;
   cursor:pointer;
 }
 
@@ -496,7 +496,7 @@ body{
   height: 34px;
   cursor:pointer;
   font-weight: 1000;
-  z-index: 6;
+  z-index: 50;
 }
 
 /* ---------------- SPEECH BUBBLE (slides with DM) ---------------- */
