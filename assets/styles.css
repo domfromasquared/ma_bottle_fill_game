@@ -221,7 +221,7 @@ body{
   padding-top: 0;
   padding-bottom: calc(var(--modsH) + 8px + var(--sab));
 
-  overflow: hidden;
+  overflow: visible;
 
   /* ensure pseudo background is behind everything */
   z-index: 0;
@@ -395,7 +395,8 @@ body{
 
 /* Shape-masked feedback halo layer */
 .bottleHalo{
-  position:absolute;
+  position:relative;
+  overflow: visible;
   inset:0;
   z-index: 4;              /* above liquid (z=2) but below bottle art (::after z=5) */
   pointer-events:none;
@@ -412,7 +413,6 @@ body{
   mask-position: center bottom;
   -webkit-mask-size: contain;
   mask-size: contain;
-   overflow: visible;
 
   opacity: 0;              /* off by default */
 }
