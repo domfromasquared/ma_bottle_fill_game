@@ -1781,13 +1781,6 @@ function resizeCanvasToCSS(canvas) {
 }
 
 /* ---------- Alpha mask: match bottle art "contain + center bottom" ---------- */
-const halo = document.createElement("div");
-halo.className = "bottleHalo";
-halo.setAttribute("aria-hidden", "true");
-
-// order matters: liquid (z=2) -> halo (z=4) -> bottle art (::after z=5)
-bottle.appendChild(canvas);
-bottle.appendChild(halo);
 
 const VIAL_ALPHA_URL = "assets/chemset/vial/vial_alpha.png";
 const vialAlphaImg = new Image();
@@ -2121,7 +2114,14 @@ function render() {
     canvas.setAttribute("aria-hidden", "true");
     bottleCanvases[i] = canvas;
 
+    const halo = document.createElement("div");
+    halo.className = "bottleHalo";
+    halo.setAttribute("aria-hidden", "true");
+
+// order matters: liquid (z=2) -> halo (z=4) -> bottle art (::after z=5)
     bottle.appendChild(canvas);
+    bottle.appendChild(halo);
+
     grid.appendChild(bottle);
   }
 
