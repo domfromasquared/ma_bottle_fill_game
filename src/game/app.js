@@ -252,6 +252,27 @@ const modOverlayClose = qs("modOverlayClose");
 const retryLevelBtn = qs("retryLevelBtn");
 const factoryResetBtn = qs("factoryResetBtn");
 
+/* ---------------- SFX ---------------- */
+const SFX = {
+  bottleOpened: new Audio("assets/sfx/bottle_opened.wav"),
+  bottlePour: new Audio("assets/sfx/bottle_pour.wav"),
+  invalidClink: new Audio("assets/sfx/invalid_clink.wav"),
+};
+
+// prevent overlap stacking
+Object.values(SFX).forEach(a => {
+  a.preload = "auto";
+  a.volume = 0.8;
+});
+
+function playSFX(a) {
+  if (!a) return;
+  try {
+    a.currentTime = 0;
+    a.play();
+  } catch {}
+}
+
 /* ---------------- Speech theme ---------------- */
 function getSpeechTheme() {
   const v = (localStorage.getItem(SPEECH_THEME_KEY) || "").toLowerCase();
@@ -1739,6 +1760,7 @@ function checkStabilizerUnlock() {
     state.locked[idx] = false;
     state.hiddenSegs[idx] = false;
     state.stabilizer.unlocked = true;
+    playSFX(SFX.bottleOpened); // ✅ SFX
     showToast("Clarity unlocked. Now stop panicking.");
     render();
     redrawAllBottles();
@@ -1983,6 +2005,7 @@ let punishedThisLevel = false;
 
 function applyPourState(from, to) {
   pushUndoSnapshot();
+  playSFX(SFX.bottlePour); // ✅ SUCCESS POUR SOUND
 
   const a = state.bottles[from],
     b = state.bottles[to];
@@ -2021,6 +2044,7 @@ function applyPourState(from, to) {
 function invalidWiggle(i) {
   const el = bottleEls[i];
   if (!el) return;
+  playSFX(SFX.invalidClink); // 🔔 ADD THIS LINE (RIGHT HERE)
   el.classList.remove("wiggle");
   void el.offsetWidth;
   el.classList.add("wiggle");
@@ -2165,6 +2189,7 @@ function handleBottleTap(i) {
     state.locked[i] = false;
     state.hiddenSegs[i] = false;
     modState.targeting = null;
+    playSFX(SFX.bottleOpened); // ✅ SFX
     renderModifiers();
     render();
     redrawAllBottles();
