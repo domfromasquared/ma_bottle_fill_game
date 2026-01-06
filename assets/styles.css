@@ -629,8 +629,19 @@ body{
   font-size: clamp(13px, 1.9vw, 16px);
   line-height: 1.35;
   margin: 0;
+
+  /* critical for flexbox scrolling */
   min-height: 0;
-  overflow: hidden;
+
+  /* enable scrolling */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+
+  /* Firefox scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.35) transparent;
 }
 
 /* Footer pushed up */
@@ -640,6 +651,20 @@ body{
   font-size: clamp(11px, 1.6vw, 13px);
   line-height: 1.25;
   opacity: 0.85;
+}
+
+/* WebKit scrollbar (Chrome, Edge, Safari) */
+#speechText::-webkit-scrollbar{
+  width: 6px;
+}
+
+#speechText::-webkit-scrollbar-track{
+  background: transparent;
+}
+
+#speechText::-webkit-scrollbar-thumb{
+  background: rgba(255,255,255,.35);
+  border-radius: 6px;
 }
 
 /* Mobile */
