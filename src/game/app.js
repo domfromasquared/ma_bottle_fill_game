@@ -32,9 +32,9 @@ const NEXT_DM_KEY = "ma_nextDMAtLevel";
 const INTRO_SEEN_KEY = "ma_introSeen";
 
 /* ---------------- Anim constants ---------------- */
-const MOVE_ANIM_MS = 700;
+const MOVE_ANIM_MS = 600;
 const TILT_MAX_DEG = 28; // visual tilt for gravity surface
-const INPUT_LOCK_PADDING_MS = 30;
+const INPUT_LOCK_PADDING_MS = 0;
 
 /* ---------------- Instability system ---------------- */
 /**
