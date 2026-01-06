@@ -584,8 +584,8 @@ body{
   position: fixed;
 
   /* align to the DM card box */
-  left: calc(var(--sal) + var(--pad) + 14px);
-  top: calc(var(--sat) + 1000px);
+  left: 50%;
+  top: calc(var(--sat) + 500px);
   width: calc(min(92vw, 560px) - 28px);
   height: min(78vh, 560px);
 
@@ -683,7 +683,8 @@ body{
   }
   #speech,
   .speech{
-    top: calc(var(--sat) + 600px);
+    left: 50%;
+     top: calc(var(--sat) + 550px);
     height: min(78vh, 540px);
   }
 }
