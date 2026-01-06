@@ -521,54 +521,99 @@ body{
   pointer-events:none;
 }
 
-/* ---------- DM CHARACTER ---------- */
+/* ---------- DM CHARACTER (NEW: glossary-sized card) ---------- */
 .dmCharacter{
-  position:absolute;
+  position: fixed;
   left: calc(var(--sal) + var(--pad));
-  bottom: calc(var(--sab) + var(--pad) + var(--modsH) + 8px);
-  width: var(--dmW);
-  height: var(--dmH);
-  border-radius: 22px;
-  background: rgba(11,18,28,.01);
+  top: calc(var(--sat) + 70px);
+  width: min(92vw, 560px);
+  height: min(78vh, 560px);
 
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(11,18,28,.96);
+  color: var(--text);
+
+  box-shadow: 0 18px 50px rgba(0,0,0,.45);
+
+  padding: 12px 14px;
+  overflow: hidden;
+
+  /* slide in like before */
   transform: translateX(-150%);
   transition: transform var(--dm-slide-ms) ease;
 
-  /* ✅ don't clip the oversized DM sprite */
-  overflow: visible;
-
-  z-index: 8;
+  z-index: 9999; /* above everything */
 }
 
 .dmCharacter.show{ transform: translateX(0); }
 
+/* Close button matches glossary .x placement/feel */
 .dmClose{
   position:absolute;
-  right: 8px;
-  top: 8px;
-  border-radius: 999px;
-  border: 0;
-  background: rgba(17,26,39,.85);
-  color: var(--text);
+  right: 10px;
+  top: 10px;
+
   width: 34px;
   height: 34px;
+  border-radius: 999px;
+
+  border: 1px solid var(--line);
+  background: rgba(17,26,39,.85);
+  color: var(--text);
+
   cursor:pointer;
   font-weight: 1000;
-  z-index: 5000;
+  z-index: 6;
 }
 
-/* ---------------- SPEECH BUBBLE (slides with DM) ---------------- */
+/* DM sprite area fills the card */
+#dmAvatar{
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(17,26,39,.10);
+}
+
+/* ---------------- SPEECH BUBBLE (NEW: centered-bottom inside card) ---------------- */
 #speech,
 .speech{
+  position: fixed;
+
+  /* align to the DM card box */
+  left: calc(var(--sal) + var(--pad) + 14px);
+  top: calc(var(--sat) + 70px);
+  width: calc(min(92vw, 560px) - 28px);
+  height: min(78vh, 560px);
+
+  /* keep it above DM visuals */
+  z-index: 10000;
+
+  /* slide in like before */
+  transform: translateX(-150%);
+  transition: transform var(--dm-slide-ms) ease;
+
+  /* allow us to place bubble at bottom */
+  pointer-events: none;
+}
+
+#speech.show,
+.speech.show{
+  transform: translateX(0);
+}
+
+/* actual bubble “plate” pinned to bottom-center */
+#speech .speechInner,
+.speech .speechInner{
   position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
 
-  left: calc(var(--sal) + var(--pad) + var(--dmW) + 12px);
-  bottom: calc(var(--sab) + var(--pad) + var(--modsH) + 8px + clamp(180px, 22vh, 420px));
-
-  z-index: 9;
-
-  width: var(--speechW);
-  max-width: calc(100vw - (var(--sal) + var(--sar) + (var(--pad)*2) + var(--dmW) + 18px));
+  width: 100%;
+  max-width: 100%;
 
   aspect-ratio: 760 / 350;
   height: auto;
@@ -577,42 +622,28 @@ body{
   background-position: center;
   background-size: 100% 100%;
 
-  /* ✅ tail-safe bottom padding */
+  /* tail-safe padding */
   padding:
-    clamp(42px, 4vw, 60px)
-    clamp(96px, 8vw, 150px)
-    clamp(50px, 8vw, 60px)
-    clamp(96px, 8vw, 150px);
+    clamp(18px, 2.2vw, 26px)
+    clamp(56px, 8vw, 88px)
+    clamp(64px, 7vw, 96px)
+    clamp(56px, 8vw, 88px);
 
   overflow: hidden;
 
   display: flex;
   flex-direction: column;
 
-  transform: translateX(-250%);
-  transition: transform var(--dm-slide-ms) ease;
-}
-
-#speech.show,
-.speech.show{
-  transform: translateX(0);
+  /* bubble itself can receive clicks if you ever add buttons in it */
+  pointer-events: auto;
 }
 
 /* ✅ Theme applies to BOTH id and class */
-#speech[data-theme="dark"],
-.speech[data-theme="dark"]{ background-image: var(--speech-plate-dark); }
+#speech[data-theme="dark"] .speechInner,
+.speech[data-theme="dark"] .speechInner{ background-image: var(--speech-plate-dark); }
 
-#speech[data-theme="light"],
-.speech[data-theme="light"]{ background-image: var(--speech-plate-light); }
-
-/* keep inner column stable */
-.speechInner{
-  width: 100%;
-  height: 100%;
-  display:flex;
-  flex-direction:column;
-  min-height: 0;
-}
+#speech[data-theme="light"] .speechInner,
+.speech[data-theme="light"] .speechInner{ background-image: var(--speech-plate-light); }
 
 /* Title = goth */
 #questTitle{
@@ -629,19 +660,8 @@ body{
   font-size: clamp(13px, 1.9vw, 16px);
   line-height: 1.35;
   margin: 0;
-
-  /* critical for flexbox scrolling */
   min-height: 0;
-
-  /* enable scrolling */
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
-
-  /* Firefox scrollbar */
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,.35) transparent;
+  overflow: hidden;
 }
 
 /* Footer pushed up */
@@ -653,29 +673,16 @@ body{
   opacity: 0.85;
 }
 
-/* WebKit scrollbar (Chrome, Edge, Safari) */
-#speechText::-webkit-scrollbar{
-  width: 6px;
-}
-
-#speechText::-webkit-scrollbar-track{
-  background: transparent;
-}
-
-#speechText::-webkit-scrollbar-thumb{
-  background: rgba(255,255,255,.35);
-  border-radius: 6px;
-}
-
-/* Mobile */
+/* Mobile: keep same card sizing rules (just reduce height a touch) */
 @media (max-width: 420px){
+  .dmCharacter{
+    top: calc(var(--sat) + 60px);
+    height: min(78vh, 540px);
+  }
   #speech,
   .speech{
-    left: calc(var(--sal) + var(--pad) + 6px);
-    width: 94vw;
-    max-width: 94vw;
-    bottom: calc(var(--sab) + var(--pad) + var(--modsH) + 8px + clamp(190px, 26vh, 420px));
-    padding: 18px 52px 72px 52px;
+    top: calc(var(--sat) + 60px);
+    height: min(78vh, 540px);
   }
 }
 
