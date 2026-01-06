@@ -225,6 +225,7 @@ const glossaryBtn = qs("glossaryBtn");
 const glossary = qs("glossary");
 const glossaryList = qs("glossaryList");
 
+const dmAvatar = qs("dmAvatar");
 const dmCharacter = qs("dmCharacter");
 const dmClose = qs("dmClose");
 const speech = qs("speech");
@@ -330,7 +331,10 @@ function pad3(n) {
 }
 
 function ensureDMImg() {
-  let img = dmCharacter.querySelector("img");
+  // attach the sprite INSIDE the dmAvatar area (not the full card)
+  const host = dmAvatar || dmCharacter;
+
+  let img = host.querySelector("img");
   if (!img) {
     img = document.createElement("img");
     img.alt = "Marketing Alchemist";
@@ -338,17 +342,17 @@ function ensureDMImg() {
     img.loading = "eager";
     img.draggable = false;
 
-    // center + ground the sprite
+    // center + ground the sprite within the card
     img.style.position = "absolute";
     img.style.left = "50%";
     img.style.bottom = "0";
     img.style.transform = "translateX(-50%)";
-    img.style.width = "140%";
+    img.style.width = "120%";
     img.style.height = "auto";
     img.style.objectFit = "contain";
     img.style.pointerEvents = "none";
 
-    dmCharacter.appendChild(img);
+    host.appendChild(img);
   }
   return img;
 }
