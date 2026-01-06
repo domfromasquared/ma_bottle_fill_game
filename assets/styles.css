@@ -525,12 +525,12 @@ body{
 /* ---------- DM CHARACTER (NEW: glossary-sized card) ---------- */
 .dmCharacter{
   position: fixed;
-  left: calc(var(--sal) + var(--pad));
+  left: 50%;
   top: calc(var(--sat) + 70px);
   width: min(92vw, 560px);
   height: min(78vh, 560px);
 
-  border: 1px solid var(--line);
+  border: 0px solid var(--line);
   border-radius: 18px;
   background: rgba(11,18,28,0);
   color: var(--text);
@@ -677,12 +677,13 @@ body{
 /* Mobile: keep same card sizing rules (just reduce height a touch) */
 @media (max-width: 420px){
   .dmCharacter{
-    top: calc(var(--sat) + 0px);
-    height: min(78vh, 540px);
+   left: 50%;
+   top: calc(var(--sat) + 100px);
+   height: min(78vh, 540px);
   }
   #speech,
   .speech{
-    top: calc(var(--sat) + 1000px);
+    top: calc(var(--sat) + 600px);
     height: min(78vh, 540px);
   }
 }
