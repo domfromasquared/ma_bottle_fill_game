@@ -326,23 +326,23 @@ body{
 
 .bottle.selected{
   box-shadow:
-    0 0 0 2px rgba(255,255,255,0.14),
-    0 0 18px rgba(0,179,255,0.55),
-    0 0 40px rgba(0,179,255,0.30);
+    0 0 0 2px rgba(255,255,255,0),
+    0 0 18px rgba(0,179,255,0),
+    0 0 40px rgba(0,179,255,0);
 }
 
 .bottle.pressed{
   box-shadow:
-    0 0 0 2px rgba(255,255,255,0.10),
-    0 0 16px rgba(0,179,255,0.45),
-    0 0 32px rgba(0,179,255,0.22);
+    0 0 0 2px rgba(255,255,255,0),
+    0 0 16px rgba(0,179,255,0),
+    0 0 32px rgba(0,179,255,0);
 }
 
 .bottle.locked.selected{
   box-shadow:
-    0 0 0 2px rgba(255,255,255,0.10),
-    0 0 18px rgba(154,122,160,0.55),
-    0 0 40px rgba(154,122,160,0.30);
+    0 0 0 2px rgba(255,255,255,0),
+    0 0 18px rgba(154,122,160,0),
+    0 0 40px rgba(154,122,160,0);
 }
 
 .bottle.wiggle{ animation: wiggle .32s ease-in-out 1; }
@@ -363,7 +363,7 @@ body{
   right: var(--ch-side);
   bottom: var(--ch-bottom);
   border-radius: var(--ch-radius);
-  background: rgba(0,0,0,.12);
+  background: rgba(0,0,0,.0);
   z-index: 1;
   pointer-events:none;
 }
@@ -412,6 +412,7 @@ body{
   mask-position: center bottom;
   -webkit-mask-size: contain;
   mask-size: contain;
+   overflow: visible;
 
   opacity: 0;              /* off by default */
 }
