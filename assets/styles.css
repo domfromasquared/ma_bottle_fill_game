@@ -585,7 +585,7 @@ body{
 
   /* align to the DM card box */
   left: calc(var(--sal) + var(--pad) + 14px);
-  top: calc(var(--sat) + 70px);
+  top: calc(var(--sat) + 2000px);
   width: calc(min(92vw, 560px) - 28px);
   height: min(78vh, 560px);
 
