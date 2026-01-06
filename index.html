@@ -65,13 +65,17 @@
       <button class="modSlot" id="modSlot3" aria-label="Modifier slot 3"><span>+</span></button>
     </nav>
 
-    <!-- CHARACTER (bottom-left overlay) -->
-    <dialog class="dmCharacter" id="dmCharacter" aria-hidden="true">
-      <button class="dmClose" id="dmClose" aria-label="Cancel DM">✕</button>
-      <div class="dmAvatar" id="dmAvatar" title="Marketing Alchemist"></div>
-    </dialog>
+    <!-- DM + SPEECH WRAPPER (moves as one unit) -->
+<dialog class="dmWrap" id="dmWrap" aria-hidden="true">
+  <div class="dmInner">
 
-    <!-- SPEECH BUBBLE (bottom-right overlay) -->
+    <!-- DM card centered -->
+    <aside class="dmCharacter" id="dmCharacter">
+      <button class="dmClose" id="dmClose" aria-label="Close DM">✕</button>
+      <div class="dmAvatar" id="dmAvatar" title="Marketing Alchemist"></div>
+    </aside>
+
+    <!-- Speech bubble bottom-center, layered on top of DM -->
     <section class="speech" id="speech" aria-hidden="true">
       <div class="speechInner">
         <div class="speechTitle" id="questTitle">—</div>
@@ -79,6 +83,9 @@
         <div class="speechSmall" id="speechSmall"></div>
       </div>
     </section>
+
+  </div>
+</dialog>
 
     <!-- overlays -->
     <div class="toast" id="toast"></div>
