@@ -522,29 +522,52 @@ body{
   pointer-events:none;
 }
 
-/* ---------- DM CHARACTER (NEW: glossary-sized card) ---------- */
-.dmCharacter{
-  position: fixed;
-  left: 50%;
-  top: calc(var(--sat) + 70px);
+/* Wrapper dialog = centering + “single moving unit” */
+.dmWrap{
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+/* optional: no dim backdrop */
+.dmWrap::backdrop{
+  background: transparent;
+}
+
+/* The moving unit (slide from left into center) */
+.dmWrap .dmInner{
+  position: relative;
+
   width: min(92vw, 560px);
   height: min(78vh, 560px);
 
-  border: 0px solid var(--line);
+  display: grid;
+  place-items: center;              /* DM centered */
+
+  /* slide-in animation */
+  transform: translateX(-150%);
+  transition: transform var(--dm-slide-ms) ease;
+
+  /* let sprites/glows bleed if needed */
+  overflow: visible;
+}
+
+.dmWrap[open] .dmInner{
+  transform: translateX(0);
+}
+
+/* DM card (now centered by wrapper, not by fixed coords) */
+.dmCharacter{
+  position: relative;
+  width: 100%;
+  height: 100%;
+
+  border: 1px solid var(--line);
   border-radius: 18px;
   background: rgba(11,18,28,0);
   color: var(--text);
 
-  box-shadow: 0 18px 50px rgba(0,0,0,0);
-
-  padding: 12px 14px;
   overflow: hidden;
-
-  /* slide in like before */
-  transform: translateX(-50%);
-  transition: transform var(--dm-slide-ms) ease;
-
-  z-index: 9999; /* above everything */
 }
 
 .dmCharacter.show{ transform: translateX(0); }
@@ -578,26 +601,19 @@ body{
   background: rgba(17,26,39,0);
 }
 
-/* ---------------- SPEECH BUBBLE (NEW: centered-bottom inside card) ---------------- */
+/* Speech bubble now lives inside dmInner and moves with it */
 #speech,
 .speech{
-  position: fixed;
-
-  /* align to the DM card box */
+  position: absolute;
   left: 50%;
-  top: calc(var(--sat) + 500px);
-  width: calc(min(92vw, 560px) - 28px);
-  height: min(78vh, 560px);
-
-  /* keep it above DM visuals */
-  z-index: 10000;
-
-  /* slide in like before */
+  bottom: 14px;                 /* sits at bottom-center of wrapper */
   transform: translateX(-50%);
-  transition: transform var(--dm-slide-ms) ease;
 
-  /* allow us to place bubble at bottom */
-  pointer-events: none;
+  width: calc(100% - 28px);     /* padding from wrapper edges */
+  max-width: calc(100% - 28px);
+
+  z-index: 5;                   /* above DM visuals */
+  pointer-events: none;         /* bubble can be click-through if you want */
 }
 
 #speech.show,
@@ -605,17 +621,10 @@ body{
   transform: translateX(0);
 }
 
-/* actual bubble “plate” pinned to bottom-center */
+/* actual bubble plate + text layout */
 #speech .speechInner,
 .speech .speechInner{
-  position: absolute;
-  left: 50%;
-  bottom: 14px;
-  transform: translateX(-50%);
-
   width: 100%;
-  max-width: 100%;
-
   aspect-ratio: 760 / 350;
   height: auto;
 
@@ -623,7 +632,6 @@ body{
   background-position: center;
   background-size: 100% 100%;
 
-  /* tail-safe padding */
   padding:
     clamp(18px, 2.2vw, 26px)
     clamp(56px, 8vw, 88px)
@@ -635,11 +643,10 @@ body{
   display: flex;
   flex-direction: column;
 
-  /* bubble itself can receive clicks if you ever add buttons in it */
   pointer-events: auto;
 }
 
-/* ✅ Theme applies to BOTH id and class */
+/* Theme applies to bubble plate */
 #speech[data-theme="dark"] .speechInner,
 .speech[data-theme="dark"] .speechInner{ background-image: var(--speech-plate-dark); }
 
