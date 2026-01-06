@@ -395,7 +395,7 @@ body{
 
 /* Shape-masked feedback halo layer */
 .bottleHalo{
-  position:relative;
+  position:absolute;
   overflow: visible;
   inset:0;
   z-index: 4;              /* above liquid (z=2) but below bottle art (::after z=5) */
