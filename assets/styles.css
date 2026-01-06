@@ -575,7 +575,7 @@ body{
   height: 100%;
   border-radius: 16px;
   overflow: hidden;
-  background: rgba(17,26,39,.10);
+  background: rgba(17,26,39,0);
 }
 
 /* ---------------- SPEECH BUBBLE (NEW: centered-bottom inside card) ---------------- */
@@ -585,7 +585,7 @@ body{
 
   /* align to the DM card box */
   left: calc(var(--sal) + var(--pad) + 14px);
-  top: calc(var(--sat) + 1600px);
+  top: calc(var(--sat) + 1000px);
   width: calc(min(92vw, 560px) - 28px);
   height: min(78vh, 560px);
 
@@ -677,12 +677,12 @@ body{
 /* Mobile: keep same card sizing rules (just reduce height a touch) */
 @media (max-width: 420px){
   .dmCharacter{
-    top: calc(var(--sat) + 60px);
+    top: calc(var(--sat) + 0px);
     height: min(78vh, 540px);
   }
   #speech,
   .speech{
-    top: calc(var(--sat) + 1400px);
+    top: calc(var(--sat) + 1000px);
     height: min(78vh, 540px);
   }
 }
