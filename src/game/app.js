@@ -10,7 +10,7 @@ import { makeToaster, qs } from "../utils/ui.js";
 const FORESHADOW_START_LEVEL = 10;
 const STABILIZER_UNLOCK_LEVEL = 15;
 
-const DEFAULT_PROD = "https://ma-bottle-fill-aApi.onrender.com";
+const DEFAULT_PROD = "https://ma-bottle-fill-api.onrender.com";
 const DEFAULT_LOCAL = "http://localhost:8787";
 const isLocal =
   location.hostname === "localhost" || location.hostname === "127.0.0.1";
