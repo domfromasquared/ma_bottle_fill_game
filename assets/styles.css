@@ -221,7 +221,7 @@ body{
   padding-top: 0;
   padding-bottom: calc(var(--modsH) + 8px + var(--sab));
 
-  overflow: visible;
+  overflow: hidden;
 
   /* ensure pseudo background is behind everything */
   z-index: 0;
