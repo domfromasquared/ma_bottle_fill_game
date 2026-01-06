@@ -401,7 +401,7 @@ body{
   pointer-events:none;
 
   /* create solid pixels to glow */
-  background: rgba(255,255,255,0.01);
+  background: rgba(255,255,255,0.78);
 
   /* mask to bottle silhouette (same alignment as your bottle art: contain + center bottom) */
   -webkit-mask-image: var(--vial-alpha-feedback);
@@ -428,26 +428,26 @@ body{
   opacity: 1;
   filter:
     drop-shadow(0 0 2px rgba(255,255,255,0.74))
-    drop-shadow(0 0 22px rgba(0,179,255,0.75))
-    drop-shadow(0 0 48px rgba(0,179,255,0.60));
+    drop-shadow(0 0 22px rgba(0,179,255,0.85))
+    drop-shadow(0 0 40px rgba(0,179,255,0.70));
 }
 
 /* Pressed = slightly softer */
 .bottle.pressed .bottleHalo{
   opacity: 1;
   filter:
-    drop-shadow(0 0 2px rgba(255,255,255,0.40))
-    drop-shadow(0 0 22px rgba(0,179,255,0.75))
-    drop-shadow(0 0 48px rgba(0,179,255,0.52));
+    drop-shadow(0 0 2px rgba(255,255,255,0.74))
+    drop-shadow(0 0 22px rgba(0,179,255,0.85))
+    drop-shadow(0 0 40px rgba(0,179,255,0.70));
 }
 
 /* Locked+Selected = purple halo :contentReference[oaicite:4]{index=4} */
 .bottle.locked.selected .bottleHalo{
   opacity: 1;
   filter:
-    drop-shadow(0 0 2px rgba(255,255,255,0.30))
-    drop-shadow(0 0 22px rgba(154,122,160,0.75))
-    drop-shadow(0 0 48px rgba(154,122,160,0.60));
+    drop-shadow(0 0 2px rgba(255,255,255,0.74))
+    drop-shadow(0 0 22px rgba(154,122,160,0.85))
+    drop-shadow(0 0 40px rgba(154,122,160,0.70));
 }
 
 /* ---------- MODIFIERS BAR ---------- */
