@@ -455,9 +455,17 @@ function inferSinTags() {
   return [...new Set(tags)].slice(0, 3);
 }
 
+let lastBankPrimary = null;
+
 function setBankRail(bankPrimary) {
+  if (bankPrimary !== lastBankPrimary) {
+    playSFX(SFX.bankChange);   // 🔔 EXACT LINE
+    lastBankPrimary = bankPrimary;
+  }
+
   const spans = bankRail.querySelectorAll(".bankLetters span");
   spans.forEach((s) => s.classList.remove("on"));
+
   const on = bankRail.querySelector(
     `.bankLetters span[data-bank="${bankPrimary}"]`
   );
