@@ -225,6 +225,7 @@ const glossaryBtn = qs("glossaryBtn");
 const glossary = qs("glossary");
 const glossaryList = qs("glossaryList");
 
+const dmWrap = qs("dmWrap");
 const dmAvatar = qs("dmAvatar");
 const dmCharacter = qs("dmCharacter");
 const dmClose = qs("dmClose");
@@ -825,13 +826,18 @@ function setDMSpeech({ title, body, small }) {
 
 /* ---------------- DM overlay helpers (accessibility-safe) ---------------- */
 function showDMOverlay() {
-  dmCharacter.classList.add("show");
+  try {
+    if (!dmWrap.open) dmWrap.showModal();
+  } catch {
+    dmWrap.setAttribute("open", "open");
+  }
+
   speech.classList.add("show");
 
-  dmCharacter.removeAttribute("aria-hidden");
+  dmWrap.removeAttribute("aria-hidden");
   speech.removeAttribute("aria-hidden");
 
-  dmCharacter.inert = false;
+  dmWrap.inert = false;
   speech.inert = false;
 
   try {
@@ -841,20 +847,23 @@ function showDMOverlay() {
 
 function hideDMOverlay() {
   const ae = document.activeElement;
-  if (ae && (dmCharacter.contains(ae) || speech.contains(ae))) {
-    try {
-      ae.blur();
-    } catch {}
+  if (ae && dmWrap.contains(ae)) {
+    try { ae.blur(); } catch {}
   }
 
-  dmCharacter.classList.remove("show");
   speech.classList.remove("show");
 
-  dmCharacter.setAttribute("aria-hidden", "true");
+  dmWrap.setAttribute("aria-hidden", "true");
   speech.setAttribute("aria-hidden", "true");
 
-  dmCharacter.inert = true;
+  dmWrap.inert = true;
   speech.inert = true;
+
+  try {
+    dmWrap.close();
+  } catch {
+    dmWrap.removeAttribute("open");
+  }
 
   try {
     grid?.focus?.();
