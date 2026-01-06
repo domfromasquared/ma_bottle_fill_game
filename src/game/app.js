@@ -257,6 +257,7 @@ const SFX = {
   bottleOpened: new Audio("assets/sfx/bottle_opened.wav"),
   bottlePour: new Audio("assets/sfx/bottle_pour.wav"),
   invalidClink: new Audio("assets/sfx/invalid_clink.wav"),
+  bankChange: new Audio("assets/sfx/bank_change.wav"), // ✅ NEW
 };
 
 // prevent overlap stacking
