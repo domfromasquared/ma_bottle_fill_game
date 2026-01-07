@@ -522,38 +522,55 @@ body{
   pointer-events:none;
 }
 
-/* Wrapper dialog = centering + “single moving unit” */
+/* ===== DM DIALOG: lock to viewport, dead-center, no touch-drag ===== */
 .dmWrap{
-  border: 0;
+  position: fixed;
+  inset: 0;
+  margin: 0;
   padding: 0;
+  border: 0;
   background: transparent;
+
+  /* center contents */
+  display: grid;
+  place-items: center;
+
+  /* stop iOS “pull/drag” scroll feel */
+  overscroll-behavior: none;
+  touch-action: none;
 }
 
-/* optional: no dim backdrop */
 .dmWrap::backdrop{
   background: transparent;
+  overscroll-behavior: none;
+  touch-action: none;
 }
 
-/* The moving unit (slide from left into center) */
+/* keep the moving unit centered; only it animates */
 .dmWrap .dmInner{
-  position: relative;
-
-  width: min(92vw, 560px);
-  height: min(78vh, 560px);
-
-  display: grid;
-  place-items: center;              /* DM centered */
-
-  /* slide-in animation */
-  transform: translateX(-150%);
-  transition: transform var(--dm-slide-ms) ease;
-
-  /* let sprites/glows bleed if needed */
-  overflow: visible;
+  touch-action: none;
 }
 
-.dmWrap[open] .dmInner{
-  transform: translateX(0);
+/* When DM is open, prevent page behind from moving */
+body.dmOpen{
+  overflow: hidden;
+  height: 100vh;
+  touch-action: none;
+}
+
+/* ===== Mobile: remove the top-based positioning that causes drift ===== */
+@media (max-width: 420px){
+  .dmCharacter{
+    left: auto;
+    top: auto;
+    height: 100%;
+  }
+  #speech,
+  .speech{
+    top: auto;
+    height: auto;
+    transform: translateX(-50%); /* keep centered */
+  }
 }
 
 /* DM card (now centered by wrapper, not by fixed coords) */
