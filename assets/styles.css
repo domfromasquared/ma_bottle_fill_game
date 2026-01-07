@@ -411,13 +411,18 @@ body{
   mask-repeat: no-repeat;
   -webkit-mask-position: center bottom;
   mask-position: center bottom;
-  -webkit-mask-size: contain;
-  mask-size: contain;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
 
   opacity: 0;              /* off by default */
 }
 
-
+/* TURN OFF the rectangle box-shadow glow (so it doesn’t fight the halo) */
+.bottle.selected,
+.bottle.pressed,
+.bottle.locked.selected{
+  box-shadow: none;
+}
 
 /* Selected = blue halo (matches your old glow color) :contentReference[oaicite:3]{index=3} */
 .bottle.selected .bottleHalo{
@@ -425,7 +430,8 @@ body{
   filter:
     drop-shadow(0 0 2px rgba(255,255,255,0.74))
     drop-shadow(0 0 22px rgba(0,179,255,0.85))
-    drop-shadow(0 0 40px rgba(0,179,255,0.70));
+    drop-shadow(0 0 40px rgba(0,179,255,0.70))
+    drop-shadow(0 0 120px rgba(0,179,255,.45));
 }
 
 /* Pressed = slightly softer */
