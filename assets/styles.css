@@ -402,7 +402,7 @@ body{
   pointer-events:none;
 
   /* create solid pixels to glow */
-  background: rgba(255,255,255,0.78);
+  background: transparent;
 
   /* mask to bottle silhouette (same alignment as your bottle art: contain + center bottom) */
   -webkit-mask-image: var(--vial-alpha-feedback);
