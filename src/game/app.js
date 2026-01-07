@@ -257,11 +257,11 @@ const SFX = {
   bottleOpened: new Audio("assets/sfx/bottle_opened.wav"),
   bottlePour: new Audio("assets/sfx/bottle_pour.wav"),
   invalidClink: new Audio("assets/sfx/invalid_clink.wav"),
-  bankChange: new Audio("assets/sfx/bank_change.wav"), // ✅ NEW
+  bankChange: new Audio("assets/sfx/bank_change.wav"),
 };
 
 // prevent overlap stacking
-Object.values(SFX).forEach(a => {
+Object.values(SFX).forEach((a) => {
   a.preload = "auto";
   a.volume = 0.8;
 });
@@ -354,7 +354,6 @@ function pad3(n) {
 }
 
 function ensureDMImg() {
-  // attach the sprite INSIDE the dmAvatar area (not the full card)
   const host = dmAvatar || dmCharacter;
 
   let img = host.querySelector("img");
@@ -365,7 +364,6 @@ function ensureDMImg() {
     img.loading = "eager";
     img.draggable = false;
 
-    // center + ground the sprite within the card
     img.style.position = "absolute";
     img.style.left = "50%";
     img.style.bottom = "0";
@@ -459,7 +457,7 @@ let lastBankPrimary = null;
 
 function setBankRail(bankPrimary) {
   if (bankPrimary !== lastBankPrimary) {
-    playSFX(SFX.bankChange);   // 🔔 EXACT LINE
+    playSFX(SFX.bankChange);
     lastBankPrimary = bankPrimary;
   }
 
@@ -759,7 +757,6 @@ function showMAWarning(stage) {
 
   showToast(line);
 
-  // small non-blocking DM pop; auto-dismiss
   try {
     dmToken++;
     showDMOverlay();
@@ -856,13 +853,14 @@ function setDMSpeech({ title, body, small }) {
 
 /* ---------------- DM overlay helpers (accessibility-safe) ---------------- */
 function showDMOverlay() {
-  document.body.classList.add("dmOpen");
-
+  // IMPORTANT: only lock body AFTER we successfully open the dialog
   try {
     if (!dmWrap.open) dmWrap.showModal();
   } catch {
     dmWrap.setAttribute("open", "open");
   }
+
+  document.body.classList.add("dmOpen");
 
   speech.classList.add("show");
 
@@ -878,11 +876,11 @@ function showDMOverlay() {
 }
 
 function hideDMOverlay() {
-  document.body.classList.remove("dmOpen");
-
   const ae = document.activeElement;
   if (ae && dmWrap.contains(ae)) {
-    try { ae.blur(); } catch {}
+    try {
+      ae.blur();
+    } catch {}
   }
 
   speech.classList.remove("show");
@@ -899,10 +897,50 @@ function hideDMOverlay() {
     dmWrap.removeAttribute("open");
   }
 
+  document.body.classList.remove("dmOpen");
+
   try {
     grid?.focus?.();
   } catch {}
 }
+
+/* ---------------- iOS dialog drag prevention + safe cancel ---------------- */
+dmWrap.addEventListener(
+  "touchmove",
+  (e) => {
+    if (dmWrap.open) e.preventDefault();
+  },
+  { passive: false }
+);
+
+dmWrap.addEventListener("cancel", (e) => {
+  e.preventDefault();
+  hideDMOverlay();
+});
+
+/* ---------------- Safety reset on refresh / bfcache ---------------- */
+function resetDMFreeze() {
+  try {
+    dmWrap?.close?.();
+  } catch {}
+  try {
+    dmWrap?.removeAttribute?.("open");
+  } catch {}
+
+  try {
+    speech?.classList?.remove?.("show");
+  } catch {}
+
+  try {
+    dmWrap.inert = true;
+    speech.inert = true;
+  } catch {}
+
+  document.body.classList.remove("dmOpen");
+}
+
+window.addEventListener("DOMContentLoaded", resetDMFreeze);
+window.addEventListener("pageshow", resetDMFreeze);
 
 /* ---------------- Intro/deadlock flags ---------------- */
 let introStep = 0; // 0 none, 1 name entry, 2 ready start quest
@@ -1773,7 +1811,7 @@ function checkStabilizerUnlock() {
     state.locked[idx] = false;
     state.hiddenSegs[idx] = false;
     state.stabilizer.unlocked = true;
-    playSFX(SFX.bottleOpened); // ✅ SFX
+    playSFX(SFX.bottleOpened);
     showToast("Clarity unlocked. Now stop panicking.");
     render();
     redrawAllBottles();
@@ -1913,7 +1951,6 @@ function drawBottleLiquid(i) {
   const cap = state.capacity;
   if (!b.length) return;
 
-  // Draw into chamber rect (based on CSS vars) so fill height feels correct
   const chTop = cssVarPx(bottleEl, "--ch-top", 0) * dpr;
   const chSide = cssVarPx(bottleEl, "--ch-side", 0) * dpr;
   const chBottom = cssVarPx(bottleEl, "--ch-bottom", 0) * dpr;
@@ -1941,11 +1978,9 @@ function drawBottleLiquid(i) {
     const yBottom = innerY + (innerH - (s + 1) * cellH);
     const yTop = innerY + (innerH - s * cellH);
 
-    // base fill
     ctx.fillStyle = fill;
     ctx.fillRect(innerX, yBottom, innerW, cellH);
 
-    // top surface tilt illusion ONLY for top-most filled segment
     const isTopMost = s === b.length - 1;
     if (isTopMost && Math.abs(tilt) > 0.001) {
       ctx.save();
@@ -1969,7 +2004,6 @@ function drawBottleLiquid(i) {
       ctx.restore();
     }
 
-    // texture overlay (FULL OPACITY per your request)
     if (img && img.complete && img.naturalWidth > 0) {
       const pat = ctx.createPattern(img, "repeat");
       if (pat) {
@@ -1982,7 +2016,6 @@ function drawBottleLiquid(i) {
     }
   }
 
-  // subtle glass shading
   ctx.save();
   ctx.globalAlpha = 0.22;
   const g = ctx.createLinearGradient(0, 0, w, 0);
@@ -1993,7 +2026,6 @@ function drawBottleLiquid(i) {
   ctx.fillRect(0, 0, w, h);
   ctx.restore();
 
-  // ✅ FINAL CLIP: enforce vial_alpha silhouette aligned to bottle art
   applyAlphaMask(ctx, bottleEl, w, h, dpr);
 }
 
@@ -2018,7 +2050,7 @@ let punishedThisLevel = false;
 
 function applyPourState(from, to) {
   pushUndoSnapshot();
-  playSFX(SFX.bottlePour); // ✅ SUCCESS POUR SOUND
+  playSFX(SFX.bottlePour);
 
   const a = state.bottles[from],
     b = state.bottles[to];
@@ -2057,7 +2089,7 @@ function applyPourState(from, to) {
 function invalidWiggle(i) {
   const el = bottleEls[i];
   if (!el) return;
-  playSFX(SFX.invalidClink); // 🔔 ADD THIS LINE (RIGHT HERE)
+  playSFX(SFX.invalidClink);
   el.classList.remove("wiggle");
   void el.offsetWidth;
   el.classList.add("wiggle");
@@ -2168,7 +2200,6 @@ function render() {
     halo.className = "bottleHalo";
     halo.setAttribute("aria-hidden", "true");
 
-// order matters: liquid (z=2) -> halo (z=4) -> bottle art (::after z=5)
     bottle.appendChild(canvas);
     bottle.appendChild(halo);
 
@@ -2202,7 +2233,7 @@ function handleBottleTap(i) {
     state.locked[i] = false;
     state.hiddenSegs[i] = false;
     modState.targeting = null;
-    playSFX(SFX.bottleOpened); // ✅ SFX
+    playSFX(SFX.bottleOpened);
     renderModifiers();
     render();
     redrawAllBottles();
