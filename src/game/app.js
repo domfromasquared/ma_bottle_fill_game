@@ -80,6 +80,32 @@ function setGamePaused(paused) {
   } catch {}
 }
 
+/* ---------------- DM anti-repeat memory ---------------- */
+const USED_VOICE_IDS_KEY = "ma_usedVoiceIds";
+const USED_VOICE_IDS_MAX = 24;
+
+function getUsedVoiceIds() {
+  const v = getJSON(USED_VOICE_IDS_KEY, []);
+  return Array.isArray(v) ? v.slice(0, USED_VOICE_IDS_MAX) : [];
+}
+
+function pushUsedVoiceIds(ids) {
+  const cur = getUsedVoiceIds();
+  const add = (Array.isArray(ids) ? ids : []).map(String).filter(Boolean);
+
+  // newest-first, de-dupe
+  const seen = new Set();
+  const merged = [...add, ...cur].filter((x) => {
+    const k = String(x);
+    if (!k) return false;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+
+  setJSON(USED_VOICE_IDS_KEY, merged.slice(0, USED_VOICE_IDS_MAX));
+}
+
 /* ---------------- Player Modifiers (3-slot system) ---------------- */
 const MODIFIERS = {
   DECOHERENCE_KEY: {
@@ -1677,9 +1703,12 @@ async function runDMIfAvailable() {
           seed: runSeed,
           wantModifier,
           foreshadowOnly,
+          used_voice_ids: getUsedVoiceIds(),
         })
     );
     payload = resp?.payload;
+    // persist anti-repeat ids coming back from server
+if (payload?.used_voice_ids) pushUsedVoiceIds(payload.used_voice_ids);
   } catch (e) {
     if (myToken !== dmToken) return;
     setDMAvatar({ mood: "furious", seedKey: 333 });
