@@ -856,6 +856,8 @@ function setDMSpeech({ title, body, small }) {
 
 /* ---------------- DM overlay helpers (accessibility-safe) ---------------- */
 function showDMOverlay() {
+  document.body.classList.add("dmOpen");
+
   try {
     if (!dmWrap.open) dmWrap.showModal();
   } catch {
@@ -876,6 +878,8 @@ function showDMOverlay() {
 }
 
 function hideDMOverlay() {
+  document.body.classList.remove("dmOpen");
+
   const ae = document.activeElement;
   if (ae && dmWrap.contains(ae)) {
     try { ae.blur(); } catch {}
