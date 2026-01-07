@@ -606,7 +606,7 @@ body{
 /* Speech bubble now lives inside dmInner and moves with it */
 #speech,
 .speech{
-  position: fixed;
+  position: absolute;
   left: 50%;
   bottom: 14px;                 /* sits at bottom-center of wrapper */
   transform: translateX(-50%);
