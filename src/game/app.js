@@ -87,8 +87,8 @@ const MODIFIERS = {
     name: "Decoherence Key",
     icon: "assets/modifiers/decoherence_key_selector.png",
     perLevelUses: 1,
-    tooltip: "Completion is a claim. Claims may be revoked.",
-    maLine: "Seal revoked. Reality updated.",
+    tooltip: "Breaks one locked bottle per level.",
+    maLine: "Use when you know the seal is the problem.",
     bankSignal: "Knowledge / Control",
   },
   TEMPORAL_RETRACTION: {
@@ -96,8 +96,8 @@ const MODIFIERS = {
     name: "Temporal Retraction Vial",
     icon: "assets/modifiers/temporal_retraction_vial_selector.png",
     perLevelUses: 3,
-    tooltip: "Time does not forgive. It permits revision.",
-    maLine: "Time retracts. Try again—cleanly.",
+    tooltip: "Rewinds to a previous valid state.",
+    maLine: "Fixes impulsive moves without restarting.",
     bankSignal: "Action / Impulse Recovery",
   },
   EQUILIBRIUM_VESSEL: {
@@ -105,8 +105,8 @@ const MODIFIERS = {
     name: "Equilibrium Vessel",
     icon: "assets/modifiers/equilibrium_vessel_selector.png",
     perLevelUses: 1,
-    tooltip: "When balance degrades, the system may intervene.",
-    maLine: "Equilibrium intervenes. Don’t get used to it.",
+    tooltip: "Adds a stabilizing empty bottle and auto-siphons if possible.",
+    maLine: "Prevents deadlock. Does not solve the puzzle.",
     bankSignal: "Nurturing / Safety Net",
   },
 };
