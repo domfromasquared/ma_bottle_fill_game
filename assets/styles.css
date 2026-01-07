@@ -701,21 +701,6 @@ body.dmOpen{
   opacity: 0.85;
 }
 
-/* Mobile: keep same card sizing rules (just reduce height a touch) */
-@media (max-width: 420px){
-  .dmCharacter{
-   left: 50%;
-   top: calc(var(--sat) + 100px);
-   height: min(78vh, 540px);
-  }
-  #speech,
-  .speech{
-    left: 50%;
-     top: calc(var(--sat) + 550px);
-    height: min(78vh, 540px);
-  }
-}
-
 /* ---------- TOAST + FX ---------- */
 .toast{
   position:absolute;
