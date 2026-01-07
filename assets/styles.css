@@ -402,7 +402,7 @@ body{
   pointer-events:none;
 
   /* create solid pixels to glow */
-  background: rgba(255,255,255,0.015);
+  background: rgba(255,255,255,0.78);
 
   /* mask to bottle silhouette (same alignment as your bottle art: contain + center bottom) */
   -webkit-mask-image: var(--vial-alpha-feedback);
@@ -411,26 +411,26 @@ body{
   mask-repeat: no-repeat;
   -webkit-mask-position: center bottom;
   mask-position: center bottom;
-  -webkit-mask-size: 100% 100%;
-  mask-size: 100% 100%;
+  -webkit-mask-size: contain;
+  mask-size: contain;
 
   opacity: 0;              /* off by default */
-    /* helps mobile/Safari render the filter consistently */
-  transform: translateZ(0);
-  will-change: filter, opacity;
 }
 
 /* TURN OFF the rectangle box-shadow glow (so it doesn’t fight the halo) */
-
+.bottle.selected,
+.bottle.pressed,
+.bottle.locked.selected{
+  box-shadow: none;
+}
 
 /* Selected = blue halo (matches your old glow color) :contentReference[oaicite:3]{index=3} */
 .bottle.selected .bottleHalo{
   opacity: 1;
   filter:
     drop-shadow(0 0 2px rgba(255,255,255,0.74))
-    drop-shadow(0 0 22px rgba(0,179,255,0.95))
-    drop-shadow(0 0 60px rgba(0,179,255,0.70))
-    drop-shadow(0 0 140px rgba(0,179,255,.45));
+    drop-shadow(0 0 22px rgba(0,179,255,0.85))
+    drop-shadow(0 0 40px rgba(0,179,255,0.70));
 }
 
 /* Pressed = slightly softer */
