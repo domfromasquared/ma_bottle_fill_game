@@ -269,11 +269,12 @@ ${fewshotsBlock()}
 
 CRITICAL OUTPUT RULES:
 - Return ONLY JSON matching schema.
-- Keep it SHORT and punchy.
-- dm_intro: 1–2 sentences. MUST include (a) clean roast and (b) lab metaphor.
-- dm_midpoint: 1 sentence. MUST be a tactical directive with urgency.
-- dm_verdict: 1 sentence. MUST include signature token: ${DM_SIGNATURE}
-- Use 1–2 required catchphrases per response.
+- MOBILE FIRST: ultra short.
+- quest_title: 2–5 words max.
+- dm_intro: 1 sentence max (roast OR lab metaphor, not both).
+- dm_midpoint: 1 short sentence, tactical directive only.
+- dm_verdict: 1 short sting + signature token: ${DM_SIGNATURE}
+- Catchphrases are OPTIONAL and rare. Never spam them.
 - HARD BAN: finance/corporate jargon. BANK is personality framework only.
 
 DM ART CONTROL (required):
@@ -303,7 +304,7 @@ wantModifier = ${wantModifier}
         instructions,
         input,
         text: { format: { type:"json_schema", name:"quest_node", strict:true, schema: QUEST_SCHEMA } },
-        max_output_tokens: 650,
+        max_output_tokens: 240,
       })
     );
 
@@ -314,6 +315,26 @@ wantModifier = ${wantModifier}
     if (!parsed.ok) return fail(res, 502, parsed.error, parsed.details);
 
     const payload = parsed.value;
+
+    // --- Anti-repeat guard: normalize used_voice_ids and reduce catchphrase spam ---
+if (!Array.isArray(payload.used_voice_ids)) payload.used_voice_ids = [];
+
+const lower = (s) => String(s || "").toLowerCase();
+const recent = new Set(payload.used_voice_ids.map(lower));
+
+// If model used "listen, genius" too often, force it out by rewriting this node once.
+const tooCommon = lower([payload.dm_intro, payload.dm_midpoint, payload.dm_verdict].join(" ")).includes("listen, genius");
+if (tooCommon && recent.has("catch:listen_genius")) {
+  // Remove the phrase without breaking the rest of the line.
+  payload.dm_intro = String(payload.dm_intro || "").replace(/listen,\s*genius…?/ig, "").trim();
+  payload.dm_midpoint = String(payload.dm_midpoint || "").replace(/listen,\s*genius…?/ig, "").trim();
+  payload.dm_verdict = String(payload.dm_verdict || "").replace(/listen,\s*genius…?/ig, "").trim();
+}
+
+// Tag usage so the client can remember it
+const full = lower([payload.dm_intro, payload.dm_midpoint, payload.dm_verdict].join(" "));
+if (full.includes("listen, genius")) payload.used_voice_ids.push("catch:listen_genius");
+
 
     if (typeof payload.dm_verdict !== "string" || !payload.dm_verdict.includes(DM_SIGNATURE)) {
       return fail(res, 400, "LLM voice payload failed validation", ["dm_verdict: missing signature token (risk of tone drift)"]);
