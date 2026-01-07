@@ -417,12 +417,7 @@ body{
   opacity: 0;              /* off by default */
 }
 
-/* TURN OFF the rectangle box-shadow glow (so it doesn’t fight the halo) */
-.bottle.selected,
-.bottle.pressed,
-.bottle.locked.selected{
-  box-shadow: none;
-}
+
 
 /* Selected = blue halo (matches your old glow color) :contentReference[oaicite:3]{index=3} */
 .bottle.selected .bottleHalo{
