@@ -606,21 +606,22 @@ body{
 /* Speech bubble now lives inside dmInner and moves with it */
 #speech,
 .speech{
-  position: absolute;
+  position: absolute;              /* NOT fixed */
   left: 50%;
-  bottom: 14px;                 /* sits at bottom-center of wrapper */
-  transform: translateX(-50%);
-
-  width: calc(100% - 28px);     /* padding from wrapper edges */
+  bottom: 14px;
+  width: calc(100% - 28px);
   max-width: calc(100% - 28px);
 
-  z-index: 5;                   /* above DM visuals */
-  pointer-events: none;         /* bubble can be click-through if you want */
+  /* keep centering AND start off-screen */
+  transform: translateX(-50%) translateX(-150%);
+  transition: transform var(--dm-slide-ms) ease;
+  z-index: 9;
 }
 
 #speech.show,
 .speech.show{
-  transform: translateX(0);
+  /* slide in, still centered */
+  transform: translateX(-50%) translateX(0);
 }
 
 /* actual bubble plate + text layout */
