@@ -1,0 +1,70 @@
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+index 0000000..c1a2b3c
+--- /dev/null
++++ b/.gitignore
+@@
++.DS_Store
++**/.DS_Store
++node_modules/
++server/node_modules/
++.env
++*.log
+
+diff --git a/src/game/app.js b/src/game/app.js
+index 7b3a1c2..9e41f6d 100644
+--- a/src/game/app.js
++++ b/src/game/app.js
+@@
+ function setSpeechTheme(theme){
+-  localStorage.setItem(SPEECH_THEME_KEY, t);
++  localStorage.setItem(SPEECH_THEME_KEY, theme);
+ }
+
+@@
+ function animateTransferThenPour(opts){
+   let raf;
+   function tick(ts){
+     const t = Math.min(1, (ts - start) / duration);
++
++    // safety cutoff to prevent infinite RAF in edge cases
++    if (t >= 1.05){
++      cancelAnimationFrame(raf);
++      cleanup();
++      return;
++    }
++
+     update(t);
+     if (t < 1){
+       raf = requestAnimationFrame(tick);
+     } else {
+       cleanup();
+     }
+   }
+   raf = requestAnimationFrame(tick);
+ }
+
+diff --git a/src/utils/http.js b/src/utils/http.js
+index 2d4c9a7..a77f1e9 100644
+--- a/src/utils/http.js
++++ b/src/utils/http.js
+@@
+   const text = await res.text();
+   let json = null;
+   try { json = text ? JSON.parse(text) : null; } catch {}
+
+   if (!res.ok){
+-    const err = new Error(`HTTP ${res.status}`);
++    const retryAfter = res.headers.get("Retry-After");
++    const statusText = res.statusText ? ` ${res.statusText}` : "";
++    const raText = retryAfter ? ` (Retry-After: ${retryAfter}s)` : "";
++    const err = new Error(`HTTP ${res.status}${statusText}${raText}`);
+     err.status = res.status;
++    err.retryAfter = retryAfter ? Number(retryAfter) : null;
+     err.detailText = text;
+     err.payload = json;
+     throw err;
+   }
+
+-  return json;
++  return json ?? {};
