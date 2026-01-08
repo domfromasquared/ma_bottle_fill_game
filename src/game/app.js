@@ -946,16 +946,13 @@ dmWrap.addEventListener("cancel", (e) => {
 
 /* ---------------- Safety reset on refresh / bfcache ---------------- */
 function resetDMFreeze() {
-  try {
-    dmWrap?.close?.();
-  } catch {}
-  try {
-    dmWrap?.removeAttribute?.("open");
-  } catch {}
+  // DO NOT nuke DM if intro or DM logic is about to run
+  if (introIsActive()) return;
 
-  try {
-    speech?.classList?.remove?.("show");
-  } catch {}
+  try { dmWrap?.close?.(); } catch {}
+  try { dmWrap?.removeAttribute?.("open"); } catch {}
+
+  try { speech?.classList?.remove?.("show"); } catch {}
 
   try {
     dmWrap.inert = true;
@@ -965,7 +962,6 @@ function resetDMFreeze() {
   document.body.classList.remove("dmOpen");
 }
 
-window.addEventListener("DOMContentLoaded", resetDMFreeze);
 window.addEventListener("pageshow", resetDMFreeze);
 
 /* ---------------- Intro/deadlock flags ---------------- */
