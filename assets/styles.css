@@ -522,7 +522,11 @@ body{
   pointer-events:none;
 }
 
-/* ===== DM DIALOG: lock to viewport, dead-center, no touch-drag ===== */
+/* =========================================================
+   DM DIALOG — fixed overlay, true centered stage, no drift
+   ========================================================= */
+
+/* Full-screen overlay */
 .dmWrap{
   position: fixed;
   inset: 0;
@@ -531,55 +535,47 @@ body{
   border: 0;
   background: transparent;
 
-  /* center contents */
   display: grid;
   place-items: center;
 
-  /* stop iOS “pull/drag” scroll feel */
   overscroll-behavior: none;
   touch-action: none;
 }
 
-.dmWrap::backdrop{
-  background: transparent;
-  overscroll-behavior: none;
-  touch-action: none;
-}
-
-/* keep the moving unit centered; only it animates */
+/* Centered STAGE — this is the glossary-equivalent */
 .dmWrap .dmInner{
+  position: relative;
+
+  width: min(92vw, 560px);
+  height: min(86vh, 640px);
+
+  display: grid;
+  place-items: center;
+
   touch-action: none;
+  overflow: visible;
 }
 
-/* When DM is open, prevent page behind from moving */
+/* Lock background when DM open */
 body.dmOpen{
   overflow: hidden;
   height: 100vh;
   touch-action: none;
 }
 
-/* ===== Mobile: remove the top-based positioning that causes drift ===== */
-@media (max-width: 420px){
-  .dmCharacter{
-    left: auto;
-    top: auto;
-    height: 100%;
-  }
-  #speech,
-  .speech{
-    top: auto;
-    height: auto;
-    transform: translateX(-50%); /* keep centered */
-  }
-}
+/* =========================================================
+   DM CARD
+   ========================================================= */
 
-/* DM card (now centered by wrapper, not by fixed coords) */
 .dmCharacter{
   position: relative;
-  justify-content:space-between;
-  align-items:center;
-  width: 100%;
-  height: 100%;
+
+  width: var(--dmW);
+  height: var(--dmH);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   border: 1px solid var(--line);
   border-radius: 18px;
@@ -589,13 +585,20 @@ body.dmOpen{
   overflow: hidden;
 }
 
-.dmCharacter.show{ transform: translateX(0); }
+/* Avatar fills DM card */
+.dmAvatar,
+#dmAvatar{
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+}
 
-/* Close button matches glossary .x placement/feel */
+/* Close button */
 .dmClose{
-  position:absolute;
-  right: 10px;
+  position: absolute;
   top: 10px;
+  right: 10px;
 
   width: 34px;
   height: 34px;
@@ -605,48 +608,40 @@ body.dmOpen{
   background: rgba(17,26,39,.85);
   color: var(--text);
 
-  cursor:pointer;
+  cursor: pointer;
   font-weight: 1000;
   z-index: 6;
 }
 
-/* DM sprite area fills the card */
-#dmAvatar{
-  position: relative;
-  width: 100%;
-  height: 100%;
-  border-radius: 16px;
-  overflow: hidden;
-  background: rgba(17,26,39,0);
-}
+/* =========================================================
+   SPEECH BUBBLE — anchored to bottom of STAGE
+   ========================================================= */
 
-/* Speech bubble now lives inside dmInner and moves with it */
-#speech,
-.speech{
-  position: absolute;              /* NOT fixed */
+.speech,
+#speech{
+  position: absolute;
   left: 50%;
   bottom: 14px;
+
   width: calc(100% - 28px);
   max-width: calc(100% - 28px);
 
-  /* keep centering AND start off-screen */
   transform: translateX(-50%) translateX(-150%);
   transition: transform var(--dm-slide-ms) ease;
+
   z-index: 9;
+  pointer-events: none;
 }
 
-#speech.show,
-.speech.show{
-  /* slide in, still centered */
+.speech.show,
+#speech.show{
   transform: translateX(-50%) translateX(0);
 }
 
-/* actual bubble plate + text layout */
-#speech .speechInner,
-.speech .speechInner{
+/* Bubble plate */
+.speechInner{
   width: 100%;
   aspect-ratio: 760 / 350;
-  height: auto;
 
   background-repeat: no-repeat;
   background-position: center;
@@ -658,47 +653,48 @@ body.dmOpen{
     clamp(64px, 7vw, 96px)
     clamp(56px, 8vw, 88px);
 
-  overflow: hidden;
-
   display: flex;
   flex-direction: column;
 
   pointer-events: auto;
 }
 
-/* Theme applies to bubble plate */
-#speech[data-theme="dark"] .speechInner,
-.speech[data-theme="dark"] .speechInner{ background-image: var(--speech-plate-dark); }
+/* Bubble themes */
+#speech[data-theme="dark"] .speechInner{ background-image: var(--speech-plate-dark); }
+#speech[data-theme="light"] .speechInner{ background-image: var(--speech-plate-light); }
 
-#speech[data-theme="light"] .speechInner,
-.speech[data-theme="light"] .speechInner{ background-image: var(--speech-plate-light); }
+/* =========================================================
+   TEXT
+   ========================================================= */
 
-/* Title = goth */
 #questTitle{
   font-family: var(--dm-font);
   font-size: clamp(18px, 2.6vw, 30px);
   line-height: 1.08;
-  margin: 0 0 10px 0;
-  letter-spacing: 0.04em;
-  text-shadow: 0 1px 2px rgba(0,0,0,.35);
+  margin-bottom: 10px;
 }
 
-/* Body */
 #speechText{
   font-size: clamp(13px, 1.9vw, 16px);
   line-height: 1.35;
-  margin: 0;
-  min-height: 0;
-  overflow: hidden;
 }
 
-/* Footer pushed up */
 #speechSmall{
   margin-top: auto;
   padding-top: 10px;
   font-size: clamp(11px, 1.6vw, 13px);
-  line-height: 1.25;
-  opacity: 0.85;
+  opacity: .85;
+}
+
+/* =========================================================
+   MOBILE — preserve centering, no hacks
+   ========================================================= */
+
+@media (max-width: 420px){
+  .dmWrap .dmInner{
+    width: min(94vw, 520px);
+    height: min(88vh, 620px);
+  }
 }
 
 /* ---------- TOAST + FX ---------- */
