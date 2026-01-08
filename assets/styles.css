@@ -523,74 +523,75 @@ body{
 }
 
 /* =========================================================
-   DM DIALOG — glossary-style centered dialog + stacked layers
-   DM centered (lower layer), speech bottom-center above it
+   DM DIALOG — make dmWrap the CARD like glossary/settings
+   Layers:
+   - dmWrap (card)
+   - dmInner (stack context)
+   - dmCharacter (avatar stage, lower layer)
+   - speech (bubble, upper layer)
    ========================================================= */
 
-/* Dialog itself is the centered “card” like glossary */
+/* DM dialog IS the card (same styling as glossary/settings) */
 .dmWrap{
-  border: 0;
-  padding: 0;
-  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(11,18,28,.96);
+  color: var(--text);
 
-  /* emulate glossary centering behavior */
   width: min(92vw, 560px);
   height: min(86vh, 640px);
-  margin: auto;
+  padding: 0;
 
-  /* kill iOS drag/scroll feel */
   overscroll-behavior: none;
   touch-action: none;
 }
 
 .dmWrap::backdrop{
-  background: transparent;
+  background: rgba(0,0,0,.0);
   overscroll-behavior: none;
   touch-action: none;
 }
 
-/* Prevent background scroll when DM open */
+/* When DM is open, prevent page behind from moving */
 body.dmOpen{
   overflow: hidden;
   height: 100vh;
   touch-action: none;
 }
 
-/* Shared wrapper for BOTH layers (DM + speech) */
+/* Stacking / centering wrapper */
 .dmWrap .dmInner{
   position: relative;
   width: 100%;
   height: 100%;
 
-  /* center the DM layer */
   display: grid;
   place-items: center;
 
-  /* reserve a little space so DM sits just above bubble */
+  /* reserve space so DM sits above the bubble */
   --speechReserve: clamp(160px, 30vw, 240px);
   padding-bottom: calc(var(--speechReserve) + 14px);
 
   touch-action: none;
 }
 
-/* DM layer (lower) */
+/* DM “stage” is no longer the card */
 .dmCharacter{
   position: relative;
   width: var(--dmW);
   height: var(--dmH);
 
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  background: rgba(11,18,28,0);
-  color: var(--text);
-  overflow: visible;
+  border: 0;
+  background: transparent;
+  border-radius: 0;
 
-  z-index: 1; /* below speech */
+  overflow: visible;
+  z-index: 1;
 }
 
-/* Close button */
+/* Keep close button feeling like glossary X */
 .dmClose{
-  position:absolute;
+  position: absolute;
   right: 10px;
   top: 10px;
 
@@ -602,12 +603,12 @@ body.dmOpen{
   background: rgba(17,26,39,.85);
   color: var(--text);
 
-  cursor:pointer;
+  cursor: pointer;
   font-weight: 1000;
   z-index: 6;
 }
 
-/* DM sprite fills card */
+/* DM avatar fills stage */
 #dmAvatar,
 .dmAvatar{
   width: 100%;
@@ -617,7 +618,7 @@ body.dmOpen{
   background: rgba(17,26,39,0);
 }
 
-/* Speech layer (upper) — anchored bottom-center INSIDE same wrapper */
+/* Speech bubble: bottom-center, above DM */
 #speech,
 .speech{
   position: absolute;
@@ -627,13 +628,12 @@ body.dmOpen{
   width: min(calc(100% - 28px), var(--speechW));
   max-width: calc(100% - 28px);
 
-  z-index: 9; /* above DM */
+  z-index: 9;
 
-  /* off-screen start but centered */
   transform: translateX(-50%) translateX(-150%);
   transition: transform var(--dm-slide-ms) ease;
 
-  pointer-events: none; /* bubble container doesn’t steal taps */
+  pointer-events: none;
 }
 
 #speech.show,
@@ -641,7 +641,6 @@ body.dmOpen{
   transform: translateX(-50%) translateX(0);
 }
 
-/* Bubble plate + confined text layout */
 #speech .speechInner,
 .speech .speechInner{
   width: 100%;
@@ -659,16 +658,21 @@ body.dmOpen{
     clamp(56px, 8vw, 88px);
 
   overflow: hidden;
+
   display: flex;
   flex-direction: column;
 
-  pointer-events: auto; /* inner is clickable */
+  pointer-events: auto;
 }
 
-#speech[data-theme="dark"] .speechInner{ background-image: var(--speech-plate-dark); }
-#speech[data-theme="light"] .speechInner{ background-image: var(--speech-plate-light); }
+/* Theme applies to bubble plate */
+#speech[data-theme="dark"] .speechInner,
+.speech[data-theme="dark"] .speechInner{ background-image: var(--speech-plate-dark); }
 
-/* Title + text */
+#speech[data-theme="light"] .speechInner,
+.speech[data-theme="light"] .speechInner{ background-image: var(--speech-plate-light); }
+
+/* Text */
 #questTitle{
   font-family: var(--dm-font);
   font-size: clamp(18px, 2.6vw, 30px);
@@ -693,14 +697,12 @@ body.dmOpen{
   opacity: 0.85;
 }
 
-/* Mobile: DO NOT force DM to full height (that was the drift cause) */
+/* Mobile: never force DM to full height */
 @media (max-width: 420px){
   .dmWrap .dmInner{
     --speechReserve: clamp(180px, 38vw, 270px);
   }
 }
-
-
 
 /* ---------- TOAST + FX ---------- */
 .toast{
