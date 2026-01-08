@@ -2164,6 +2164,16 @@ function requestRedraw() {
 
 window.addEventListener("resize", requestRedraw, { passive: true });
 window.addEventListener("orientationchange", requestRedraw, { passive: true });
+// ✅ iOS Safari: address bar / toolbar changes don't always trigger window.resize until interaction
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", requestRedraw, { passive: true });
+  window.visualViewport.addEventListener("scroll", requestRedraw, { passive: true });
+}
+
+// ✅ Force a redraw after first layout + after fonts settle
+requestAnimationFrame(() => requestAnimationFrame(requestRedraw));
+document.fonts?.ready?.then?.(() => requestRedraw());
+setTimeout(requestRedraw, 80);
 
 /* ---------------- Pour + win ---------------- */
 let levelInvalid = 0;
