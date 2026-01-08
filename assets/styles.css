@@ -59,15 +59,16 @@
   --ch-bottom: 0px;
   --ch-radius: 0px;
 
-  /* DM sizing (so speech can track it) */
-  --dmW: clamp(160px, 44vw, 440px);
-  --dmH: clamp(220px, 34vh, 680px);
+/* DM sizing (so speech can track it) */
+--dmScale: 2;
+--dmW: calc(clamp(160px, 44vw, 440px) * var(--dmScale));
+--dmH: calc(clamp(220px, 34vh, 680px) * var(--dmScale));
 
-  /* Speech sizing */
-  --speechW: clamp(320px, 72vw, 780px);
+/* Speech sizing */
+--speechW: calc(clamp(320px, 72vw, 780px) * var(--dmScale));
 
-  /* Slide timing */
-  --dm-slide-ms:1650ms;
+/* Slide timing */
+--dm-slide-ms: 1650ms;
 }
 
 *{ box-sizing:border-box; }
