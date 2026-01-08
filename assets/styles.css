@@ -645,7 +645,8 @@ body.dmOpen{
 #speech .speechInner,
 .speech .speechInner{
   width: 100%;
-  aspect-ratio: 760 / 350;
+  aspect-ratio: auto;
+  min-height: clamp(220px, 32vw, 340px);
   height: auto;
 
   background-repeat: no-repeat;
