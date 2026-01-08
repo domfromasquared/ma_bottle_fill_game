@@ -30,6 +30,7 @@ const DM_COUNT_KEY = "ma_dmAppearCount";
 const NEXT_DM_KEY = "ma_nextDMAtLevel";
 
 const INTRO_SEEN_KEY = "ma_introSeen";
+const NAME_PROMPTED_KEY = "ma_namePrompted";
 
 /* ---------------- Anim constants ---------------- */
 const MOVE_ANIM_MS = 600;
@@ -259,6 +260,7 @@ const speech = qs("speech");
 const questTitle = qs("questTitle");
 const speechText = qs("speechText");
 const speechSmall = qs("speechSmall");
+const speechNext = qs("speechNext");
 
 const bankRail = qs("bankRail");
 const bankExpanded = qs("bankExpanded");
@@ -820,6 +822,60 @@ function makePrimaryBtn(label) {
   return btn;
 }
 
+/* ---------------- Speech paging (retro blocks) ---------------- */
+let dmPages = [];
+let dmPageIndex = 0;
+let dmBodyCopyEl = null;
+
+function splitIntoPagesPreserveNewlines(text, maxChars = 260) {
+  const raw = String(text || "").trim();
+  if (!raw) return [""];
+
+  // Preserve newlines as tokens so pre-wrap keeps rhythm
+  const tokens = raw.replace(/\n/g, " \n ").split(/\s+/).filter(Boolean);
+
+  const pages = [];
+  let buf = "";
+
+  for (const t of tokens) {
+    const next = buf
+      ? t === "\n"
+        ? `${buf}\n`
+        : `${buf} ${t}`
+      : t === "\n"
+      ? "\n"
+      : t;
+
+    if (next.length > maxChars && buf) {
+      pages.push(buf.trim());
+      buf = t === "\n" ? "\n" : t;
+    } else {
+      buf = next;
+    }
+  }
+
+  if (buf.trim()) pages.push(buf.trim());
+  return pages.length ? pages : [""];
+}
+
+function renderDMPage() {
+  if (!dmBodyCopyEl) return;
+
+  dmBodyCopyEl.textContent = dmPages[dmPageIndex] ?? "";
+  const hasMore = dmPageIndex < dmPages.length - 1;
+
+  if (speechNext) speechNext.classList.toggle("show", hasMore);
+
+  requestAnimationFrame(() => shrinkTextToFitBubble());
+}
+
+speechNext?.addEventListener("click", () => {
+  if (dmPageIndex < dmPages.length - 1) {
+    dmPageIndex++;
+    renderDMPage();
+  }
+});
+
 /* ---------------- Speech auto-fit (shrink to fit bubble) ---------------- */
 function shrinkTextToFitBubble() {
   const bubble = speech;
@@ -864,16 +920,30 @@ function shrinkTextToFitBubble() {
   }
 }
 
-function setDMSpeech({ title, body, small }) {
+function setDMSpeech({ title, body, small, paginate = true, maxChars = 260 }) {
   questTitle.textContent = title || "—";
   speechSmall.textContent = small || "";
+
+  // Clear existing content; callers may append controls after
   speechText.innerHTML = "";
+
+  // Copy element (paging updates this only)
   const copy = document.createElement("div");
   copy.style.whiteSpace = "pre-wrap";
-  copy.textContent = body || "";
   speechText.appendChild(copy);
 
-  requestAnimationFrame(() => shrinkTextToFitBubble());
+  dmBodyCopyEl = copy;
+
+  const full = String(body || "");
+  if (paginate) {
+    dmPages = splitIntoPagesPreserveNewlines(full, maxChars);
+    dmPageIndex = 0;
+  } else {
+    dmPages = [full];
+    dmPageIndex = 0;
+  }
+
+  renderDMPage();
   return { copy };
 }
 
@@ -1462,6 +1532,10 @@ function makeInput(placeholder) {
 function runFirstLoadIntro() {
   if (localStorage.getItem(INTRO_SEEN_KEY) === "1") return false;
 
+  // Lock immediately so refresh/close never re-triggers intro or name ask
+  localStorage.setItem(INTRO_SEEN_KEY, "1");
+  localStorage.setItem(NAME_PROMPTED_KEY, "1");
+
   introStep = 1;
   dmToken++;
 
@@ -1477,7 +1551,9 @@ There’s a flaw in the lab — the mixtures are unstable.
 Your job is to restore order.
 
 Tell me… what do I call you?`,
-    small: "Enter a name (14 characters max), then press Submit.",
+    small: "Enter a name (optional), then press Submit. Or skip.",
+    paginate: true,
+    maxChars: 240,
   });
 
   const row = document.createElement("div");
@@ -1488,11 +1564,21 @@ Tell me… what do I call you?`,
 
   const input = makeInput("Your name…");
   const submitBtn = makePrimaryBtn("Submit");
+  const skipBtn = makePrimaryBtn("Skip");
+
+  const finishIntroNoName = () => {
+    setPlayerName(DEFAULT_PLAYER_NAME);
+    syncInfoPanel();
+    introStep = 0;
+    hideDMOverlay();
+  };
 
   const submit = async () => {
     const name = (input.value || "").trim();
+
+    // Allow blank; never ask again later
     if (!name) {
-      showToast("Give me a name.");
+      finishIntroNoName();
       return;
     }
 
@@ -1508,12 +1594,17 @@ Tell me… what do I call you?`,
         title: "No.",
         body: `${roastRes.roast}\n\nTry again.`,
         small: "Enter a different name.",
+        paginate: true,
+        maxChars: 240,
       });
+
+      // Re-append the input row after paging reset
+      speechText.appendChild(row);
+      requestAnimationFrame(() => shrinkTextToFitBubble());
       return;
     }
 
     const saved = setPlayerName(name);
-    localStorage.setItem(INTRO_SEEN_KEY, "1");
     syncInfoPanel();
     introStep = 2;
 
@@ -1528,6 +1619,8 @@ It rewards alignment.
 
 Ready?`,
       small: "Press Start Quest to begin. (✕ always cancels me.)",
+      paginate: true,
+      maxChars: 240,
     });
 
     const row2 = document.createElement("div");
@@ -1549,12 +1642,15 @@ Ready?`,
   };
 
   submitBtn.addEventListener("click", submit);
+  skipBtn.addEventListener("click", finishIntroNoName);
+
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter") submit();
   });
 
   row.appendChild(input);
   row.appendChild(submitBtn);
+  row.appendChild(skipBtn);
   speechText.appendChild(row);
 
   setTimeout(() => input.focus(), 200);
@@ -2364,6 +2460,8 @@ dmClose.addEventListener("click", () => {
   hideDMOverlay();
 
   if (introIsActive()) {
+    localStorage.setItem(INTRO_SEEN_KEY, "1");
+    localStorage.setItem(NAME_PROMPTED_KEY, "1");
     setPlayerName(DEFAULT_PLAYER_NAME);
     introStep = 0;
     syncInfoPanel();
@@ -2404,6 +2502,7 @@ Try not to disappoint me twice.`,
   setTimeout(() => {
     localStorage.removeItem(PLAYER_NAME_KEY);
     localStorage.removeItem(INTRO_SEEN_KEY);
+    localStorage.removeItem(NAME_PROMPTED_KEY);
     localStorage.removeItem(RUN_SEED_KEY);
     localStorage.removeItem(DM_COUNT_KEY);
     localStorage.removeItem(NEXT_DM_KEY);
