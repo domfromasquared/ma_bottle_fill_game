@@ -698,6 +698,37 @@ body.dmOpen{
   opacity: 0.85;
 }
 
+/* Paging arrow (Game Boy style) */
+.speechNext{
+  margin-left: auto;
+  margin-top: 8px;
+
+  width: 44px;
+  height: 34px;
+
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(17,26,39,.75);
+  color: var(--text);
+
+  cursor: pointer;
+  user-select: none;
+
+  display: none;           /* only when multiple pages */
+  pointer-events: auto;    /* bubble parent blocks pointer events */
+}
+
+.speechNext.show{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  animation: speechBlink 1.1s steps(2, end) infinite;
+}
+
+@keyframes speechBlink{
+  50%{ opacity: .35; }
+}
+
 /* Mobile: never force DM to full height */
 @media (max-width: 420px){
   .dmWrap .dmInner{
