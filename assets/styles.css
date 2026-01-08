@@ -67,7 +67,7 @@
   --speechW: clamp(320px, 72vw, 780px);
 
   /* Slide timing */
-  --dm-slide-ms:650ms;
+  --dm-slide-ms:1650ms;
 }
 
 *{ box-sizing:border-box; }
