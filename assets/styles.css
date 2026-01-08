@@ -523,10 +523,11 @@ body{
 }
 
 /* =========================================================
-   DM DIALOG — fixed overlay, true centered stage, no drift
+   DM DIALOG — single centered stage, speech overlays inside
+   Speech anchored bottom-center; DM centered above it
    ========================================================= */
 
-/* Full-screen overlay */
+/* Overlay */
 .dmWrap{
   position: fixed;
   inset: 0;
@@ -542,31 +543,41 @@ body{
   touch-action: none;
 }
 
-/* Centered STAGE — this is the glossary-equivalent */
-.dmWrap .dmInner{
-  position: relative;
-
-  width: min(92vw, 560px);
-  height: min(86vh, 640px);
-
-  display: grid;
-  place-items: center;
-
+.dmWrap::backdrop{
+  background: transparent;
+  overscroll-behavior: none;
   touch-action: none;
-  overflow: visible;
 }
 
-/* Lock background when DM open */
+/* Prevent background scroll when DM open */
 body.dmOpen{
   overflow: hidden;
   height: 100vh;
   touch-action: none;
 }
 
-/* =========================================================
-   DM CARD
-   ========================================================= */
+/* ===== Centered stage (the shared wrapper for DM + speech) ===== */
+.dmWrap .dmInner{
+  position: relative;
 
+  width: min(92vw, 560px);
+  height: min(86vh, 640px);
+  margin: 0 auto;
+
+  /* Center DM within the usable area */
+  display: grid;
+  place-items: center;
+
+  /* Reserve space for the speech bubble at the bottom
+     so the DM sits centered ABOVE the bubble */
+  --speechReserve: clamp(170px, 32vw, 260px);
+  padding-bottom: calc(var(--speechReserve) + 14px);
+
+  touch-action: none;
+  overflow: visible;
+}
+
+/* ===== DM card (centered by dmInner grid) ===== */
 .dmCharacter{
   position: relative;
 
@@ -574,8 +585,8 @@ body.dmOpen{
   height: var(--dmH);
 
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
 
   border: 1px solid var(--line);
   border-radius: 18px;
@@ -585,20 +596,10 @@ body.dmOpen{
   overflow: hidden;
 }
 
-/* Avatar fills DM card */
-.dmAvatar,
-#dmAvatar{
-  width: 100%;
-  height: 100%;
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-/* Close button */
 .dmClose{
   position: absolute;
-  top: 10px;
   right: 10px;
+  top: 10px;
 
   width: 34px;
   height: 34px;
@@ -613,12 +614,18 @@ body.dmOpen{
   z-index: 6;
 }
 
-/* =========================================================
-   SPEECH BUBBLE — anchored to bottom of STAGE
-   ========================================================= */
+#dmAvatar,
+.dmAvatar{
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(17,26,39,0);
+}
 
-.speech,
-#speech{
+/* ===== Speech bubble: inside the SAME stage, z-layer above DM ===== */
+#speech,
+.speech{
   position: absolute;
   left: 50%;
   bottom: 14px;
@@ -626,22 +633,26 @@ body.dmOpen{
   width: calc(100% - 28px);
   max-width: calc(100% - 28px);
 
+  z-index: 9;
+
+  /* off-screen start, but centered */
   transform: translateX(-50%) translateX(-150%);
   transition: transform var(--dm-slide-ms) ease;
 
-  z-index: 9;
-  pointer-events: none;
+  pointer-events: none; /* container doesn't steal taps */
 }
 
-.speech.show,
-#speech.show{
+#speech.show,
+.speech.show{
   transform: translateX(-50%) translateX(0);
 }
 
-/* Bubble plate */
-.speechInner{
+/* Bubble plate + text */
+#speech .speechInner,
+.speech .speechInner{
   width: 100%;
   aspect-ratio: 760 / 350;
+  height: auto;
 
   background-repeat: no-repeat;
   background-position: center;
@@ -653,49 +664,53 @@ body.dmOpen{
     clamp(64px, 7vw, 96px)
     clamp(56px, 8vw, 88px);
 
+  overflow: hidden;
+
   display: flex;
   flex-direction: column;
 
-  pointer-events: auto;
+  pointer-events: auto; /* inner is clickable */
 }
 
-/* Bubble themes */
 #speech[data-theme="dark"] .speechInner{ background-image: var(--speech-plate-dark); }
 #speech[data-theme="light"] .speechInner{ background-image: var(--speech-plate-light); }
-
-/* =========================================================
-   TEXT
-   ========================================================= */
 
 #questTitle{
   font-family: var(--dm-font);
   font-size: clamp(18px, 2.6vw, 30px);
   line-height: 1.08;
-  margin-bottom: 10px;
+  margin: 0 0 10px 0;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 2px rgba(0,0,0,.35);
 }
 
 #speechText{
   font-size: clamp(13px, 1.9vw, 16px);
   line-height: 1.35;
+  margin: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 #speechSmall{
   margin-top: auto;
   padding-top: 10px;
   font-size: clamp(11px, 1.6vw, 13px);
-  opacity: .85;
+  line-height: 1.25;
+  opacity: 0.85;
 }
 
-/* =========================================================
-   MOBILE — preserve centering, no hacks
-   ========================================================= */
-
+/* ===== Mobile: keep same logic; just tweak reserve if needed ===== */
 @media (max-width: 420px){
   .dmWrap .dmInner{
     width: min(94vw, 520px);
     height: min(88vh, 620px);
+
+    /* Slightly larger reserve on tiny screens if bubble crowds */
+    --speechReserve: clamp(190px, 40vw, 280px);
   }
 }
+
 
 /* ---------- TOAST + FX ---------- */
 .toast{
