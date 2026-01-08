@@ -60,11 +60,11 @@
   --ch-radius: 0px;
 
   /* DM sizing (so speech can track it) */
-  --dmW: clamp(160px, 44vw, 220px);
-  --dmH: clamp(220px, 34vh, 340px);
+  --dmW: clamp(160px, 44vw, 440px);
+  --dmH: clamp(220px, 34vh, 680px);
 
   /* Speech sizing */
-  --speechW: clamp(320px, 72vw, 760px);
+  --speechW: clamp(320px, 72vw, 780px);
 
   /* Slide timing */
   --dm-slide-ms:650ms;
