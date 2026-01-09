@@ -224,5 +224,9 @@ function handleBottleTap(i) {
 }
 
 /* ---------------- Boot ---------------- */
-startLevel();
+function boot() {
+  startLevel();
+}
+
+boot();
 
