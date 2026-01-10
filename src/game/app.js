@@ -1894,6 +1894,9 @@ function buildLocalRecipe() {
     wildcardSlots: cfg.wildcardSlots,
     // Rule #2 (optional per-level): element symbol that acts as Keystone. Solving a full bottle of this element uncorks all corked bottles.
     keystoneElementSym: null,
+    // Rule #2 (optional per-level): designated bottle index to solve as the Keystone collector.
+    // If null, generator will select a safe non-corked empty bottle.
+    keystoneBottleIndex: null,
     elements: elems,
     sinTags,
     appliedModifier: pendingModifier || null,
@@ -1964,6 +1967,18 @@ function enforceKeystoneGenerationSafety({ ksIdx, lockCount, filledBottles }) {
     swapSeg(src.bi, src.si, destBottle, destSlot);
   }
 
+  // (Collector Guarantee) Ensure there is at least one non-corked empty bottle that can collect keystone segments.
+  // For keystone levels we require at least 1 empty bottle; by clamping lockCount to filledBottles, empties are never corked.
+  // We also keep the collector visually "normal" (not sealed-unknown) to avoid confusing the player.
+  const collectorIndex = fb; // first empty bottle index (after filled bottles)
+  if (collectorIndex >= lc && collectorIndex < state.bottles.length) {
+    state.keystoneCollectorIndex = collectorIndex;
+    // Ensure collector is empty and readable
+    state.bottles[collectorIndex] = [];
+    if (state.sealedUnknown) state.sealedUnknown[collectorIndex] = false;
+    if (state.revealDepthPct) state.revealDepthPct[collectorIndex] = 1;
+  }
+
   // (B) Hard rule: corked bottles must contain ZERO keystone segments.
   // Swap out any remaining keystone segments in corked bottles into non-corked filled bottles.
   for (let bi = 0; bi < lc; bi++) {
@@ -2018,6 +2033,25 @@ function validateKeystoneLevelSafety({ ksIdx, lockCount, filledBottles }) {
   const empties = state.bottles.filter((b) => !b.length).length;
   if (empties < 1) errors.push("NO_EMPTY_BOTTLE");
 
+  // 3b) Keystone collector: at least one NON-CORKED empty bottle must exist to collect fragments.
+  // We prefer the first empty slot after filled bottles (index = fb), but accept any non-corked empty.
+  let hasNonCorkedEmpty = false;
+  for (let bi = lc; bi < state.bottles.length; bi++) {
+    const b = state.bottles[bi] || [];
+    if (!b.length) { hasNonCorkedEmpty = true; break; }
+  }
+  if (!hasNonCorkedEmpty) errors.push("NO_KEYSTONE_COLLECTOR");
+
+  // 3c) Designated Keystone bottle must exist, be non-corked, and start empty.
+  const designated = state.keystone?.bottleIndex;
+  if (!Number.isInteger(designated) || designated < lc || designated >= state.bottles.length) {
+    errors.push("NO_DESIGNATED_KEYSTONE_BOTTLE");
+  } else {
+    const db = state.bottles[designated] || [];
+    if (db.length !== 0) errors.push("DESIGNATED_KEYSTONE_NOT_EMPTY");
+    if (state.locked[designated]) errors.push("DESIGNATED_KEYSTONE_IS_CORKED");
+  }
+
   // 4) Basic pre-unlock move exists (unless level is trivially solved)
   // Use existing helper if available
   try {
@@ -2036,7 +2070,7 @@ function generateBottlesFromRecipe(recipe) {
   state.selected = -1;
 
   const filledBottles = bottleCount - empty;
-  const lockCount = Math.min(recipe.lockedBottles || 0, bottleCount);
+  const lockCount = Math.min(recipe.lockedBottles || 0, filledBottles);
 
   // Rule #2: init keystone gate for this level
   const ksSym = recipe.keystoneElementSym;
@@ -2045,6 +2079,7 @@ function generateBottlesFromRecipe(recipe) {
     sym: ksSym ? String(ksSym) : null,
     idx: ksIdx >= 0 ? ksIdx : null,
     unlocked: false,
+    bottleIndex: null,
   };
 
   // Retry generation a few times if keystone safety fails (prevents rare impossible boards).
@@ -2115,6 +2150,32 @@ function generateBottlesFromRecipe(recipe) {
         filledBottles,
       });
 
+      // Keystone designated bottle: must be a NON-CORKED empty bottle the player fills with the keystone element.
+      // Priority: recipe.keystoneBottleIndex -> generator-selected collector -> any non-corked empty.
+      let designated = Number.isInteger(recipe.keystoneBottleIndex)
+        ? recipe.keystoneBottleIndex
+        : null;
+
+      if (designated === null || designated === undefined) {
+        if (Number.isInteger(state.keystoneCollectorIndex)) {
+          designated = state.keystoneCollectorIndex;
+        } else {
+          for (let bi = lockCount; bi < state.bottles.length; bi++) {
+            if ((state.bottles[bi] || []).length === 0) { designated = bi; break; }
+          }
+        }
+      }
+
+      // Normalize designated bottle if valid; otherwise leave null and let validator reject.
+      if (Number.isInteger(designated) && designated >= lockCount && designated < state.bottles.length) {
+        state.keystone.bottleIndex = designated;
+        state.bottles[designated] = []; // must start empty (collector)
+        if (state.sealedUnknown) state.sealedUnknown[designated] = false; // keep readable
+        if (state.revealDepthPct) state.revealDepthPct[designated] = 1;
+      } else {
+        state.keystone.bottleIndex = null;
+      }
+
       const v = validateKeystoneLevelSafety({
         ksIdx: state.keystone.idx,
         lockCount,
@@ -2161,14 +2222,15 @@ function checkKeystoneUnlock() {
   const ks = state.keystone;
   if (!ks || ks.unlocked || ks.idx === null) return false;
 
+  // Designated bottle only: the Keystone bottle must be the one that becomes SOLVED.
+  const bi = ks.bottleIndex;
+  if (!Number.isInteger(bi) || bi < 0 || bi >= state.bottles.length) return false;
+
   const cap = state.capacity;
   const target = ks.idx;
+  const b = state.bottles[bi] || [];
 
-  // If any bottle is SOLVED with the keystone element, unlock all corked bottles.
-  const solved = state.bottles.some(
-    (b) => b.length === cap && b.every((x) => x === target)
-  );
-
+  const solved = b.length === cap && b.every((x) => x === target);
   if (!solved) return false;
 
   ks.unlocked = true;
