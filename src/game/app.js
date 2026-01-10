@@ -1112,8 +1112,6 @@ function useFailMod(mod) {
     state.hiddenSegs.push(false);
     state.sealedUnknown.push(false);
     state.revealDepthPct.push(1);
-    state.sealedUnknown.push(false);
-    state.revealDepthPct.push(1);
 
     const to = state.bottles.length - 1;
     let best = null;
@@ -1490,8 +1488,6 @@ modSlot3?.addEventListener("click", () => {
     state.bottles.push([]);
     state.locked.push(false);
     state.hiddenSegs.push(false);
-    state.sealedUnknown.push(false);
-    state.revealDepthPct.push(1);
     state.sealedUnknown.push(false);
     state.revealDepthPct.push(1);
 
@@ -1922,15 +1918,17 @@ function shuffle(arr, rng) {
  * This is a generator-side safety pass (not gameplay logic).
  */
 function enforceKeystoneGenerationSafety({ ksIdx, lockCount, filledBottles }) {
+  // Preconditions: keystone active + at least one corked bottle
   if (ksIdx === null || ksIdx === undefined) return;
   const cap = state.capacity | 0;
   if (cap <= 0) return;
-  if ((lockCount | 0) <= 0) return;
-  if ((filledBottles | 0) <= 0) return;
+  const lc = lockCount | 0;
+  const fb = filledBottles | 0;
+  if (lc <= 0 || fb <= 0) return;
 
-  // Non-corked bottles among the initially-filled set (empty bottles start after filledBottles)
+  // Collect non-corked, initially-filled bottle indices (exclude empties that come after filledBottles)
   const nonLockedFilled = [];
-  for (let i = lockCount; i < filledBottles; i++) nonLockedFilled.push(i);
+  for (let i = lc; i < fb; i++) nonLockedFilled.push(i);
   if (!nonLockedFilled.length) return;
 
   const swapSeg = (b1, s1, b2, s2) => {
@@ -1939,9 +1937,8 @@ function enforceKeystoneGenerationSafety({ ksIdx, lockCount, filledBottles }) {
     state.bottles[b2][s2] = tmp;
   };
 
-  // Helper to find any keystone segment position (bottle, slot)
   const findAnyKeystone = (avoidBottle, avoidSlot) => {
-    for (let bi = 0; bi < filledBottles; bi++) {
+    for (let bi = 0; bi < fb; bi++) {
       const b = state.bottles[bi] || [];
       for (let si = 0; si < b.length; si++) {
         if (bi === avoidBottle && si === avoidSlot) continue;
@@ -1951,48 +1948,31 @@ function enforceKeystoneGenerationSafety({ ksIdx, lockCount, filledBottles }) {
     return null;
   };
 
-  // 1) Ensure at least `cap` keystone segments exist in non-corked bottles at TOP positions.
-  //    We do this by swapping existing keystone segments into the top slot of non-corked bottles.
-  let placed = 0;
-  const maxPlacements = cap; // a full solved bottle requires exactly `cap` segments
-
-  for (let k = 0; k < maxPlacements; k++) {
+  // (A) Accessibility guarantee: place up to `cap` keystone segments onto TOP slots of non-corked filled bottles.
+  // This is the "gather the fragments" Mode B guarantee (no full solver required).
+  for (let k = 0; k < cap; k++) {
     const destBottle = nonLockedFilled[k % nonLockedFilled.length];
-    const destSlot = (state.bottles[destBottle]?.length || 0) - 1;
-    if (destSlot < 0) continue;
+    const dest = state.bottles[destBottle] || [];
+    if (!dest.length) continue;
 
-    if (state.bottles[destBottle][destSlot] === ksIdx) {
-      placed++;
-      continue;
-    }
+    const destSlot = dest.length - 1; // TOP slot
+    if (dest[destSlot] === ksIdx) continue;
 
     const src = findAnyKeystone(destBottle, destSlot);
     if (!src) break;
 
     swapSeg(src.bi, src.si, destBottle, destSlot);
-    if (state.bottles[destBottl
-  // --- Keystone safety pass (generation-side) ---
-  if (state.keystone?.idx !== null && state.keystone?.idx !== undefined && lockCount > 0) {
-    enforceKeystoneGenerationSafety({
-      ksIdx: state.keystone.idx,
-      lockCount,
-      filledBottles,
-    });
   }
 
-e][destSlot] === ksIdx) placed++;
-  }
-
-  // 2) Hard rule: corked bottles must contain ZERO keystone segments.
-  //    Any remaining keystone segments in corked bottles get swapped out to non-corked filled bottles.
-  for (let bi = 0; bi < lockCount; bi++) {
+  // (B) Hard rule: corked bottles must contain ZERO keystone segments.
+  // Swap out any remaining keystone segments in corked bottles into non-corked filled bottles.
+  for (let bi = 0; bi < lc; bi++) {
     const b = state.bottles[bi] || [];
     for (let si = 0; si < b.length; si++) {
       if (b[si] !== ksIdx) continue;
 
-      // find a non-corked segment that is NOT keystone to swap with
       let swapped = false;
-      for (let bj = lockCount; bj < filledBottles && !swapped; bj++) {
+      for (let bj = lc; bj < fb && !swapped; bj++) {
         const bb = state.bottles[bj] || [];
         for (let sj = 0; sj < bb.length; sj++) {
           if (bb[sj] === ksIdx) continue;
@@ -2001,46 +1981,62 @@ e][destSlot] === ksIdx) placed++;
           break;
         }
       }
-      // If we couldn't swap (extremely unlikely unless palette is only keystone),
-      // we leave it as-is; validator should catch this scenario.
+      // If we couldn't swap (edge case: palette is only keystone), leave it and let the validator catch it.
     }
   }
 }
 
-function generateBottlesFromRecipe(recipe) {
-  const rng = makeRng(hashSeed(runSeed, 9898, level));
-  state.capacity = recipe.capacity;
-  state.selected = -1;
+function validateKeystoneLevelSafety({ ksIdx, lockCount, filledBottles }) {
+  const errors = [];
+  if (ksIdx === null || ksIdx === undefined) return { ok: true, errors };
+  const cap = state.capacity | 0;
+  const lc = lockCount | 0;
+  const fb = filledBottles | 0;
 
+  if (cap <= 0) return { ok: true, errors };
+
+  // 1) No keystone in corked bottles
+  if (lc > 0) {
+    for (let bi = 0; bi < lc; bi++) {
+      const b = state.bottles[bi] || [];
+      if (b.includes(ksIdx)) {
+        errors.push("KEYSTONE_IN_CORKED");
+        break;
+      }
+    }
+  }
+
+  // 2) Enough accessible keystone count pre-unlock (at least `cap` segments outside corked bottles)
+  let accessibleKs = 0;
+  for (let bi = lc; bi < state.bottles.length; bi++) {
+    const b = state.bottles[bi] || [];
+    for (const seg of b) if (seg === ksIdx) accessibleKs++;
+  }
+  if (accessibleKs < cap) errors.push("INSUFFICIENT_ACCESSIBLE_KEYSTONE");
+
+  // 3) Optionality sanity: at least one empty bottle exists pre-unlock (recommended, but treat as error only if none)
+  const empties = state.bottles.filter((b) => !b.length).length;
+  if (empties < 1) errors.push("NO_EMPTY_BOTTLE");
+
+  // 4) Basic pre-unlock move exists (unless level is trivially solved)
+  // Use existing helper if available
+  try {
+    if (!isSolved() && !hasAnyPlayableMove()) errors.push("NO_PRE_UNLOCK_MOVES");
+  } catch {}
+
+  return { ok: errors.length === 0, errors, accessibleKs };
+}
+
+function generateBottlesFromRecipe(recipe) {
   const colors = recipe.colors;
   const bottleCount = recipe.bottleCount;
   const empty = recipe.emptyBottles;
 
-  const pool = [];
-  for (let c = 0; c < colors; c++) {
-    for (let i = 0; i < recipe.capacity; i++) pool.push(c);
-  }
-  shuffle(pool, rng);
+  state.capacity = recipe.capacity;
+  state.selected = -1;
 
-  state.bottles = [];
-  let idx = 0;
   const filledBottles = bottleCount - empty;
-
-  for (let b = 0; b < filledBottles; b++) {
-    const bottle = [];
-    for (let k = 0; k < recipe.capacity; k++) bottle.push(pool[idx++]);
-    state.bottles.push(bottle);
-  }
-  for (let e = 0; e < empty; e++) state.bottles.push([]);
-
-  state.locked = new Array(bottleCount).fill(false);
-  state.hiddenSegs = new Array(bottleCount).fill(false);
-
-  // Rule #3 (Sealed Unknown): partial reveal from the top only.
-  state.sealedUnknown = new Array(bottleCount).fill(false);
-  state.revealDepthPct = new Array(bottleCount).fill(1);
-
-  state.stabilizer = null;
+  const lockCount = Math.min(recipe.lockedBottles || 0, bottleCount);
 
   // Rule #2: init keystone gate for this level
   const ksSym = recipe.keystoneElementSym;
@@ -2051,31 +2047,91 @@ function generateBottlesFromRecipe(recipe) {
     unlocked: false,
   };
 
-  const lockCount = Math.min(recipe.lockedBottles || 0, bottleCount);
-  for (let i = 0; i < lockCount; i++) {
-    state.locked[i] = true;
-    state.hiddenSegs[i] = false; // Rule #2: corked contents are visible
-  }
+  // Retry generation a few times if keystone safety fails (prevents rare impossible boards).
+  const MAX_ATTEMPTS = 8;
 
-  // Sealed Unknown bottles (NOT locked; only information is obscured)
-  // Default: top segment visible; deeper segments clouded until the top is poured away.
-  const suCountRaw = recipe.sealedUnknownBottles || 0;
-  const maxSU = Math.max(0, bottleCount - lockCount); // don't assign SU to locked bottles
-  const suCount = Math.max(0, Math.min(suCountRaw, maxSU));
-  if (suCount > 0) {
-    const cap2 = state.capacity;
-    let assigned = 0;
-    // Assign from the end to reduce collision with early locked indices.
-    for (let i = bottleCount - 1; i >= 0 && assigned < suCount; i--) {
-      if (state.locked[i]) continue;
-      state.sealedUnknown[i] = true;
-      state.revealDepthPct[i] = state.bottles[i]?.length ? 1 / cap2 : 1;
-      assigned++;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const rng = makeRng(hashSeed(runSeed, 9898, level, attempt));
+
+    // Build and shuffle pool
+    const pool = [];
+    for (let c = 0; c < colors; c++) {
+      for (let i = 0; i < state.capacity; i++) pool.push(c);
     }
-  }
+    shuffle(pool, rng);
 
-  if (level >= STABILIZER_UNLOCK_LEVEL && lockCount > 0) {
-    state.stabilizer = { unlock: "UR_full", idx: 0, unlocked: false };
+    // Build bottles
+    state.bottles = [];
+    let idx = 0;
+
+    for (let b = 0; b < filledBottles; b++) {
+      const bottle = [];
+      for (let k = 0; k < state.capacity; k++) bottle.push(pool[idx++]);
+      state.bottles.push(bottle);
+    }
+    for (let e = 0; e < empty; e++) state.bottles.push([]);
+
+    // Base per-bottle flags
+    state.locked = new Array(bottleCount).fill(false);
+    state.hiddenSegs = new Array(bottleCount).fill(false);
+
+    // Rule #3: Sealed Unknown bottles (partial reveal from top only)
+    state.sealedUnknown = new Array(bottleCount).fill(false);
+    state.revealDepthPct = new Array(bottleCount).fill(1);
+
+    state.stabilizer = null;
+
+    // Apply corks (Rule #2: contents visible)
+    for (let i = 0; i < lockCount; i++) {
+      state.locked[i] = true;
+      state.hiddenSegs[i] = false;
+    }
+
+    // Assign Sealed Unknown bottles (never assign to locked bottles)
+    const suCountRaw = recipe.sealedUnknownBottles || 0;
+    const maxSU = Math.max(0, bottleCount - lockCount);
+    const suCount = Math.max(0, Math.min(suCountRaw, maxSU));
+    if (suCount > 0) {
+      const cap2 = state.capacity;
+      let assigned = 0;
+      for (let i = bottleCount - 1; i >= 0 && assigned < suCount; i--) {
+        if (state.locked[i]) continue;
+        state.sealedUnknown[i] = true;
+        state.revealDepthPct[i] = state.bottles[i]?.length ? 1 / cap2 : 1;
+        assigned++;
+      }
+    }
+
+    // Stabilizer (existing behavior)
+    if (level >= STABILIZER_UNLOCK_LEVEL && lockCount > 0) {
+      state.stabilizer = { unlock: "UR_full", idx: 0, unlocked: false };
+    }
+
+    // Keystone safety pass + validation
+    if (state.keystone?.idx !== null && state.keystone?.idx !== undefined && lockCount > 0) {
+      enforceKeystoneGenerationSafety({
+        ksIdx: state.keystone.idx,
+        lockCount,
+        filledBottles,
+      });
+
+      const v = validateKeystoneLevelSafety({
+        ksIdx: state.keystone.idx,
+        lockCount,
+        filledBottles,
+      });
+
+      if (!v.ok) {
+        // Try again with a different shuffle
+        if (attempt === MAX_ATTEMPTS - 1) {
+          console.warn("Keystone safety failed after retries:", v.errors);
+        }
+        continue;
+      }
+    }
+
+    // Success
+    return;
   }
 }
 
