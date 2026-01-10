@@ -114,7 +114,7 @@ const MODIFIERS = {
     name: "Decoherence Key",
     icon: "assets/modifiers/decoherence_key_selector.png",
     perLevelUses: 1,
-    tooltip: "Breaks one locked bottle per level.",
+    tooltip: "Uncorks all corked bottles on this level.",
     maLine: "Use when you know the seal is the problem.",
     bankSignal: "Knowledge / Control",
   },
@@ -566,6 +566,8 @@ const state = {
   // 0..1 percent of capacity revealed from the top (future-proof)
   revealDepthPct: [],
   stabilizer: null,
+  // Rule #2: Keystone gate (solve a specified element bottle to uncork all corked bottles)
+  keystone: null,
 };
 
 const topColor = (b) => (b.length ? b[b.length - 1] : null);
@@ -1894,6 +1896,8 @@ function buildLocalRecipe() {
     lockedBottles: cfg.lockedBottles,
     sealedUnknownBottles: 0,
     wildcardSlots: cfg.wildcardSlots,
+    // Rule #2 (optional per-level): element symbol that acts as Keystone. Solving a full bottle of this element uncorks all corked bottles.
+    keystoneElementSym: null,
     elements: elems,
     sinTags,
     appliedModifier: pendingModifier || null,
@@ -1942,10 +1946,19 @@ function generateBottlesFromRecipe(recipe) {
 
   state.stabilizer = null;
 
+  // Rule #2: init keystone gate for this level
+  const ksSym = recipe.keystoneElementSym;
+  const ksIdx = ksSym ? currentElements.indexOf(String(ksSym)) : -1;
+  state.keystone = {
+    sym: ksSym ? String(ksSym) : null,
+    idx: ksIdx >= 0 ? ksIdx : null,
+    unlocked: false,
+  };
+
   const lockCount = Math.min(recipe.lockedBottles || 0, bottleCount);
   for (let i = 0; i < lockCount; i++) {
     state.locked[i] = true;
-    state.hiddenSegs[i] = true;
+    state.hiddenSegs[i] = false; // Rule #2: corked contents are visible
   }
 
   // Sealed Unknown bottles (NOT locked; only information is obscured)
@@ -1969,6 +1982,48 @@ function generateBottlesFromRecipe(recipe) {
     state.stabilizer = { unlock: "UR_full", idx: 0, unlocked: false };
   }
 }
+
+
+function uncorkAllCorkedBottles(reason = "uncork") {
+  let changed = false;
+  for (let i = 0; i < state.bottles.length; i++) {
+    if (state.locked[i]) {
+      state.locked[i] = false;
+      // Keep hiddenSegs off for corked bottles (visible contents)
+      state.hiddenSegs[i] = false;
+      changed = true;
+    }
+  }
+  if (changed) {
+    playSFX(SFX.bottleOpened);
+    if (reason === "keystone") showToast("Keystone solved. Corks released.");
+    else if (reason === "deco") showToast("Decoherence applied. Corks released.");
+    else showToast("Corks released.");
+    render();
+    redrawAllBottles();
+  }
+  return changed;
+}
+
+function checkKeystoneUnlock() {
+  const ks = state.keystone;
+  if (!ks || ks.unlocked || ks.idx === null) return false;
+
+  const cap = state.capacity;
+  const target = ks.idx;
+
+  // If any bottle is SOLVED with the keystone element, unlock all corked bottles.
+  const solved = state.bottles.some(
+    (b) => b.length === cap && b.every((x) => x === target)
+  );
+
+  if (!solved) return false;
+
+  ks.unlocked = true;
+  uncorkAllCorkedBottles("keystone");
+  return true;
+}
+
 
 function checkStabilizerUnlock() {
   if (!state.stabilizer || state.stabilizer.unlocked) return;
@@ -2291,6 +2346,9 @@ function applyPourState(from, to) {
 
   checkStabilizerUnlock();
 
+  // Rule #2: keystone unlock gate
+  checkKeystoneUnlock();
+
   if (isSolved()) {
     showToast("Solved. Next level.");
     nextLevel();
@@ -2453,13 +2511,10 @@ function handleBottleTap(i) {
       showToast("Decoherence Key is spent.");
       return;
     }
-    state.locked[i] = false;
-    state.hiddenSegs[i] = false;
+    // Rule #2: Decoherence uncorks ALL corked bottles on this level
+    uncorkAllCorkedBottles("deco");
     modState.targeting = null;
-    playSFX(SFX.bottleOpened);
     renderModifiers();
-    render();
-    redrawAllBottles();
     maOneLiner(MODIFIERS.DECOHERENCE_KEY.maLine);
     return;
   }
