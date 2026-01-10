@@ -165,6 +165,8 @@ function pushUndoSnapshot() {
     bottles: deepCloneBottles(state.bottles),
     locked: state.locked.slice(),
     hiddenSegs: state.hiddenSegs.slice(),
+    sealedUnknown: state.sealedUnknown.slice(),
+    revealDepthPct: state.revealDepthPct.slice(),
     selected: state.selected,
     levelInvalid,
     punishedThisLevel,
@@ -181,6 +183,8 @@ function restoreUndoSnapshot() {
   state.bottles = deepCloneBottles(snap.bottles);
   state.locked = snap.locked.slice();
   state.hiddenSegs = snap.hiddenSegs.slice();
+  state.sealedUnknown = (snap.sealedUnknown || []).slice();
+  state.revealDepthPct = (snap.revealDepthPct || []).slice();
   state.selected = snap.selected;
 
   levelInvalid = snap.levelInvalid;
@@ -557,6 +561,10 @@ const state = {
   selected: -1,
   locked: [],
   hiddenSegs: [],
+  // Rule #3: Sealed Unknown bottles (partially revealed from the top only)
+  sealedUnknown: [],
+  // 0..1 percent of capacity revealed from the top (future-proof)
+  revealDepthPct: [],
   stabilizer: null,
 };
 
@@ -1100,6 +1108,10 @@ function useFailMod(mod) {
     state.bottles.push([]);
     state.locked.push(false);
     state.hiddenSegs.push(false);
+    state.sealedUnknown.push(false);
+    state.revealDepthPct.push(1);
+    state.sealedUnknown.push(false);
+    state.revealDepthPct.push(1);
 
     const to = state.bottles.length - 1;
     let best = null;
@@ -1476,6 +1488,10 @@ modSlot3?.addEventListener("click", () => {
     state.bottles.push([]);
     state.locked.push(false);
     state.hiddenSegs.push(false);
+    state.sealedUnknown.push(false);
+    state.revealDepthPct.push(1);
+    state.sealedUnknown.push(false);
+    state.revealDepthPct.push(1);
 
     const to = state.bottles.length - 1;
     let best = null;
@@ -1876,6 +1892,7 @@ function buildLocalRecipe() {
     capacity: cfg.capacity,
     emptyBottles: cfg.emptyBottles,
     lockedBottles: cfg.lockedBottles,
+    sealedUnknownBottles: 0,
     wildcardSlots: cfg.wildcardSlots,
     elements: elems,
     sinTags,
@@ -1918,12 +1935,34 @@ function generateBottlesFromRecipe(recipe) {
 
   state.locked = new Array(bottleCount).fill(false);
   state.hiddenSegs = new Array(bottleCount).fill(false);
+
+  // Rule #3 (Sealed Unknown): partial reveal from the top only.
+  state.sealedUnknown = new Array(bottleCount).fill(false);
+  state.revealDepthPct = new Array(bottleCount).fill(1);
+
   state.stabilizer = null;
 
   const lockCount = Math.min(recipe.lockedBottles || 0, bottleCount);
   for (let i = 0; i < lockCount; i++) {
     state.locked[i] = true;
     state.hiddenSegs[i] = true;
+  }
+
+  // Sealed Unknown bottles (NOT locked; only information is obscured)
+  // Default: top segment visible; deeper segments clouded until the top is poured away.
+  const suCountRaw = recipe.sealedUnknownBottles || 0;
+  const maxSU = Math.max(0, bottleCount - lockCount); // don't assign SU to locked bottles
+  const suCount = Math.max(0, Math.min(suCountRaw, maxSU));
+  if (suCount > 0) {
+    const cap2 = state.capacity;
+    let assigned = 0;
+    // Assign from the end to reduce collision with early locked indices.
+    for (let i = bottleCount - 1; i >= 0 && assigned < suCount; i--) {
+      if (state.locked[i]) continue;
+      state.sealedUnknown[i] = true;
+      state.revealDepthPct[i] = state.bottles[i]?.length ? 1 / cap2 : 1;
+      assigned++;
+    }
   }
 
   if (level >= STABILIZER_UNLOCK_LEVEL && lockCount > 0) {
@@ -2097,6 +2136,17 @@ function drawBottleLiquid(i) {
   const innerH = Math.max(1, h - chTop - chBottom);
   const cellH = innerH / cap;
 
+  // Rule #3 (Sealed Unknown): revealDepthPct controls how many layers from the TOP are visible.
+  // Visible layer count is based on capacity (future-proof for different segment structures).
+  const isSU = !!state.sealedUnknown?.[i];
+  const fillCount = b.length;
+  const pct = Number.isFinite(state.revealDepthPct?.[i]) ? state.revealDepthPct[i] : 1;
+  const visibleLayersFromTop = isSU
+    ? Math.max(1, Math.min(cap, Math.ceil(Math.max(0, Math.min(1, pct)) * cap)))
+    : cap;
+  const visibleCount = Math.min(fillCount, visibleLayersFromTop);
+  const hiddenBelow = Math.max(0, fillCount - visibleCount);
+
   const tilt = bottleTiltRad[i] || 0;
   const slant = Math.tan(tilt) * (innerW * 0.18);
 
@@ -2104,9 +2154,14 @@ function drawBottleLiquid(i) {
     const idx = b[s] ?? null;
     if (idx === null || idx === undefined) continue;
 
+    // Clouded segments: hide identity below the currently visible top layers.
+    // Note: segments still have real values; only rendering is obscured.
+    const isClouded = isSU && s < hiddenBelow;
+
     const sym = currentElements[idx];
     const el = ELEMENTS?.[sym];
-    const fill = el?.color || currentPalette[idx] || "#fff";
+    let fill = el?.color || currentPalette[idx] || "#fff";
+    if (isClouded) fill = "rgba(120,130,150,.55)";
     const role = el?.role || "";
     const texUrl = getRoleTextureUrl(role);
     const img = getPatternImage(texUrl);
@@ -2140,11 +2195,20 @@ function drawBottleLiquid(i) {
       ctx.restore();
     }
 
+    // Extra fog veil for clouded layers
+    if (isClouded) {
+      ctx.save();
+      ctx.globalAlpha = 0.35;
+      ctx.fillStyle = "rgba(10,14,22,.65)";
+      ctx.fillRect(innerX, yBottom, innerW, cellH);
+      ctx.restore();
+    }
+
     if (img && img.complete && img.naturalWidth > 0) {
       const pat = ctx.createPattern(img, "repeat");
       if (pat) {
         ctx.save();
-        ctx.globalAlpha = 1.0;
+        ctx.globalAlpha = isClouded ? 0.10 : 1.0;
         ctx.fillStyle = pat;
         ctx.fillRect(innerX, yBottom, innerW, cellH);
         ctx.restore();
@@ -2205,6 +2269,17 @@ function applyPourState(from, to) {
   const amount = Math.min(run, space);
 
   for (let i = 0; i < amount; i++) b.push(a.pop());
+
+  // Rule #3 (Sealed Unknown): each removed top segment reveals one deeper segment.
+  if (amount > 0 && state.sealedUnknown?.[from]) {
+    const step = 1 / Math.max(1, state.capacity);
+    const cur = Number.isFinite(state.revealDepthPct?.[from])
+      ? state.revealDepthPct[from]
+      : 1;
+    state.revealDepthPct[from] = Math.min(1, cur + step * amount);
+    // If emptied, stop showing as partially revealed.
+    if (!state.bottles[from]?.length) state.revealDepthPct[from] = 1;
+  }
 
   sig.moves++;
   syncInfoPanel();
@@ -2320,6 +2395,8 @@ function render() {
     if (state.selected === i) bottle.classList.add("selected");
     if (state.locked[i]) bottle.classList.add("locked");
     if (state.hiddenSegs[i]) bottle.classList.add("hiddenSegs");
+    if (state.sealedUnknown?.[i]) bottle.classList.add("sealedUnknown");
+    if ((state.revealDepthPct?.[i] ?? 1) < 1) bottle.classList.add("partiallyRevealed");
 
     const stg = instabilityStage[i] || 0;
     if (stg === 1) bottle.classList.add("unstable1");
