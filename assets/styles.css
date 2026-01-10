@@ -452,6 +452,44 @@ body{
     drop-shadow(0 0 40px rgba(154,122,160,0.70));
 }
 
+/* ---------- Keystone bottle marker (subtle) ---------- */
+/* Tiny “rune” dot at the neck. Above liquid + above bottle art. */
+.bottle.keystoneTarget{
+  position: relative; /* ensure pseudo positioning */
+}
+
+.bottle.keystoneTarget::before{
+  /* NOTE: .bottle::before is already used in your file for chamber overlay,
+     so we keep that intact by using a more specific selector layer below.
+     If you want zero risk, use ::marker via an added span — but that would not be CSS-only.
+  */
+}
+
+/* Use an extra overlay via the halo layer instead (safe: doesn't conflict with ::before/::after) */
+.bottle.keystoneTarget .bottleHalo{
+  /* Always faintly visible even when not selected */
+  opacity: 0.18;
+  filter:
+    drop-shadow(0 0 2px rgba(255,255,255,0.40))
+    drop-shadow(0 0 10px rgba(255,210,74,0.35));
+}
+
+/* Add a tiny glyph badge using background-mask on the bottle element itself */
+.bottle.keystoneTarget{
+  --ks-dot: radial-gradient(circle at center,
+    rgba(255,210,74,0.95) 0 2px,
+    rgba(255,210,74,0.35) 3px,
+    rgba(0,0,0,0) 6px
+  );
+}
+
+.bottle.keystoneTarget{
+  background-image: var(--ks-dot);
+  background-repeat: no-repeat;
+  background-size: 14px 14px;
+  background-position: 50% 14px; /* top-center “neck” */
+}
+
 /* ---------- MODIFIERS BAR ---------- */
 .modBar{
   position:absolute;
