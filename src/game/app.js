@@ -242,6 +242,7 @@ const showToast = makeToaster(qs("toast"));
 const settings = qs("settings");
 const devBtn = qs("devBtn");
 const apiBaseEl = qs("apiBase");
+const genReportEl = qs("genReport");
 
 const infoLevel = qs("infoLevel");
 const infoMoves = qs("infoMoves");
@@ -1262,13 +1263,42 @@ function tickInstabilityAfterValidMove() {
 }
 
 /* ---------------- UI ---------------- */
+
+function renderGenReport() {
+  if (!genReportEl) return;
+  const r = state.genReport;
+  if (!r) {
+    genReportEl.textContent = "—";
+    return;
+  }
+
+  const lines = [];
+  lines.push(`attempts: ${r.attempts_used}/${r.max_attempts}`);
+  if (r.keystone_active) {
+    lines.push(`keystone: ${r.keystone_element || "—"} @ bottle ${r.keystone_bottle_index ?? "—"}`);
+    if (typeof r.accessible_keystone === "number" && typeof r.capacity === "number") {
+      lines.push(`keystone accessible: ${r.accessible_keystone}/${r.capacity}`);
+    }
+  } else {
+    lines.push("keystone: (inactive)");
+  }
+  lines.push(`corked: ${r.corked_count ?? 0}`);
+  if (r.last_errors && r.last_errors.length) {
+    lines.push(`last_errors: ${r.last_errors.join(", ")}`);
+  } else {
+    lines.push("last_errors: none");
+  }
+  genReportEl.textContent = lines.join("\n");
+}
+
 function syncInfoPanel() {
   infoLevel.textContent = String(level);
   infoMoves.textContent = String(sig.moves);
   infoInvalid.textContent = String(sig.invalid);
   infoPlayer.textContent = getPlayerName() || "—";
-  infoThesis.textContent = thesisLabel.textContent.replace("Thesis: ", "") || "—";
+  infoThesis.textContent = thesisLabel.textContent.replace("Thesis: ", "") || "—";  renderGenReport();
 }
+
 
 function renderThesisBar(thesisKey) {
   const thesis = thesisKey ? THESES[thesisKey] : null;
@@ -2780,10 +2810,6 @@ function handleBottleTap(i) {
     }
     return;
   }
-  
-if (state.keystone?.bottleIndex === i && !state.keystone?.unlocked) {
-  bottle.classList.add("keystoneTarget");
-}
 
   animateTransferThenPour(from, to);
 }
@@ -2818,7 +2844,10 @@ function nextLevel() {
 }
 
 /* ---------------- Settings / Glossary / BANK ---------------- */
-devBtn.addEventListener("click", () => settings.showModal());
+devBtn.addEventListener("click", () => {
+  syncInfoPanel();
+  settings.showModal();
+});
 glossaryBtn.addEventListener("click", () => {
   renderGlossary();
   glossary.showModal();
