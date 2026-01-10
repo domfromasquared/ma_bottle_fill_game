@@ -24,7 +24,7 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
 const MODEL_QUEST = process.env.MODEL_QUEST || "gpt-4o-mini";
 const MODEL_RECIPE = process.env.MODEL_RECIPE || "gpt-4o-mini";
 
-const DM_SIGNATURE = "-MA";
+const DM_SIGNATURE = "[SIG:MA_V1]";
 
 /* ---------- Load voice canon ---------- */
 const VOICE_DIR = path.join(process.cwd(), "voice");
