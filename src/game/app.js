@@ -1911,6 +1911,102 @@ function shuffle(arr, rng) {
   }
 }
 
+
+/* ---------------- Keystone generation safety (Rule #2) ---------------- */
+/**
+ * When corked bottles exist AND a keystone element is active for the level:
+ * 1) Corked bottles may NEVER contain the keystone element (soft-lock prevention).
+ * 2) Keystone segments should be accessible pre-unlock. We guarantee this by
+ *    moving keystone segments to TOP positions of non-corked, filled bottles.
+ *
+ * This is a generator-side safety pass (not gameplay logic).
+ */
+function enforceKeystoneGenerationSafety({ ksIdx, lockCount, filledBottles }) {
+  if (ksIdx === null || ksIdx === undefined) return;
+  const cap = state.capacity | 0;
+  if (cap <= 0) return;
+  if ((lockCount | 0) <= 0) return;
+  if ((filledBottles | 0) <= 0) return;
+
+  // Non-corked bottles among the initially-filled set (empty bottles start after filledBottles)
+  const nonLockedFilled = [];
+  for (let i = lockCount; i < filledBottles; i++) nonLockedFilled.push(i);
+  if (!nonLockedFilled.length) return;
+
+  const swapSeg = (b1, s1, b2, s2) => {
+    const tmp = state.bottles[b1][s1];
+    state.bottles[b1][s1] = state.bottles[b2][s2];
+    state.bottles[b2][s2] = tmp;
+  };
+
+  // Helper to find any keystone segment position (bottle, slot)
+  const findAnyKeystone = (avoidBottle, avoidSlot) => {
+    for (let bi = 0; bi < filledBottles; bi++) {
+      const b = state.bottles[bi] || [];
+      for (let si = 0; si < b.length; si++) {
+        if (bi === avoidBottle && si === avoidSlot) continue;
+        if (b[si] === ksIdx) return { bi, si };
+      }
+    }
+    return null;
+  };
+
+  // 1) Ensure at least `cap` keystone segments exist in non-corked bottles at TOP positions.
+  //    We do this by swapping existing keystone segments into the top slot of non-corked bottles.
+  let placed = 0;
+  const maxPlacements = cap; // a full solved bottle requires exactly `cap` segments
+
+  for (let k = 0; k < maxPlacements; k++) {
+    const destBottle = nonLockedFilled[k % nonLockedFilled.length];
+    const destSlot = (state.bottles[destBottle]?.length || 0) - 1;
+    if (destSlot < 0) continue;
+
+    if (state.bottles[destBottle][destSlot] === ksIdx) {
+      placed++;
+      continue;
+    }
+
+    const src = findAnyKeystone(destBottle, destSlot);
+    if (!src) break;
+
+    swapSeg(src.bi, src.si, destBottle, destSlot);
+    if (state.bottles[destBottl
+  // --- Keystone safety pass (generation-side) ---
+  if (state.keystone?.idx !== null && state.keystone?.idx !== undefined && lockCount > 0) {
+    enforceKeystoneGenerationSafety({
+      ksIdx: state.keystone.idx,
+      lockCount,
+      filledBottles,
+    });
+  }
+
+e][destSlot] === ksIdx) placed++;
+  }
+
+  // 2) Hard rule: corked bottles must contain ZERO keystone segments.
+  //    Any remaining keystone segments in corked bottles get swapped out to non-corked filled bottles.
+  for (let bi = 0; bi < lockCount; bi++) {
+    const b = state.bottles[bi] || [];
+    for (let si = 0; si < b.length; si++) {
+      if (b[si] !== ksIdx) continue;
+
+      // find a non-corked segment that is NOT keystone to swap with
+      let swapped = false;
+      for (let bj = lockCount; bj < filledBottles && !swapped; bj++) {
+        const bb = state.bottles[bj] || [];
+        for (let sj = 0; sj < bb.length; sj++) {
+          if (bb[sj] === ksIdx) continue;
+          swapSeg(bi, si, bj, sj);
+          swapped = true;
+          break;
+        }
+      }
+      // If we couldn't swap (extremely unlikely unless palette is only keystone),
+      // we leave it as-is; validator should catch this scenario.
+    }
+  }
+}
+
 function generateBottlesFromRecipe(recipe) {
   const rng = makeRng(hashSeed(runSeed, 9898, level));
   state.capacity = recipe.capacity;
