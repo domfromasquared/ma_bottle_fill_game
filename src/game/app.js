@@ -2780,6 +2780,10 @@ function handleBottleTap(i) {
     }
     return;
   }
+  
+if (state.keystone?.bottleIndex === i && !state.keystone?.unlocked) {
+  bottle.classList.add("keystoneTarget");
+}
 
   animateTransferThenPour(from, to);
 }
