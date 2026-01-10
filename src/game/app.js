@@ -2699,6 +2699,7 @@ function render() {
     if (state.hiddenSegs[i]) bottle.classList.add("hiddenSegs");
     if (state.sealedUnknown?.[i]) bottle.classList.add("sealedUnknown");
     if ((state.revealDepthPct?.[i] ?? 1) < 1) bottle.classList.add("partiallyRevealed");
+    if (state.keystone?.bottleIndex === i && !state.keystone?.unlocked) bottle.classList.add("keystoneTarget");
 
     const stg = instabilityStage[i] || 0;
     if (stg === 1) bottle.classList.add("unstable1");
