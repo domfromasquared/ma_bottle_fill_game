@@ -663,10 +663,11 @@ function computeLevelConfig() {
       1,
       Math.min(4, base.emptyBottles + (m.emptyBottlesDelta || 0))
     );
-    base.lockedBottles = Math.max(
+    base.corkedBottles = Math.max(
       0,
-      Math.min(2, base.lockedBottles + (m.lockedBottlesDelta || 0))
+      Math.min(2, (base.corkedBottles ?? base.lockedBottles ?? 0) + (m.corkedBottlesDelta ?? m.lockedBottlesDelta ?? 0))
     );
+    base.lockedBottles = base.corkedBottles; // backward compat
     base.wildcardSlots = Math.max(
       0,
       Math.min(2, base.wildcardSlots + (m.wildcardSlotsDelta || 0))
@@ -1919,7 +1920,8 @@ function buildLocalRecipe() {
     bottleCount: cfg.bottleCount,
     capacity: cfg.capacity,
     emptyBottles: cfg.emptyBottles,
-    lockedBottles: cfg.lockedBottles,
+    corkedBottles: cfg.lockedBottles,
+    lockedBottles: cfg.lockedBottles, // backward compat
     sealedUnknownBottles: 0,
     wildcardSlots: cfg.wildcardSlots,
     // Rule #2 (optional per-level): element symbol that acts as Keystone. Solving a full bottle of this element uncorks all corked bottles.
@@ -2100,7 +2102,7 @@ function generateBottlesFromRecipe(recipe) {
   state.selected = -1;
 
   const filledBottles = bottleCount - empty;
-  const lockCount = Math.min(recipe.lockedBottles || 0, filledBottles);
+  const lockCount = Math.min((recipe.corkedBottles ?? recipe.lockedBottles ?? 0), filledBottles);
 
   // Rule #2: init keystone gate for this level
   const ksSym = recipe.keystoneElementSym;
