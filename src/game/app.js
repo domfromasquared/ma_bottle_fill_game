@@ -920,6 +920,21 @@ function shrinkTextToFitBubble() {
   }
 }
 
+function formatDMForPlayer(raw) {
+  if (!raw) return "";
+
+  // strip server validation signature(s)
+  let txt = String(raw).replace(/\[SIG:MA_V1\]/g, "").trim();
+
+  // optional: normalize whitespace after stripping
+  txt = txt.replace(/\n{3,}/g, "\n\n").trim();
+
+  // add a player-facing signoff if not present
+  if (!/(-\s*MA)\s*$/i.test(txt)) txt += "\n\n-MA";
+
+  return txt;
+}
+
 function setDMSpeech({ title, body, small, paginate = true, maxChars = 260 }) {
   questTitle.textContent = title || "—";
   speechSmall.textContent = small || "";
@@ -934,7 +949,7 @@ function setDMSpeech({ title, body, small, paginate = true, maxChars = 260 }) {
 
   dmBodyCopyEl = copy;
 
-  const full = String(body || "");
+  const full = formatDMForPlayer(body || "");
   if (paginate) {
     dmPages = splitIntoPagesPreserveNewlines(full, maxChars);
     dmPageIndex = 0;
