@@ -1,6 +1,4 @@
 // src/game/app.js
-import "./bankInference.js";
-
 import { ELEMENTS, THESES } from "../../element_schema.js";
 import { getJSON, setJSON, setNum } from "../utils/storage.js";
 import { makeRng, hashSeed, randInt } from "../utils/rng.js";
@@ -11,28 +9,18 @@ import { makeToaster, qs } from "../utils/ui.js";
 /* ---------------- Constants ---------------- */
 const FORESHADOW_START_LEVEL = 10;
 const STABILIZER_UNLOCK_LEVEL = 15;
-
-const DEFAULT_PROD = "https://ma-bottle-fill-api.onrender.com";
-
-/* ---------------- Telemetry (local v1) ---------------- */
+/* ========================= Telemetry (local, dev-first) =========================
+   Stored in localStorage as a ring buffer. Export via maExportTelemetry().
+   NOTE: BANK inference expects eventType + moveIndex + legal where applicable.
+================================================================================== */
 const TELEMETRY_KEY = "ma_telemetry_v1";
 const TELEMETRY_MAX = 1000;
 
-function telemetryEnabled() {
-  // Default ON. Users can opt out by setting localStorage.maTelemetryOff = "1"
-  return localStorage.getItem("maTelemetryOff") !== "1";
+function telemetryIsOff() {
+  return localStorage.getItem("maTelemetryOff") === "1";
 }
 
-function telemetrySessionId() {
-  let id = localStorage.getItem("maTelemetrySessionId");
-  if (!id) {
-    id = (globalThis.crypto?.randomUUID?.() || `sess_${Math.random().toString(16).slice(2)}_${Date.now()}`);
-    localStorage.setItem("maTelemetrySessionId", id);
-  }
-  return id;
-}
-
-function readTelemetry() {
+function getTelemetry() {
   try {
     const raw = localStorage.getItem(TELEMETRY_KEY);
     const arr = raw ? JSON.parse(raw) : [];
@@ -42,45 +30,62 @@ function readTelemetry() {
   }
 }
 
-function writeTelemetry(arr) {
+function pushTelemetry(evt) {
+  if (telemetryIsOff()) return;
+  const now = Date.now();
+  const e = {
+    // keep both for backward/forward compatibility
+    t: now,
+    ts: now,
+    eventType: evt.eventType,
+    ...evt,
+  };
+  const arr = getTelemetry();
+  arr.push(e);
+  if (arr.length > TELEMETRY_MAX) arr.splice(0, arr.length - TELEMETRY_MAX);
   try {
-    localStorage.setItem(TELEMETRY_KEY, JSON.stringify(arr.slice(-TELEMETRY_MAX)));
+    localStorage.setItem(TELEMETRY_KEY, JSON.stringify(arr));
   } catch {
-    // ignore quota / serialization errors
+    // ignore quota errors
   }
 }
 
-function logEvent(eventType, data = {}) {
-  if (!telemetryEnabled()) return;
-
-  const evt = {
-    t: Date.now(),
-    sid: telemetrySessionId(),
-    type: eventType,
-    level,
-    moveIndex: sig.moves,
-    ...data,
-  };
-
-  const arr = readTelemetry();
-  arr.push(evt);
-  writeTelemetry(arr);
-}
-
-globalThis.maExportTelemetry = function maExportTelemetry() {
-  const arr = readTelemetry();
-  const payload = JSON.stringify(arr, null, 2);
-  const blob = new Blob([payload], { type: "application/json" });
+window.maExportTelemetry = function maExportTelemetry() {
+  const arr = getTelemetry();
+  const blob = new Blob([JSON.stringify(arr, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `ma_telemetry_${new Date().toISOString().slice(0,10)}.json`;
+  a.href = url;
+  a.download = `ma_telemetry_${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
   document.body.appendChild(a);
   a.click();
-  setTimeout(() => {
-    URL.revokeObjectURL(a.href);
-    a.remove();
-  }, 0);
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2500);
 };
+
+function bottleTypeForTelemetry(i) {
+  const b = state.bottles[i] || [];
+  if (state.locked?.[i]) return "corked";
+  if (state.sealedUnknown?.[i]) return "sealedUnknown";
+  if (!b.length) return "empty";
+  // solved bottle (full single color)
+  if (b.length === state.capacity && b.every((x) => x === b[0])) return "solved";
+  return "open";
+}
+
+function canPourInfo(from, to) {
+  if (from === to) return { legal: false, blockedBy: "same" };
+  if (state.locked[from] || state.locked[to]) return { legal: false, blockedBy: "cork" };
+  const a = state.bottles[from], b = state.bottles[to];
+  if (!a.length) return { legal: false, blockedBy: "empty" };
+  if (b.length >= state.capacity) return { legal: false, blockedBy: "capacity" };
+  const color = topColor(a), target = topColor(b);
+  const ok = (target === null || target === color);
+  return { legal: ok, blockedBy: ok ? null : "rule" };
+}
+
+
+const DEFAULT_PROD = "https://ma-bottle-fill-api.onrender.com";
 const DEFAULT_LOCAL = "http://localhost:8787";
 const isLocal =
   location.hostname === "localhost" || location.hostname === "127.0.0.1";
@@ -250,8 +255,6 @@ function restoreUndoSnapshot() {
   const snap = undoStack.pop();
   if (!snap) return false;
 
-  // Keystone unlock event contract: once unlocked in a run, it stays unlocked.
-  const keystoneWasUnlocked = !!(state.keystone && state.keystone.unlocked);
   state.bottles = deepCloneBottles(snap.bottles);
   state.locked = snap.locked.slice();
   state.hiddenSegs = snap.hiddenSegs.slice();
@@ -264,13 +267,6 @@ function restoreUndoSnapshot() {
 
   sig.moves = snap.sigMoves;
   sig.invalid = snap.sigInvalid;
-
-  if (keystoneWasUnlocked) {
-    // Keep corks released even when rewinding to a pre-unlock snapshot.
-    state.keystone = state.keystone || {};
-    state.keystone.unlocked = true;
-    uncorkAllCorkedBottles("keystone");
-  }
 
   syncInfoPanel();
   render();
@@ -669,18 +665,6 @@ function isSolved() {
     return b.every((x) => x === b[0]);
   });
 }
-
-
-function bottleTypeLabel(i) {
-  if (state.locked?.[i]) return "corked";
-  if (state.keystone?.idx === i) return "keystone";
-  const b = state.bottles?.[i] || [];
-  if (!b.length) return "empty";
-  if (isBottleSolved(b)) return "solved";
-  if (state.sealedUnknown?.[i]) return "sealed_unknown";
-  return "open";
-}
-
 
 function canPour(from, to) {
   if (from === to) return false;
@@ -1211,6 +1195,20 @@ function useFailMod(mod) {
 
     for (let from = 0; from < state.bottles.length; from++) {
       if (from === to) continue;
+
+  // telemetry: pour attempt
+  const _pourInfo = canPourInfo(from, to);
+  pushTelemetry({
+    eventType: "pour_attempt",
+    level: currentLevel,
+    moveIndex: levelMoveIndex,
+    from,
+    to,
+    legal: _pourInfo.legal,
+    blockedBy: _pourInfo.blockedBy,
+    fromType: bottleTypeForTelemetry(from),
+    toType: bottleTypeForTelemetry(to),
+  });
       if (!canPour(from, to)) continue;
 
       const run = topRunCount(state.bottles[from]);
@@ -1245,8 +1243,6 @@ function useFailMod(mod) {
 function showInstabilityFailDM() {
   if (deadlockActive) return;
   deadlockActive = true;
-
-  try { logEvent("level_end", { result: "collapse", moves: sig.moves, undos: sig.undos }); } catch {}
 
   const { bankPrimary } = inferBANK();
   setBankRail(bankPrimary);
@@ -1292,7 +1288,6 @@ And this time—touch the problem before it becomes the problem.`,
   retryBtn.addEventListener("click", () => {
     deadlockActive = false;
     sig.resets++;
-    try { logEvent("level_end", { result: "reset", cause: "retry", moves: sig.moves, undos: sig.undos }); } catch {}
     hideDMOverlay();
     startLevel();
   });
@@ -1852,8 +1847,6 @@ function showOutOfMovesDM() {
   if (deadlockActive) return;
   deadlockActive = true;
 
-  try { logEvent("level_end", { result: "deadlock", moves: sig.moves, undos: sig.undos }); } catch {}
-
   const { bankPrimary } = inferBANK();
   setBankRail(bankPrimary);
 
@@ -2336,12 +2329,15 @@ function uncorkAllCorkedBottles(reason = "uncork") {
     }
   }
   if (changed) {
-    try {
-      logEvent("cork_unlock", {
-        method: reason === "keystone" ? "keystone" : reason === "deco" ? "deco_key" : reason,
-        corkedCount: 0,
-      });
-    } catch {}
+
+    pushTelemetry({
+      eventType: "cork_unlock",
+      level: currentLevel,
+      moveIndex: levelMoveIndex,
+      method: reason === "keystone" ? "keystone" : (reason === "deco" ? "deco_key" : "other"),
+      corkedCount: state.locked?.filter(Boolean)?.length ?? null,
+    });
+
     playSFX(SFX.bottleOpened);
     if (reason === "keystone") showToast("Keystone solved. Corks released.");
     else if (reason === "deco") showToast("Decoherence applied. Corks released.");
@@ -2368,15 +2364,14 @@ function checkKeystoneUnlock() {
   if (!solved) return false;
 
   ks.unlocked = true;
-  try {
-    logEvent("keystone_solved", {
-      keystoneElementSym: ks.sym ?? null,
-      keystoneBottleIndex: ks.idx,
-      movesToSolve: sig.moves,
-      instabilityActive: (state.instabilityStage || []).some((s) => (s || 0) > 0),
-      usedDecoKey: !!sig.modUses?.DECOHERENCE_KEY,
+
+    pushTelemetry({
+      eventType: "keystone_solved",
+      level: currentLevel,
+      moveIndex: levelMoveIndex,
+      bottleIndex: ks.bottleIndex,
+      elementSym: ks.elementSym,
     });
-  } catch {}
   uncorkAllCorkedBottles("keystone");
   return true;
 }
@@ -2680,20 +2675,21 @@ function applyPourState(from, to) {
   const space = state.capacity - b.length;
   const amount = Math.min(run, space);
 
-  for (let i = 0; i < amount; i++) b.push(a.pop());
 
-  // Telemetry: pour execute
-  if (amount > 0) {
-    try {
-      logEvent("pour_execute", {
-        from,
-        to,
-        movedCount: amount,
-        fromType: bottleTypeLabel(from),
-        toType: bottleTypeLabel(to),
-      });
-    } catch {}
-  }
+  // telemetry: pour execute (movedCount known here)
+  pushTelemetry({
+    eventType: "pour_execute",
+    level: currentLevel,
+    moveIndex: levelMoveIndex,
+    from,
+    to,
+    movedCount: amount,
+    fromType: bottleTypeForTelemetry(from),
+    toType: bottleTypeForTelemetry(to),
+  });
+
+
+  for (let i = 0; i < amount; i++) b.push(a.pop());
 
   // Rule #3 (Sealed Unknown): each removed top segment reveals one deeper segment.
   if (amount > 0 && state.sealedUnknown?.[from]) {
@@ -2701,16 +2697,15 @@ function applyPourState(from, to) {
     const cur = Number.isFinite(state.revealDepthPct?.[from])
       ? state.revealDepthPct[from]
       : 1;
-    const prev = cur;
     state.revealDepthPct[from] = Math.min(1, cur + step * amount);
-    try {
-      if (state.revealDepthPct[from] > prev) {
-        logEvent("unknown_reveal", {
-          bottleIndex: from,
-          newRevealDepthPct: state.revealDepthPct[from],
-        });
-      }
-    } catch {}
+
+    pushTelemetry({
+      eventType: "unknown_reveal",
+      level: currentLevel,
+      moveIndex: levelMoveIndex,
+      bottleIndex: from,
+      newRevealDepthPct: state.revealDepthPct[from],
+    });
     // If emptied, stop showing as partially revealed.
     if (!state.bottles[from]?.length) state.revealDepthPct[from] = 1;
   }
@@ -2721,15 +2716,24 @@ function applyPourState(from, to) {
   levelMoveIndex++;
   markTouched(from);
   markTouched(to);
-
-  // Rule #2: keystone unlock gate (fires after pour, before instability tick)
-  checkKeystoneUnlock();
-
   tickInstabilityAfterValidMove();
+
   checkStabilizerUnlock();
 
-if (isSolved()) {
-    try { logEvent("level_end", { result: "win", moves: sig.moves, undos: sig.undos }); } catch {}
+  // Rule #2: keystone unlock gate
+  checkKeystoneUnlock();
+
+  if (isSolved()) {
+
+    pushTelemetry({
+      eventType: "level_end",
+      level: currentLevel,
+      moveIndex: levelMoveIndex,
+      result: "win",
+      moves: sig.moves,
+      invalid: sig.invalid,
+      undos: sig.undos,
+    });
     showToast("Solved. Next level.");
     nextLevel();
     return true;
@@ -2739,6 +2743,16 @@ if (isSolved()) {
   redrawAllBottles();
 
   if (!isSolved() && !hasAnyPlayableMove()) {
+
+    pushTelemetry({
+      eventType: "level_end",
+      level: currentLevel,
+      moveIndex: levelMoveIndex,
+      result: "deadlock",
+      moves: sig.moves,
+      invalid: sig.invalid,
+      undos: sig.undos,
+    });
     showOutOfMovesDM();
   }
 
@@ -2880,6 +2894,18 @@ function handleBottleTap(i) {
   if (deadlockActive) return;
   if (inputLocked) return;
 
+
+  // telemetry: bottle select
+  pushTelemetry({
+    eventType: "bottle_select",
+    level: currentLevel,
+    moveIndex: levelMoveIndex,
+    bottleIndex: i,
+    bottleType: bottleTypeForTelemetry(i),
+    revealDepthPct: Number.isFinite(state.revealDepthPct?.[i]) ? state.revealDepthPct[i] : 1,
+    isKeystone: state.keystone?.bottleIndex === i && !state.keystone?.unlocked,
+  });
+
   if (modState.targeting === "DECOHERENCE_KEY") {
     if (!state.locked[i]) {
       showToast("Tap a LOCKED bottle to revoke its seal.");
@@ -2892,10 +2918,14 @@ function handleBottleTap(i) {
       showToast("Decoherence Key is spent.");
       return;
     }
-    // Telemetry: deco key unlock path
-    try { logEvent("deco_key_use", { bottleIndex: i }); } catch {}
     // Rule #2: Decoherence uncorks ALL corked bottles on this level
-    uncorkAllCorkedBottles("deco");
+    
+    pushTelemetry({
+      eventType: "deco_key_use",
+      level: currentLevel,
+      moveIndex: levelMoveIndex,
+    });
+uncorkAllCorkedBottles("deco");
     modState.targeting = null;
     renderModifiers();
     maOneLiner(MODIFIERS.DECOHERENCE_KEY.maLine);
@@ -2908,14 +2938,6 @@ function handleBottleTap(i) {
 
   if (state.selected < 0) {
     state.selected = i;
-    try {
-      logEvent("bottle_select", {
-        bottleIndex: i,
-        bottleType: bottleTypeLabel(i),
-        revealDepthPct: Number.isFinite(state.revealDepthPct?.[i]) ? state.revealDepthPct[i] : 1,
-        isKeystone: state.keystone?.idx === i,
-      });
-    } catch {}
     render();
     redrawAllBottles();
     return;
@@ -2931,17 +2953,6 @@ function handleBottleTap(i) {
   const from = state.selected;
   const to = i;
 
-    try {
-      const legal = canPour(from, to);
-      logEvent("pour_attempt", {
-        from,
-        to,
-        legal,
-        blockedBy: legal ? null : (state.locked?.[from] || state.locked?.[to] ? "cork" : "rule"),
-        fromType: bottleTypeLabel(from),
-        toType: bottleTypeLabel(to),
-      });
-    } catch {}
   state.selected = -1;
   render();
   redrawAllBottles();
@@ -2986,22 +2997,20 @@ function startLevel() {
 
   generateBottlesFromRecipe(recipe);
 
-  initInstabilityForLevel();
 
-  // Telemetry: level start snapshot
-  try {
-    const corkedCount = state.locked?.filter(Boolean).length || 0;
-    const sealedUnknownCount = state.sealedUnknown?.filter(Boolean).length || 0;
-    const ks = state.keystone || {};
-    logEvent("level_start", {
-      capacity: state.capacity,
-      colors: currentElements?.length || 0,
-      corkedCount,
-      sealedUnknownCount,
-      keystoneElementSym: ks.sym ?? null,
-      keystoneBottleIndex: ks.idx ?? null,
-    });
-  } catch {}
+  // telemetry: level start
+  pushTelemetry({
+    eventType: "level_start",
+    level: currentLevel,
+    capacity: state.capacity,
+    corkedCount: (recipe.corkedBottles ?? recipe.lockedBottles ?? 0),
+    sealedUnknownCount: (recipe.sealedUnknownBottles ?? 0),
+    keystoneElementSym: recipe.keystoneElementSym ?? null,
+    keystoneBottleIndex: recipe.keystoneBottleIndex ?? null,
+  });
+
+
+  initInstabilityForLevel();
 
   render();
   syncInfoPanel();
