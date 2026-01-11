@@ -11,6 +11,74 @@ const FORESHADOW_START_LEVEL = 10;
 const STABILIZER_UNLOCK_LEVEL = 15;
 
 const DEFAULT_PROD = "https://ma-bottle-fill-api.onrender.com";
+
+/* ---------------- Telemetry (local v1) ---------------- */
+const TELEMETRY_KEY = "ma_telemetry_v1";
+const TELEMETRY_MAX = 1000;
+
+function telemetryEnabled() {
+  // Default ON. Users can opt out by setting localStorage.maTelemetryOff = "1"
+  return localStorage.getItem("maTelemetryOff") !== "1";
+}
+
+function telemetrySessionId() {
+  let id = localStorage.getItem("maTelemetrySessionId");
+  if (!id) {
+    id = (globalThis.crypto?.randomUUID?.() || `sess_${Math.random().toString(16).slice(2)}_${Date.now()}`);
+    localStorage.setItem("maTelemetrySessionId", id);
+  }
+  return id;
+}
+
+function readTelemetry() {
+  try {
+    const raw = localStorage.getItem(TELEMETRY_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeTelemetry(arr) {
+  try {
+    localStorage.setItem(TELEMETRY_KEY, JSON.stringify(arr.slice(-TELEMETRY_MAX)));
+  } catch {
+    // ignore quota / serialization errors
+  }
+}
+
+function logEvent(eventType, data = {}) {
+  if (!telemetryEnabled()) return;
+
+  const evt = {
+    t: Date.now(),
+    sid: telemetrySessionId(),
+    type: eventType,
+    level,
+    moveIndex: sig.moves,
+    ...data,
+  };
+
+  const arr = readTelemetry();
+  arr.push(evt);
+  writeTelemetry(arr);
+}
+
+globalThis.maExportTelemetry = function maExportTelemetry() {
+  const arr = readTelemetry();
+  const payload = JSON.stringify(arr, null, 2);
+  const blob = new Blob([payload], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `ma_telemetry_${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    URL.revokeObjectURL(a.href);
+    a.remove();
+  }, 0);
+};
 const DEFAULT_LOCAL = "http://localhost:8787";
 const isLocal =
   location.hostname === "localhost" || location.hostname === "127.0.0.1";
@@ -600,6 +668,18 @@ function isSolved() {
   });
 }
 
+
+function bottleTypeLabel(i) {
+  if (state.locked?.[i]) return "corked";
+  if (state.keystone?.idx === i) return "keystone";
+  const b = state.bottles?.[i] || [];
+  if (!b.length) return "empty";
+  if (isBottleSolved(b)) return "solved";
+  if (state.sealedUnknown?.[i]) return "sealed_unknown";
+  return "open";
+}
+
+
 function canPour(from, to) {
   if (from === to) return false;
   if (state.locked[from] || state.locked[to]) return false;
@@ -1164,6 +1244,8 @@ function showInstabilityFailDM() {
   if (deadlockActive) return;
   deadlockActive = true;
 
+  try { logEvent("level_end", { result: "collapse", moves: sig.moves, undos: sig.undos }); } catch {}
+
   const { bankPrimary } = inferBANK();
   setBankRail(bankPrimary);
 
@@ -1208,6 +1290,7 @@ And this time—touch the problem before it becomes the problem.`,
   retryBtn.addEventListener("click", () => {
     deadlockActive = false;
     sig.resets++;
+    try { logEvent("level_end", { result: "reset", cause: "retry", moves: sig.moves, undos: sig.undos }); } catch {}
     hideDMOverlay();
     startLevel();
   });
@@ -1767,6 +1850,8 @@ function showOutOfMovesDM() {
   if (deadlockActive) return;
   deadlockActive = true;
 
+  try { logEvent("level_end", { result: "deadlock", moves: sig.moves, undos: sig.undos }); } catch {}
+
   const { bankPrimary } = inferBANK();
   setBankRail(bankPrimary);
 
@@ -2249,6 +2334,12 @@ function uncorkAllCorkedBottles(reason = "uncork") {
     }
   }
   if (changed) {
+    try {
+      logEvent("cork_unlock", {
+        method: reason === "keystone" ? "keystone" : reason === "deco" ? "deco_key" : reason,
+        corkedCount: 0,
+      });
+    } catch {}
     playSFX(SFX.bottleOpened);
     if (reason === "keystone") showToast("Keystone solved. Corks released.");
     else if (reason === "deco") showToast("Decoherence applied. Corks released.");
@@ -2275,6 +2366,15 @@ function checkKeystoneUnlock() {
   if (!solved) return false;
 
   ks.unlocked = true;
+  try {
+    logEvent("keystone_solved", {
+      keystoneElementSym: ks.sym ?? null,
+      keystoneBottleIndex: ks.idx,
+      movesToSolve: sig.moves,
+      instabilityActive: (state.instabilityStage || []).some((s) => (s || 0) > 0),
+      usedDecoKey: !!sig.modUses?.DECOHERENCE_KEY,
+    });
+  } catch {}
   uncorkAllCorkedBottles("keystone");
   return true;
 }
@@ -2580,13 +2680,35 @@ function applyPourState(from, to) {
 
   for (let i = 0; i < amount; i++) b.push(a.pop());
 
+  // Telemetry: pour execute
+  if (amount > 0) {
+    try {
+      logEvent("pour_execute", {
+        from,
+        to,
+        movedCount: amount,
+        fromType: bottleTypeLabel(from),
+        toType: bottleTypeLabel(to),
+      });
+    } catch {}
+  }
+
   // Rule #3 (Sealed Unknown): each removed top segment reveals one deeper segment.
   if (amount > 0 && state.sealedUnknown?.[from]) {
     const step = 1 / Math.max(1, state.capacity);
     const cur = Number.isFinite(state.revealDepthPct?.[from])
       ? state.revealDepthPct[from]
       : 1;
+    const prev = cur;
     state.revealDepthPct[from] = Math.min(1, cur + step * amount);
+    try {
+      if (state.revealDepthPct[from] > prev) {
+        logEvent("unknown_reveal", {
+          bottleIndex: from,
+          newRevealDepthPct: state.revealDepthPct[from],
+        });
+      }
+    } catch {}
     // If emptied, stop showing as partially revealed.
     if (!state.bottles[from]?.length) state.revealDepthPct[from] = 1;
   }
@@ -2605,6 +2727,7 @@ function applyPourState(from, to) {
   checkStabilizerUnlock();
 
 if (isSolved()) {
+    try { logEvent("level_end", { result: "win", moves: sig.moves, undos: sig.undos }); } catch {}
     showToast("Solved. Next level.");
     nextLevel();
     return true;
@@ -2767,6 +2890,8 @@ function handleBottleTap(i) {
       showToast("Decoherence Key is spent.");
       return;
     }
+    // Telemetry: deco key unlock path
+    try { logEvent("deco_key_use", { bottleIndex: i }); } catch {}
     // Rule #2: Decoherence uncorks ALL corked bottles on this level
     uncorkAllCorkedBottles("deco");
     modState.targeting = null;
@@ -2781,6 +2906,14 @@ function handleBottleTap(i) {
 
   if (state.selected < 0) {
     state.selected = i;
+    try {
+      logEvent("bottle_select", {
+        bottleIndex: i,
+        bottleType: bottleTypeLabel(i),
+        revealDepthPct: Number.isFinite(state.revealDepthPct?.[i]) ? state.revealDepthPct[i] : 1,
+        isKeystone: state.keystone?.idx === i,
+      });
+    } catch {}
     render();
     redrawAllBottles();
     return;
@@ -2796,6 +2929,17 @@ function handleBottleTap(i) {
   const from = state.selected;
   const to = i;
 
+    try {
+      const legal = canPour(from, to);
+      logEvent("pour_attempt", {
+        from,
+        to,
+        legal,
+        blockedBy: legal ? null : (state.locked?.[from] || state.locked?.[to] ? "cork" : "rule"),
+        fromType: bottleTypeLabel(from),
+        toType: bottleTypeLabel(to),
+      });
+    } catch {}
   state.selected = -1;
   render();
   redrawAllBottles();
@@ -2841,6 +2985,21 @@ function startLevel() {
   generateBottlesFromRecipe(recipe);
 
   initInstabilityForLevel();
+
+  // Telemetry: level start snapshot
+  try {
+    const corkedCount = state.locked?.filter(Boolean).length || 0;
+    const sealedUnknownCount = state.sealedUnknown?.filter(Boolean).length || 0;
+    const ks = state.keystone || {};
+    logEvent("level_start", {
+      capacity: state.capacity,
+      colors: currentElements?.length || 0,
+      corkedCount,
+      sealedUnknownCount,
+      keystoneElementSym: ks.sym ?? null,
+      keystoneBottleIndex: ks.idx ?? null,
+    });
+  } catch {}
 
   render();
   syncInfoPanel();
