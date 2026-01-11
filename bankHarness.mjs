@@ -20,6 +20,11 @@ import process from "node:process";
 // Adjust if your path differs:
 import { computeBankProfile } from "./src/game/bankInference.js";
 
+function getEventTs(e) {
+  const v = e?.ts ?? e?.t ?? 0;
+  return Number.isFinite(v) ? v : 0;
+}
+
 function parseArgs(argv) {
   const args = { file: null, levels: null, last: null, perLevel: false };
   const rest = argv.slice(2);
@@ -137,7 +142,7 @@ function main() {
   }
 
   // Sort deterministically
-  events.sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0));
+events.sort((a, b) => getEventTs(a) - getEventTs(b));
 
   const runsAll = groupRuns(events);
   const runsFiltered = lastNRuns(filterLevels(runsAll, args.levels), args.last);
