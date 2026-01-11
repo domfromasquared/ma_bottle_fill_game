@@ -1,3 +1,5 @@
+import "./bankInference.js";
+
 // src/game/app.js
 import { ELEMENTS, THESES } from "../../element_schema.js";
 import { getJSON, setJSON, setNum } from "../utils/storage.js";
