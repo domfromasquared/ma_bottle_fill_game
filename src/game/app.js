@@ -180,6 +180,8 @@ function restoreUndoSnapshot() {
   const snap = undoStack.pop();
   if (!snap) return false;
 
+  // Keystone unlock event contract: once unlocked in a run, it stays unlocked.
+  const keystoneWasUnlocked = !!(state.keystone && state.keystone.unlocked);
   state.bottles = deepCloneBottles(snap.bottles);
   state.locked = snap.locked.slice();
   state.hiddenSegs = snap.hiddenSegs.slice();
@@ -192,6 +194,13 @@ function restoreUndoSnapshot() {
 
   sig.moves = snap.sigMoves;
   sig.invalid = snap.sigInvalid;
+
+  if (keystoneWasUnlocked) {
+    // Keep corks released even when rewinding to a pre-unlock snapshot.
+    state.keystone = state.keystone || {};
+    state.keystone.unlocked = true;
+    uncorkAllCorkedBottles("keystone");
+  }
 
   syncInfoPanel();
   render();
@@ -2588,14 +2597,14 @@ function applyPourState(from, to) {
   levelMoveIndex++;
   markTouched(from);
   markTouched(to);
-  tickInstabilityAfterValidMove();
 
-  checkStabilizerUnlock();
-
-  // Rule #2: keystone unlock gate
+  // Rule #2: keystone unlock gate (fires after pour, before instability tick)
   checkKeystoneUnlock();
 
-  if (isSolved()) {
+  tickInstabilityAfterValidMove();
+  checkStabilizerUnlock();
+
+if (isSolved()) {
     showToast("Solved. Next level.");
     nextLevel();
     return true;
