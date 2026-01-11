@@ -1200,7 +1200,7 @@ function useFailMod(mod) {
   const _pourInfo = canPourInfo(from, to);
   pushTelemetry({
     eventType: "pour_attempt",
-    level: currentLevel,
+    level: level,
     moveIndex: levelMoveIndex,
     from,
     to,
@@ -2332,7 +2332,7 @@ function uncorkAllCorkedBottles(reason = "uncork") {
 
     pushTelemetry({
       eventType: "cork_unlock",
-      level: currentLevel,
+      level: level,
       moveIndex: levelMoveIndex,
       method: reason === "keystone" ? "keystone" : (reason === "deco" ? "deco_key" : "other"),
       corkedCount: state.locked?.filter(Boolean)?.length ?? null,
@@ -2367,7 +2367,7 @@ function checkKeystoneUnlock() {
 
     pushTelemetry({
       eventType: "keystone_solved",
-      level: currentLevel,
+      level: level,
       moveIndex: levelMoveIndex,
       bottleIndex: ks.bottleIndex,
       elementSym: ks.elementSym,
@@ -2679,7 +2679,7 @@ function applyPourState(from, to) {
   // telemetry: pour execute (movedCount known here)
   pushTelemetry({
     eventType: "pour_execute",
-    level: currentLevel,
+    level: level,
     moveIndex: levelMoveIndex,
     from,
     to,
@@ -2701,7 +2701,7 @@ function applyPourState(from, to) {
 
     pushTelemetry({
       eventType: "unknown_reveal",
-      level: currentLevel,
+      level: level,
       moveIndex: levelMoveIndex,
       bottleIndex: from,
       newRevealDepthPct: state.revealDepthPct[from],
@@ -2727,7 +2727,7 @@ function applyPourState(from, to) {
 
     pushTelemetry({
       eventType: "level_end",
-      level: currentLevel,
+      level: level,
       moveIndex: levelMoveIndex,
       result: "win",
       moves: sig.moves,
@@ -2746,7 +2746,7 @@ function applyPourState(from, to) {
 
     pushTelemetry({
       eventType: "level_end",
-      level: currentLevel,
+      level: level,
       moveIndex: levelMoveIndex,
       result: "deadlock",
       moves: sig.moves,
@@ -2898,7 +2898,7 @@ function handleBottleTap(i) {
   // telemetry: bottle select
   pushTelemetry({
     eventType: "bottle_select",
-    level: currentLevel,
+    level: level,
     moveIndex: levelMoveIndex,
     bottleIndex: i,
     bottleType: bottleTypeForTelemetry(i),
@@ -2922,7 +2922,7 @@ function handleBottleTap(i) {
     
     pushTelemetry({
       eventType: "deco_key_use",
-      level: currentLevel,
+      level: level,
       moveIndex: levelMoveIndex,
     });
 uncorkAllCorkedBottles("deco");
@@ -3001,7 +3001,7 @@ function startLevel() {
   // telemetry: level start
   pushTelemetry({
     eventType: "level_start",
-    level: currentLevel,
+    level: level,
     capacity: state.capacity,
     corkedCount: (recipe.corkedBottles ?? recipe.lockedBottles ?? 0),
     sealedUnknownCount: (recipe.sealedUnknownBottles ?? 0),
