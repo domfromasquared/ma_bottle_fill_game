@@ -1,5 +1,3 @@
-import "./bankInference.js";
-
 // src/game/app.js
 import { ELEMENTS, THESES } from "../../element_schema.js";
 import { getJSON, setJSON, setNum } from "../utils/storage.js";
@@ -2958,6 +2956,20 @@ uncorkAllCorkedBottles("deco");
   state.selected = -1;
   render();
   redrawAllBottles();
+
+  // telemetry: pour attempt (player)
+  const _pourInfo = canPourInfo(from, to);
+  pushTelemetry({
+    eventType: "pour_attempt",
+    level: level,
+    moveIndex: levelMoveIndex,
+    from,
+    to,
+    legal: _pourInfo.legal,
+    blockedBy: _pourInfo.blockedBy,
+    fromType: bottleTypeForTelemetry(from),
+    toType: bottleTypeForTelemetry(to),
+  });
 
   if (!canPour(from, to)) {
     sig.invalid++;
