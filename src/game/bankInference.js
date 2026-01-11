@@ -16,6 +16,7 @@
        diagnostics: {...}
      }
    ============================================================ */
+import "./bankInference.js";
 
 const BANK_TYPES = ["Blueprint", "Action", "Nurturing", "Knowledge"];
 
