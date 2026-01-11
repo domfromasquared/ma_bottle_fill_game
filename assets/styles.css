@@ -418,6 +418,36 @@ body{
   opacity: 0;              /* off by default */
 }
 
+/* ---------- Keystone designated bottle marker (subtle) ---------- */
+/* A faint “rune” dot near the neck + a gentle halo presence.
+   Uses existing .bottleHalo layer so it never fights the bottle art (::after). */
+.bottle.keystoneTarget{
+  /* tiny neck dot */
+  --ks-dot: radial-gradient(circle at center,
+    rgba(255,210,74,0.95) 0 2px,
+    rgba(255,210,74,0.35) 3px,
+    rgba(0,0,0,0) 6px
+  );
+
+  background-image: var(--ks-dot);
+  background-repeat: no-repeat;
+  background-size: 14px 14px;
+  background-position: 50% 14px; /* top-center “neck” */
+}
+
+/* keep it VERY subtle until selected */
+.bottle.keystoneTarget .bottleHalo{
+  opacity: 0.14;
+  filter:
+    drop-shadow(0 0 2px rgba(255,255,255,0.35))
+    drop-shadow(0 0 10px rgba(255,210,74,0.28));
+}
+
+/* when selected, let your normal selection halo rules win */
+.bottle.keystoneTarget.selected .bottleHalo{
+  opacity: 1;
+}
+
 /* TURN OFF the rectangle box-shadow glow (so it doesn’t fight the halo) */
 .bottle.selected,
 .bottle.pressed,
