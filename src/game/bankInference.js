@@ -472,3 +472,6 @@ function computeBankProfile(events) {
     }
   };
 }
+// DEV ONLY: expose for console calibration
+window.computeBankProfile = computeBankProfile;
+
