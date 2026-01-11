@@ -1,5 +1,3 @@
-import "./bankInference.js";
-
 // src/game/app.js
 import { ELEMENTS, THESES } from "../../element_schema.js";
 import { getJSON, setJSON, setNum } from "../utils/storage.js";
@@ -2700,6 +2698,19 @@ function applyPourState(from, to) {
       ? state.revealDepthPct[from]
       : 1;
     state.revealDepthPct[from] = Math.min(1, cur + step * amount);
+
+    // telemetry: unknown reveal (Rule #3)
+    const nextReveal = state.revealDepthPct[from];
+    if (nextReveal > cur + 1e-6) {
+      pushTelemetry({
+        eventType: "unknown_reveal",
+        level: level,
+        moveIndex: levelMoveIndex,
+        bottleIndex: from,
+        newRevealDepthPct: nextReveal,
+        prevRevealDepthPct: cur,
+      });
+    }
 
     pushTelemetry({
       eventType: "unknown_reveal",
