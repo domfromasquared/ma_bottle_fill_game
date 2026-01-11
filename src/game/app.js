@@ -1,5 +1,7 @@
 // src/game/app.js
-import "./bankInference.js";
+import { computeBankProfile } from "./bankInference.js";
+window.computeBankProfile = computeBankProfile; // devtools calibration
+
 import { ELEMENTS, THESES } from "../../element_schema.js";
 import { getJSON, setJSON, setNum } from "../utils/storage.js";
 import { makeRng, hashSeed, randInt } from "../utils/rng.js";
