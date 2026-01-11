@@ -161,10 +161,16 @@ function expectedSolveMoves(levelStartEvent) {
   return BANK_CFG.EXPECTED_SOLVE_MOVES_BY_BAND[band] || 44;
 }
 
+function getEventTs(e) {
+  // support both legacy `t` and newer `ts`
+  const v = e?.ts ?? e?.t ?? 0;
+  return Number.isFinite(v) ? v : 0;
+}
+
 /* ------------------------ Main ------------------------ */
 function computeBankProfile(events) {
   const evs = Array.isArray(events) ? events.slice() : [];
-  evs.sort((a,b) => (a.ts ?? 0) - (b.ts ?? 0)); // deterministic if timestamps present
+  evs.sort((a,b) => getEventTs(a) - getEventTs(b));  // deterministic if timestamps present
 
   // State
   let S = { Blueprint: 0, Action: 0, Nurturing: 0, Knowledge: 0 };
