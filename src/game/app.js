@@ -2006,6 +2006,7 @@ function buildLocalRecipe() {
   const cfg = computeLevelConfig();
   const elems = chooseElementsForThesis(currentThesisKey, cfg.colors, rng);
 
+   
   return {
     title: `Level ${level}`,
     colors: cfg.colors,
@@ -2025,7 +2026,28 @@ function buildLocalRecipe() {
     sinTags,
     appliedModifier: pendingModifier || null,
   };
+
+   /* ---------- Sealed Unknown introduction ramp ---------- */
+recipe.sealedUnknownBottles = recipe.sealedUnknownBottles ?? 0;
+
+if (level >= 12 && level < 20) {
+  if (Math.random() < 0.25) {
+    recipe.sealedUnknownBottles = Math.max(recipe.sealedUnknownBottles, 1);
+  }
+} else if (level >= 20 && level < 35) {
+  if (Math.random() < 0.40) {
+    recipe.sealedUnknownBottles = Math.max(recipe.sealedUnknownBottles, 1);
+  }
+} else if (level >= 35) {
+  if (Math.random() < 0.55) {
+    recipe.sealedUnknownBottles = Math.max(recipe.sealedUnknownBottles, 1);
+  }
+  if (Math.random() < 0.15) {
+    recipe.sealedUnknownBottles = Math.max(recipe.sealedUnknownBottles, 2);
+  }
 }
+
+return recipe;
 
 function shuffle(arr, rng) {
   for (let i = arr.length - 1; i > 0; i--) {
