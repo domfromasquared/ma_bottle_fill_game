@@ -218,6 +218,7 @@ const RECIPE_SCHEMA = {
     capacity: { type: "integer", minimum: 3, maximum: 6 },
     emptyBottles: { type: "integer", minimum: 1, maximum: 6 },
     lockedBottles: { type: "integer", minimum: 0, maximum: 3 },
+    corkedBottles: { type: "integer", minimum: 0, maximum: 3 }, // ✅ alias
     wildcardSlots: { type: "integer", minimum: 0, maximum: 2 },
 
     elements: { type: "array", items: { type: "string" }, minItems: 4, maxItems: 12 },
@@ -244,6 +245,21 @@ function normalizeContext(body) {
   c.modifier = c.modifier ?? c.modifier_delta;
   c.foreshadowOnly = c.foreshadowOnly ?? c.foreshadow_only;
   return c;
+}
+
+function normalizeModifier(mod) {
+  const m = { ...ZERO_MOD, ...(mod || {}) };
+
+  // Accept corked alias from client
+  if ((m.lockedBottlesDelta === undefined || m.lockedBottlesDelta === null) &&
+      (m.corkedBottlesDelta !== undefined && m.corkedBottlesDelta !== null)) {
+    m.lockedBottlesDelta = m.corkedBottlesDelta;
+  }
+
+  // Keep both in sync (server canonical = locked)
+  m.corkedBottlesDelta = m.lockedBottlesDelta;
+
+  return m;
 }
 
 /* ---------- Routes ---------- */
@@ -342,7 +358,8 @@ if (full.includes("listen, genius")) payload.used_voice_ids.push("catch:listen_g
       return fail(res, 400, "LLM voice payload failed validation", ["dm_verdict: missing signature token (risk of tone drift)"]);
     }
 
-    if (!wantModifier) payload.modifier = { ...ZERO_MOD };
+if (!wantModifier) payload.modifier = normalizeModifier(ZERO_MOD);
+else payload.modifier = normalizeModifier(payload.modifier);
 
     const fullText = [payload.quest_title, payload.dm_intro, payload.dm_midpoint, payload.dm_verdict].join(" ");
     if (violatesVoice(fullText)) {
@@ -368,7 +385,7 @@ app.post("/api/level-recipe", async (req, res) => {
     const missing = required.filter(k => context[k] === undefined || context[k] === null || context[k] === "");
     if (missing.length) return fail(res, 400, "Missing required fields", missing);
 
-    const incomingMod = context.modifier || { ...ZERO_MOD };
+    const incomingMod = normalizeModifier(context.modifier);
 
     const instructions = `
 ${voiceLock}
