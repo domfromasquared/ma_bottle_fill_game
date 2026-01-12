@@ -2006,8 +2006,8 @@ function buildLocalRecipe() {
   const cfg = computeLevelConfig();
   const elems = chooseElementsForThesis(currentThesisKey, cfg.colors, rng);
 
-   
-  return {
+  // Build a mutable recipe object first
+  const recipe = {
     title: `Level ${level}`,
     colors: cfg.colors,
     bottleCount: cfg.bottleCount,
@@ -2017,37 +2017,41 @@ function buildLocalRecipe() {
     lockedBottles: cfg.lockedBottles, // backward compat
     sealedUnknownBottles: 0,
     wildcardSlots: cfg.wildcardSlots,
-    // Rule #2 (optional per-level): element symbol that acts as Keystone. Solving a full bottle of this element uncorks all corked bottles.
+
+    // Rule #2 (optional per-level): element symbol that acts as Keystone.
     keystoneElementSym: null,
+
     // Rule #2 (optional per-level): designated bottle index to solve as the Keystone collector.
     // If null, generator will select a safe non-corked empty bottle.
     keystoneBottleIndex: null,
+
     elements: elems,
     sinTags,
     appliedModifier: pendingModifier || null,
   };
 
-   /* ---------- Sealed Unknown introduction ramp ---------- */
-recipe.sealedUnknownBottles = recipe.sealedUnknownBottles ?? 0;
+  /* ---------- Sealed Unknown introduction ramp ---------- */
+  recipe.sealedUnknownBottles = recipe.sealedUnknownBottles ?? 0;
 
-if (level >= 12 && level < 20) {
-  if (Math.random() < 0.25) {
-    recipe.sealedUnknownBottles = Math.max(recipe.sealedUnknownBottles, 1);
+  if (level >= 12 && level < 20) {
+    if (Math.random() < 0.25) {
+      recipe.sealedUnknownBottles = Math.max(recipe.sealedUnknownBottles, 1);
+    }
+  } else if (level >= 20 && level < 35) {
+    if (Math.random() < 0.40) {
+      recipe.sealedUnknownBottles = Math.max(recipe.sealedUnknownBottles, 1);
+    }
+  } else if (level >= 35) {
+    if (Math.random() < 0.55) {
+      recipe.sealedUnknownBottles = Math.max(recipe.sealedUnknownBottles, 1);
+    }
+    if (Math.random() < 0.15) {
+      recipe.sealedUnknownBottles = Math.max(recipe.sealedUnknownBottles, 2);
+    }
   }
-} else if (level >= 20 && level < 35) {
-  if (Math.random() < 0.40) {
-    recipe.sealedUnknownBottles = Math.max(recipe.sealedUnknownBottles, 1);
-  }
-} else if (level >= 35) {
-  if (Math.random() < 0.55) {
-    recipe.sealedUnknownBottles = Math.max(recipe.sealedUnknownBottles, 1);
-  }
-  if (Math.random() < 0.15) {
-    recipe.sealedUnknownBottles = Math.max(recipe.sealedUnknownBottles, 2);
-  }
+
+  return recipe;
 }
-
-return recipe;
 
 function shuffle(arr, rng) {
   for (let i = arr.length - 1; i > 0; i--) {
