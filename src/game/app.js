@@ -2246,7 +2246,7 @@ function generateBottlesFromRecipe(recipe) {
     }
 
     // Assign Sealed Unknown bottles (never assign to locked bottles)
-    const suCountRaw = recipe.sealedUnknownBottles || 0;
+    const suCountRaw = recipe.sealedUnknownBottles || 2;
     const maxSU = Math.max(0, bottleCount - lockCount);
     const suCount = Math.max(0, Math.min(suCountRaw, maxSU));
     if (suCount > 0) {
@@ -3033,7 +3033,7 @@ function startLevel() {
     level: level,
     capacity: state.capacity,
     corkedCount: (recipe.corkedBottles ?? recipe.lockedBottles ?? 0),
-    sealedUnknownCount: (recipe.sealedUnknownBottles ?? 0),
+    sealedUnknownCount: (recipe.sealedUnknownBottles ?? 2),
     keystoneElementSym: recipe.keystoneElementSym ?? null,
     keystoneBottleIndex: recipe.keystoneBottleIndex ?? null,
   });
