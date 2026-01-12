@@ -2005,6 +2005,8 @@ function buildLocalRecipe() {
 
   const cfg = computeLevelConfig();
   const elems = chooseElementsForThesis(currentThesisKey, cfg.colors, rng);
+   console.log("LEVEL", level, "cfg.lockedBottles =", cfg.lockedBottles, "emptyBottles =", cfg.emptyBottles, "bottleCount =", cfg.bottleCount);
+
 
   // Build a mutable recipe object first
   const recipe = {
