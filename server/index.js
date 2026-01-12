@@ -152,6 +152,7 @@ function fewshotsBlock() {
 /* ---------- Modifier defaults ---------- */
 const ZERO_MOD = {
   lockedBottlesDelta: 0,
+  corkedBottlesDelta: 0,
   emptyBottlesDelta: 0,
   capacityDelta: 0,
   wildcardSlotsDelta: 0,
@@ -170,6 +171,7 @@ const MODIFIER_SCHEMA = {
   additionalProperties: false,
   properties: {
     lockedBottlesDelta: { type: "integer", minimum: -1, maximum: 2 },
+    corkedBottlesDelta: { type: "integer", minimum: -1, maximum: 2 },
     emptyBottlesDelta:  { type: "integer", minimum: -2, maximum: 3 },
     capacityDelta:      { type: "integer", minimum: -1, maximum: 2 },
     wildcardSlotsDelta: { type: "integer", minimum: -1, maximum: 2 },
@@ -179,7 +181,7 @@ const MODIFIER_SCHEMA = {
     bonusObjective:     { type: "string" },
   },
   required: [
-    "lockedBottlesDelta","emptyBottlesDelta","capacityDelta","wildcardSlotsDelta",
+    "lockedBottlesDelta","corkedBottlesDelta","emptyBottlesDelta","capacityDelta","wildcardSlotsDelta",
     "colorsDelta","bottleCountDelta","ruleTag","bonusObjective"
   ],
 };
