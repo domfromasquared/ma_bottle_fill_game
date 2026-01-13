@@ -2040,8 +2040,8 @@ function buildLocalRecipe() {
   const sinTags = inferSinTags();
   currentThesisKey = pickThesisKey(rng, sinTags, bankPrimary);
 
-  const cfg = computeLevelConfig();
-  const elems = chooseElementsForThesis(currentThesisKey, cfg.colors, rng);
+   const cfg = computeLevelConfig(level, rng);
+   const elems = chooseElementsForThesis(currentThesisKey, cfg.colors, rng);
    console.log("LEVEL", level, "cfg.lockedBottles =", cfg.lockedBottles, "emptyBottles =", cfg.emptyBottles, "bottleCount =", cfg.bottleCount);
 
 
