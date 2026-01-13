@@ -721,44 +721,81 @@ function isBottleMostlySolved(i) {
 
 let pendingModifier = null;
 
-function computeLevelConfig() {
+/**
+ * Option A: computeLevelConfig(levelArg, rng)
+ * - Deterministic corked/locked bottle ramp using rng.f()
+ * - Keeps corkedBottles + lockedBottles always mirrored (backward compat)
+ * - Modifier deltas apply on top
+ */
+function computeLevelConfig(levelArg = level, rng = null) {
+  // If caller doesn't provide rng, create a deterministic one for THIS level.
+  // (Keeps behavior stable across refresh/runSeed.)
+  if (!rng) rng = makeRng(hashSeed(runSeed, 4242, levelArg, 99001));
+
   const base = {
-    colors: Math.min(6, 3 + Math.floor((level - 1) / 6)),
+    colors: Math.min(6, 3 + Math.floor((levelArg - 1) / 6)),
     capacity: 4,
     bottleCount: null,
     emptyBottles: 2,
+
+    // Canonical term
+    corkedBottles: 0,
+    // Backward compat (always mirrored)
     lockedBottles: 0,
+
     wildcardSlots: 0,
   };
+
   const m = pendingModifier || null;
   if (m) {
     base.colors = Math.max(3, Math.min(8, base.colors + (m.colorsDelta || 0)));
-    base.capacity = Math.max(
-      3,
-      Math.min(6, base.capacity + (m.capacityDelta || 0))
-    );
+    base.capacity = Math.max(3, Math.min(6, base.capacity + (m.capacityDelta || 0)));
+
     base.emptyBottles = Math.max(
       1,
       Math.min(4, base.emptyBottles + (m.emptyBottlesDelta || 0))
     );
-    base.corkedBottles = Math.max(
-      0,
-      Math.min(2, (base.corkedBottles ?? base.lockedBottles ?? 0) + (m.corkedBottlesDelta ?? m.lockedBottlesDelta ?? 0))
-    );
+
+    // Apply modifier deltas to corked/locked (supports both names)
+    const deltaCorked = (m.corkedBottlesDelta ?? m.lockedBottlesDelta ?? 0);
+    base.corkedBottles = Math.max(0, Math.min(2, base.corkedBottles + deltaCorked));
     base.lockedBottles = base.corkedBottles; // backward compat
+
     base.wildcardSlots = Math.max(
       0,
       Math.min(2, base.wildcardSlots + (m.wildcardSlotsDelta || 0))
     );
+
     base.bottleCount =
       base.colors + base.emptyBottles + (m.bottleCountDelta || 0);
   }
+
+  // Corked bottle introduction ramp (Rule #2 levels)
+  // If modifiers already set corkedBottles > 0, we respect it.
+  // Otherwise we probabilistically introduce them by level band.
+  if (base.corkedBottles <= 0) {
+    if (levelArg >= 18 && levelArg < 28) {
+      if (rng.f() < 0.25) base.corkedBottles = 1;
+    } else if (levelArg >= 28 && levelArg < 45) {
+      if (rng.f() < 0.40) base.corkedBottles = 1;
+    } else if (levelArg >= 45) {
+      if (rng.f() < 0.55) base.corkedBottles = 1;
+      if (rng.f() < 0.15) base.corkedBottles = 2;
+    }
+  }
+
+  // Always mirror for backward compat
+  base.lockedBottles = base.corkedBottles;
+
   if (!base.bottleCount) base.bottleCount = base.colors + base.emptyBottles;
   return base;
 }
 
 function thesisAdjust() {
-  const cfg = computeLevelConfig();
+  // Deterministic cfg for this level (same seed style as buildLocalRecipe)
+  const rng = makeRng(hashSeed(runSeed, 4242, level, 99001));
+  const cfg = computeLevelConfig(level, rng);
+
   const base = 10;
   let threshold = base + Math.floor(level / 2) + (cfg.bottleCount - cfg.colors);
 
