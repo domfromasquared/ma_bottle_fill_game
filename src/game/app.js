@@ -1,4 +1,3 @@
-
 import "./bankInference.js";
 
 // src/game/app.js
@@ -721,81 +720,64 @@ function isBottleMostlySolved(i) {
 
 let pendingModifier = null;
 
-/**
- * Option A: computeLevelConfig(levelArg, rng)
- * - Deterministic corked/locked bottle ramp using rng.f()
- * - Keeps corkedBottles + lockedBottles always mirrored (backward compat)
- * - Modifier deltas apply on top
- */
 function computeLevelConfig(levelArg = level, rng = null) {
-  // If caller doesn't provide rng, create a deterministic one for THIS level.
-  // (Keeps behavior stable across refresh/runSeed.)
+  // deterministic RNG for config decisions (corked/unknown ramps)
   if (!rng) rng = makeRng(hashSeed(runSeed, 4242, levelArg, 99001));
-
   const base = {
     colors: Math.min(6, 3 + Math.floor((levelArg - 1) / 6)),
     capacity: 4,
     bottleCount: null,
     emptyBottles: 2,
-
-    // Canonical term
-    corkedBottles: 0,
-    // Backward compat (always mirrored)
     lockedBottles: 0,
-
+    sealedUnknownBottles: (cfg.sealedUnknownBottles ?? 0),
     wildcardSlots: 0,
   };
-
   const m = pendingModifier || null;
   if (m) {
     base.colors = Math.max(3, Math.min(8, base.colors + (m.colorsDelta || 0)));
-    base.capacity = Math.max(3, Math.min(6, base.capacity + (m.capacityDelta || 0)));
-
+    base.capacity = Math.max(
+      3,
+      Math.min(6, base.capacity + (m.capacityDelta || 0))
+    );
     base.emptyBottles = Math.max(
       1,
       Math.min(4, base.emptyBottles + (m.emptyBottlesDelta || 0))
     );
-
-    // Apply modifier deltas to corked/locked (supports both names)
-    const deltaCorked = (m.corkedBottlesDelta ?? m.lockedBottlesDelta ?? 0);
-    base.corkedBottles = Math.max(0, Math.min(2, base.corkedBottles + deltaCorked));
+    base.corkedBottles = Math.max(
+      0,
+      Math.min(2, (base.corkedBottles ?? base.lockedBottles ?? 0) + (m.corkedBottlesDelta ?? m.lockedBottlesDelta ?? 0))
+    );
     base.lockedBottles = base.corkedBottles; // backward compat
-
+    base.sealedUnknownBottles = Math.max(
+      0,
+      Math.min(3, (base.sealedUnknownBottles ?? 0) + (m.sealedUnknownBottlesDelta || 0))
+    );
     base.wildcardSlots = Math.max(
       0,
       Math.min(2, base.wildcardSlots + (m.wildcardSlotsDelta || 0))
     );
-
     base.bottleCount =
       base.colors + base.emptyBottles + (m.bottleCountDelta || 0);
   }
 
-  // Corked bottle introduction ramp (Rule #2 levels)
-  // If modifiers already set corkedBottles > 0, we respect it.
-  // Otherwise we probabilistically introduce them by level band.
-  if (base.corkedBottles <= 0) {
-    if (levelArg >= 18 && levelArg < 28) {
-      if (rng.f() < 0.25) base.corkedBottles = 1;
-    } else if (levelArg >= 28 && levelArg < 45) {
-      if (rng.f() < 0.40) base.corkedBottles = 1;
-    } else if (levelArg >= 45) {
-      if (rng.f() < 0.55) base.corkedBottles = 1;
-      if (rng.f() < 0.15) base.corkedBottles = 2;
+  // Sealed Unknown introduction ramp (Rule #3)
+  // If modifiers already set sealedUnknownBottles > 0, we respect it.
+  if ((base.sealedUnknownBottles ?? 0) <= 0) {
+    if (levelArg >= 12 && levelArg < 20) {
+      if (rng.f() < 0.25) base.sealedUnknownBottles = 1;
+    } else if (levelArg >= 20 && levelArg < 35) {
+      if (rng.f() < 0.40) base.sealedUnknownBottles = 1;
+    } else if (levelArg >= 35) {
+      if (rng.f() < 0.55) base.sealedUnknownBottles = 1;
+      if (rng.f() < 0.15) base.sealedUnknownBottles = 2;
     }
   }
-
-  // Always mirror for backward compat
-  base.lockedBottles = base.corkedBottles;
-
   if (!base.bottleCount) base.bottleCount = base.colors + base.emptyBottles;
   return base;
 }
 
 function thesisAdjust() {
-  // Deterministic cfg for this level (same seed style as buildLocalRecipe)
-  const rng = makeRng(hashSeed(runSeed, 4242, level, 99001));
   const cfg = computeLevelConfig(level, rng);
-
   const base = 10;
   let threshold = base + Math.floor(level / 2) + (cfg.bottleCount - cfg.colors);
 
@@ -2040,13 +2022,10 @@ function buildLocalRecipe() {
   const sinTags = inferSinTags();
   currentThesisKey = pickThesisKey(rng, sinTags, bankPrimary);
 
-   const cfg = computeLevelConfig(level, rng);
-   const elems = chooseElementsForThesis(currentThesisKey, cfg.colors, rng);
-   console.log("LEVEL", level, "cfg.lockedBottles =", cfg.lockedBottles, "emptyBottles =", cfg.emptyBottles, "bottleCount =", cfg.bottleCount);
+  const cfg = computeLevelConfig(level, rng);
+  const elems = chooseElementsForThesis(currentThesisKey, cfg.colors, rng);
 
-
-  // Build a mutable recipe object first
-  const recipe = {
+  return {
     title: `Level ${level}`,
     colors: cfg.colors,
     bottleCount: cfg.bottleCount,
@@ -2054,42 +2033,17 @@ function buildLocalRecipe() {
     emptyBottles: cfg.emptyBottles,
     corkedBottles: cfg.lockedBottles,
     lockedBottles: cfg.lockedBottles, // backward compat
-    sealedUnknownBottles: 0,
+    sealedUnknownBottles: (cfg.sealedUnknownBottles ?? 0),
     wildcardSlots: cfg.wildcardSlots,
-
-    // Rule #2 (optional per-level): element symbol that acts as Keystone.
+    // Rule #2 (optional per-level): element symbol that acts as Keystone. Solving a full bottle of this element uncorks all corked bottles.
     keystoneElementSym: null,
-
     // Rule #2 (optional per-level): designated bottle index to solve as the Keystone collector.
     // If null, generator will select a safe non-corked empty bottle.
     keystoneBottleIndex: null,
-
     elements: elems,
     sinTags,
     appliedModifier: pendingModifier || null,
   };
-
-  /* ---------- Sealed Unknown introduction ramp ---------- */
-  recipe.sealedUnknownBottles = recipe.sealedUnknownBottles ?? 0;
-
-  if (level >= 12 && level < 20) {
-    if (Math.random() < 0.25) {
-      recipe.sealedUnknownBottles = Math.max(recipe.sealedUnknownBottles, 1);
-    }
-  } else if (level >= 20 && level < 35) {
-    if (Math.random() < 0.40) {
-      recipe.sealedUnknownBottles = Math.max(recipe.sealedUnknownBottles, 1);
-    }
-  } else if (level >= 35) {
-    if (Math.random() < 0.55) {
-      recipe.sealedUnknownBottles = Math.max(recipe.sealedUnknownBottles, 1);
-    }
-    if (Math.random() < 0.15) {
-      recipe.sealedUnknownBottles = Math.max(recipe.sealedUnknownBottles, 2);
-    }
-  }
-
-  return recipe;
 }
 
 function shuffle(arr, rng) {
