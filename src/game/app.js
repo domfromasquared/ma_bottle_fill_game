@@ -2744,6 +2744,7 @@ function applyPourState(from, to) {
     if (!state.bottles[from]?.length) state.revealDepthPct[from] = 1;
   }
 
+  }
   sig.moves++;
   syncInfoPanel();
 
