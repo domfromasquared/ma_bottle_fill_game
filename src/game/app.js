@@ -729,7 +729,7 @@ function computeLevelConfig(levelArg = level, rng = null) {
     bottleCount: null,
     emptyBottles: 2,
     lockedBottles: 0,
-    sealedUnknownBottles: (cfg.sealedUnknownBottles ?? 0),
+    sealedUnknownBottles: 0,
     wildcardSlots: 0,
   };
   const m = pendingModifier || null;
@@ -760,6 +760,22 @@ function computeLevelConfig(levelArg = level, rng = null) {
       base.colors + base.emptyBottles + (m.bottleCountDelta || 0);
   }
 
+
+
+// Corked bottle introduction ramp (Rule #2)
+// If modifiers already set corkedBottles > 0, we respect it.
+if ((base.corkedBottles ?? 0) <= 0) {
+  if (levelArg >= 18 && levelArg < 28) {
+    if (rng.f() < 0.25) base.corkedBottles = 1;
+  } else if (levelArg >= 28 && levelArg < 45) {
+    if (rng.f() < 0.40) base.corkedBottles = 1;
+  } else if (levelArg >= 45) {
+    if (rng.f() < 0.55) base.corkedBottles = 1;
+    if (rng.f() < 0.15) base.corkedBottles = 2;
+  }
+}
+// Always mirror for backward compat
+base.lockedBottles = base.corkedBottles;
   // Sealed Unknown introduction ramp (Rule #3)
   // If modifiers already set sealedUnknownBottles > 0, we respect it.
   if ((base.sealedUnknownBottles ?? 0) <= 0) {
@@ -777,7 +793,7 @@ function computeLevelConfig(levelArg = level, rng = null) {
 }
 
 function thesisAdjust() {
-  const cfg = computeLevelConfig(level, rng);
+  const cfg = computeLevelConfig(level, makeRng(hashSeed(runSeed, 4242, level, 99001)));
   const base = 10;
   let threshold = base + Math.floor(level / 2) + (cfg.bottleCount - cfg.colors);
 
@@ -2022,7 +2038,7 @@ function buildLocalRecipe() {
   const sinTags = inferSinTags();
   currentThesisKey = pickThesisKey(rng, sinTags, bankPrimary);
 
-  const cfg = computeLevelConfig(level, rng);
+  const cfg = computeLevelConfig(level, makeRng(hashSeed(runSeed, 4242, level, 99001)));
   const elems = chooseElementsForThesis(currentThesisKey, cfg.colors, rng);
 
   return {
@@ -2031,9 +2047,9 @@ function buildLocalRecipe() {
     bottleCount: cfg.bottleCount,
     capacity: cfg.capacity,
     emptyBottles: cfg.emptyBottles,
-    corkedBottles: cfg.lockedBottles,
+    corkedBottles: (cfg.corkedBottles ?? cfg.lockedBottles ?? 0),
     lockedBottles: cfg.lockedBottles, // backward compat
-    sealedUnknownBottles: (cfg.sealedUnknownBottles ?? 0),
+    sealedUnknownBottles: 0,
     wildcardSlots: cfg.wildcardSlots,
     // Rule #2 (optional per-level): element symbol that acts as Keystone. Solving a full bottle of this element uncorks all corked bottles.
     keystoneElementSym: null,
@@ -2392,7 +2408,7 @@ function checkKeystoneUnlock() {
       level: level,
       moveIndex: levelMoveIndex,
       bottleIndex: ks.bottleIndex,
-      elementSym: ks.elementSym,
+      elementSym: ks.sym,
     });
   uncorkAllCorkedBottles("keystone");
   return true;
@@ -2724,23 +2740,6 @@ function applyPourState(from, to) {
     // telemetry: unknown reveal (Rule #3)
     const nextReveal = state.revealDepthPct[from];
     if (nextReveal > cur + 1e-6) {
-      pushTelemetry({
-        eventType: "unknown_reveal",
-        level: level,
-        moveIndex: levelMoveIndex,
-        bottleIndex: from,
-        newRevealDepthPct: nextReveal,
-        prevRevealDepthPct: cur,
-      });
-    }
-
-    pushTelemetry({
-      eventType: "unknown_reveal",
-      level: level,
-      moveIndex: levelMoveIndex,
-      bottleIndex: from,
-      newRevealDepthPct: state.revealDepthPct[from],
-    });
     // If emptied, stop showing as partially revealed.
     if (!state.bottles[from]?.length) state.revealDepthPct[from] = 1;
   }
