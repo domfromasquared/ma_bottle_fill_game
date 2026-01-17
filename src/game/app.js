@@ -729,7 +729,7 @@ function computeLevelConfig(levelArg = level, rng = null) {
     bottleCount: null,
     emptyBottles: 2,
     lockedBottles: 0,
-    sealedUnknownBottles: 0,
+    sealedUnknownBottles: (cfg.sealedUnknownBottles ?? 0),
     wildcardSlots: 0,
   };
   const m = pendingModifier || null;
@@ -2041,7 +2041,7 @@ function buildLocalRecipe() {
   const cfg = computeLevelConfig(level, makeRng(hashSeed(runSeed, 4242, level, 99001)));
   const elems = chooseElementsForThesis(currentThesisKey, cfg.colors, rng);
 
-  return {
+  const recipe = {
     title: `Level ${level}`,
     colors: cfg.colors,
     bottleCount: cfg.bottleCount,
@@ -2060,6 +2060,14 @@ function buildLocalRecipe() {
     sinTags,
     appliedModifier: pendingModifier || null,
   };
+
+// Rule #2: Keystone activation
+// If the level has corked bottles, enable a Keystone element (deterministic pick from this level's element list).
+if ((recipe.corkedBottles ?? recipe.lockedBottles ?? 0) > 0 && !recipe.keystoneElementSym) {
+  recipe.keystoneElementSym = recipe.elements?.[0]?.sym ?? recipe.elements?.[0] ?? null;
+}
+
+return recipe;;
 }
 
 function shuffle(arr, rng) {
@@ -2290,8 +2298,10 @@ function generateBottlesFromRecipe(recipe) {
       let assigned = 0;
       for (let i = bottleCount - 1; i >= 0 && assigned < suCount; i--) {
         if (state.locked[i]) continue;
+        const len = state.bottles[i]?.length || 0;
+        if (len === 0) continue; // never assign sealed-unknown to empty bottles
         state.sealedUnknown[i] = true;
-        state.revealDepthPct[i] = state.bottles[i]?.length ? 1 / cap2 : 1;
+        state.revealDepthPct[i] = 1 / cap2; // start: only top segment visible
         assigned++;
       }
     }
@@ -2357,6 +2367,7 @@ function generateBottlesFromRecipe(recipe) {
 
 
 function uncorkAllCorkedBottles(reason = "uncork") {
+  const corkedBefore = state.locked?.filter(Boolean)?.length ?? 0;
   let changed = false;
   for (let i = 0; i < state.bottles.length; i++) {
     if (state.locked[i]) {
@@ -2373,7 +2384,7 @@ function uncorkAllCorkedBottles(reason = "uncork") {
       level: level,
       moveIndex: levelMoveIndex,
       method: reason === "keystone" ? "keystone" : (reason === "deco" ? "deco_key" : "other"),
-      corkedCount: state.locked?.filter(Boolean)?.length ?? null,
+      corkedCount: corkedBefore,
     });
 
     playSFX(SFX.bottleOpened);
@@ -2730,22 +2741,32 @@ function applyPourState(from, to) {
   for (let i = 0; i < amount; i++) b.push(a.pop());
 
   // Rule #3 (Sealed Unknown): each removed top segment reveals one deeper segment.
-  if (amount > 0 && state.sealedUnknown?.[from]) {
-    const step = 1 / Math.max(1, state.capacity);
-    const cur = Number.isFinite(state.revealDepthPct?.[from])
-      ? state.revealDepthPct[from]
-      : 1;
-    state.revealDepthPct[from] = Math.min(1, cur + step * amount);
+if (amount > 0 && state.sealedUnknown?.[from]) {
+  const step = 1 / Math.max(1, state.capacity);
+  const cur = Number.isFinite(state.revealDepthPct?.[from]) ? state.revealDepthPct[from] : 1;
+  const next = Math.min(1, cur + step * amount);
 
-    // telemetry: unknown reveal (Rule #3)
-    const nextReveal = state.revealDepthPct[from];
-    if (nextReveal > cur + 1e-6) {
-    // If emptied, stop showing as partially revealed.
-    if (!state.bottles[from]?.length) state.revealDepthPct[from] = 1;
+  // If emptied, stop showing as partially revealed.
+  if (!state.bottles[from]?.length) {
+    state.revealDepthPct[from] = 1;
+  } else {
+    state.revealDepthPct[from] = next;
   }
 
+  // telemetry: unknown reveal (Rule #3)
+  if (next > cur + 1e-6) {
+    pushTelemetry({
+      eventType: "unknown_reveal",
+      level: level,
+      moveIndex: levelMoveIndex,
+      bottleIndex: from,
+      revealDepthPctBefore: cur,
+      revealDepthPctAfter: state.revealDepthPct[from],
+      remainingSegments: state.bottles[from]?.length || 0,
+    });
   }
-  sig.moves++;
+}
+sig.moves++;
   syncInfoPanel();
 
   levelMoveIndex++;
