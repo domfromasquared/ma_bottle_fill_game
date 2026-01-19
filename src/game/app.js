@@ -2593,14 +2593,14 @@ function drawBottleLiquid(i) {
   const innerH = Math.max(1, h - chTop - chBottom);
   const cellH = innerH / cap;
 
-  // Rule #3 (Sealed Unknown): revealDepthPct controls how many layers from the TOP are visible.
-  // Visible layer count is based on capacity (future-proof for different segment structures).
+  // Rule #3 (Sealed Unknown): only the CURRENT top segment is shown in true color.
+  // Lower segments remain clouded until they become the top segment.
+  // We still track revealDepthPct for telemetry/future FX, but it does NOT make multiple
+  // colored layers visible at once.
   const isSU = !!state.sealedUnknown?.[i];
   const fillCount = b.length;
   const pct = Number.isFinite(state.revealDepthPct?.[i]) ? state.revealDepthPct[i] : 1;
-  const visibleLayersFromTop = isSU
-    ? Math.max(1, Math.min(cap, Math.ceil(Math.max(0, Math.min(1, pct)) * cap)))
-    : cap;
+  const visibleLayersFromTop = isSU ? 1 : cap;
   const visibleCount = Math.min(fillCount, visibleLayersFromTop);
   const hiddenBelow = Math.max(0, fillCount - visibleCount);
 
