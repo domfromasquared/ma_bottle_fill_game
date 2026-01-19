@@ -728,8 +728,9 @@ function computeLevelConfig(levelArg = level, rng = null) {
     capacity: 4,
     bottleCount: null,
     emptyBottles: 2,
+    corkedBottles: 0,
     lockedBottles: 0,
-    sealedUnknownBottles: (cfg.sealedUnknownBottles ?? 0),
+    sealedUnknownBottles: 0,
     wildcardSlots: 0,
   };
   const m = pendingModifier || null;
@@ -2049,7 +2050,7 @@ function buildLocalRecipe() {
     emptyBottles: cfg.emptyBottles,
     corkedBottles: (cfg.corkedBottles ?? cfg.lockedBottles ?? 0),
     lockedBottles: cfg.lockedBottles, // backward compat
-    sealedUnknownBottles: 0,
+    sealedUnknownBottles: (cfg.sealedUnknownBottles ?? 0),
     wildcardSlots: cfg.wildcardSlots,
     // Rule #2 (optional per-level): element symbol that acts as Keystone. Solving a full bottle of this element uncorks all corked bottles.
     keystoneElementSym: null,
@@ -2067,7 +2068,7 @@ if ((recipe.corkedBottles ?? recipe.lockedBottles ?? 0) > 0 && !recipe.keystoneE
   recipe.keystoneElementSym = recipe.elements?.[0]?.sym ?? recipe.elements?.[0] ?? null;
 }
 
-return recipe;;
+return recipe;
 }
 
 function shuffle(arr, rng) {
