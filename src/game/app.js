@@ -93,6 +93,14 @@ const isLocal =
   location.hostname === "localhost" || location.hostname === "127.0.0.1";
 
 const INVALID_POUR_PUNISH_THRESHOLD = 3;
+
+// Soft-deadlock detection ("no progressive moves")
+// We treat back-and-forth cycling with no meaningful progress as a fail-state.
+// This avoids "infinite legal pours" that can never lead to completion.
+const SOFT_DEADLOCK_WINDOW = 18;          // recent valid pours to consider
+const SOFT_DEADLOCK_REPEAT_MIN = 3;       // same exact state seen this many times inside the window
+const SOFT_DEADLOCK_STALL_MOVES = 14;     // consecutive valid pours with no progress = fail
+
 const SIN_QUEUE_KEY = "ma_sinQueue";
 
 const PLAYER_NAME_KEY = "ma_playerName";
@@ -274,6 +282,9 @@ function restoreUndoSnapshot() {
   syncInfoPanel();
   render();
   redrawAllBottles();
+
+  resetSoftDeadlock();
+  recordSoftDeadlockStep();
   return true;
 }
 
@@ -691,6 +702,94 @@ function hasAnyPlayableMove() {
     }
   }
   return false;
+}
+
+
+
+/* ---------------- Soft-deadlock detection (progressless loops) ---------------- */
+let softDeadlockStates = [];
+let softDeadlockProgress = [];
+
+function resetSoftDeadlock() {
+  softDeadlockStates = [];
+  softDeadlockProgress = [];
+}
+
+function stateHashForDeadlock() {
+  // Hash bottles + corks + key gates. Deterministic string; fast enough for our window sizes.
+  const bottlesSig = state.bottles
+    .map((b) => (b && b.length ? b.join(',') : ''))
+    .join('|');
+  const lockedSig = (state.locked || []).map((x) => (x ? '1' : '0')).join('');
+  const suSig = (state.sealedUnknown || []).map((x) => (x ? '1' : '0')).join('');
+  const rdSig = (state.revealDepthPct || []).map((v) => {
+    const n = Number.isFinite(v) ? v : 1;
+    return String(Math.round(Math.max(0, Math.min(1, n)) * 100));
+  }).join(',');
+  const ks = state.keystone;
+  const ksSig = ks ? `${ks.idx ?? 'n'}:${ks.bottleIndex ?? 'n'}:${ks.unlocked ? 1 : 0}` : 'none';
+  const st = state.stabilizer;
+  const stSig = st ? `${st.idx ?? 'n'}:${st.unlocked ? 1 : 0}` : 'none';
+  return `${bottlesSig}#L${lockedSig}#SU${suSig}#RD${rdSig}#K${ksSig}#S${stSig}`;
+}
+
+function progressSignature() {
+  // A tiny summary that should move when the player makes real progress.
+  // If this signature doesn't change for long enough AND we see repeated states, we declare deadlock.
+  const cap = state.capacity || 0;
+  let solved = 0;
+  let empty = 0;
+  for (let i = 0; i < state.bottles.length; i++) {
+    const b = state.bottles[i] || [];
+    if (!b.length) {
+      empty++;
+      continue;
+    }
+    if (b.length === cap && b.every((x) => x === b[0])) solved++;
+  }
+  const corked = (state.locked || []).filter(Boolean).length;
+  const ksUnlocked = state.keystone?.unlocked ? 1 : 0;
+  return `${solved}/${state.bottles.length}|E${empty}|C${corked}|K${ksUnlocked}`;
+}
+
+function recordSoftDeadlockStep() {
+  const h = stateHashForDeadlock();
+  const p = progressSignature();
+
+  softDeadlockStates.push(h);
+  softDeadlockProgress.push(p);
+
+  if (softDeadlockStates.length > SOFT_DEADLOCK_WINDOW) softDeadlockStates.shift();
+  if (softDeadlockProgress.length > SOFT_DEADLOCK_WINDOW) softDeadlockProgress.shift();
+}
+
+function isSoftDeadlocked() {
+  // Not enough history to be confident.
+  if (softDeadlockStates.length < Math.min(8, SOFT_DEADLOCK_WINDOW)) return false;
+
+  // If we are already solved or have no moves, let the standard logic handle it.
+  try {
+    if (isSolved()) return false;
+    if (!hasAnyPlayableMove()) return false;
+  } catch {}
+
+  const windowStates = softDeadlockStates.slice(-SOFT_DEADLOCK_WINDOW);
+  const windowProgress = softDeadlockProgress.slice(-SOFT_DEADLOCK_WINDOW);
+
+  // (A) Exact state repetition: same state appears multiple times in the recent window.
+  const freq = new Map();
+  for (const s of windowStates) freq.set(s, (freq.get(s) || 0) + 1);
+  const maxRepeat = Math.max(...freq.values());
+
+  // (B) Stalled progress: progress signature unchanged for too many valid pours.
+  const lastP = windowProgress[windowProgress.length - 1];
+  let stall = 0;
+  for (let i = windowProgress.length - 1; i >= 0; i--) {
+    if (windowProgress[i] === lastP) stall++;
+    else break;
+  }
+
+  return maxRepeat >= SOFT_DEADLOCK_REPEAT_MIN && stall >= SOFT_DEADLOCK_STALL_MOVES;
 }
 
 /* ---------------- Instability helpers ---------------- */
@@ -1226,6 +1325,10 @@ function useFailMod(mod) {
 
     state.bottles.push([]);
     state.locked.push(false);
+
+    resetSoftDeadlock();
+
+    resetSoftDeadlock();
     state.hiddenSegs.push(false);
     state.sealedUnknown.push(false);
     state.revealDepthPct.push(1);
@@ -2387,6 +2490,9 @@ function uncorkAllCorkedBottles(reason = "uncork") {
     else showToast("Corks released.");
     render();
     redrawAllBottles();
+
+    resetSoftDeadlock();
+    recordSoftDeadlockStep();
   }
   return changed;
 }
@@ -2768,6 +2874,9 @@ function applyPourState(from, to) {
   // Rule #2: keystone unlock gate
   checkKeystoneUnlock();
 
+  // Soft-deadlock tracking (after a valid move updates state)
+  recordSoftDeadlockStep();
+
   // telemetry: keystone progress (designated bottle only)
   try {
     const ks = state.keystone;
@@ -2811,13 +2920,14 @@ function applyPourState(from, to) {
   render();
   redrawAllBottles();
 
-  if (!isSolved() && !hasAnyPlayableMove()) {
+  const softDead = isSoftDeadlocked();
+  if (!isSolved() && (!hasAnyPlayableMove() || softDead)) {
 
     pushTelemetry({
       eventType: "level_end",
       level: level,
       moveIndex: levelMoveIndex,
-      result: "deadlock",
+      result: softDead ? "soft_deadlock" : "deadlock",
       moves: sig.moves,
       invalid: sig.invalid,
       undos: sig.undos,
@@ -3082,6 +3192,9 @@ function startLevel() {
   renderThesisBar(currentThesisKey);
 
   generateBottlesFromRecipe(recipe);
+
+  resetSoftDeadlock();
+  recordSoftDeadlockStep();
 
 
   // telemetry: level start
