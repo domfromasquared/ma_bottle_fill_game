@@ -269,6 +269,7 @@ function restoreUndoSnapshot() {
 
   sig.moves = snap.sigMoves;
   sig.invalid = snap.sigInvalid;
+  sig.undos = snap.sigUndos ?? sig.undos;
 
   syncInfoPanel();
   render();
@@ -506,7 +507,7 @@ function setDMAvatar({ mood, frame, seedKey }) {
 }
 
 /* ---------------- BANK inference ---------------- */
-const sig = { moves: 0, invalid: 0, resets: 0, moveTimes: [], lastMoveAt: 0 };
+const sig = { moves: 0, invalid: 0, undos: 0, resets: 0, moveTimes: [], lastMoveAt: 0 };
 const avg = (arr) =>
   arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
 
@@ -728,7 +729,6 @@ function computeLevelConfig(levelArg = level, rng = null) {
     capacity: 4,
     bottleCount: null,
     emptyBottles: 2,
-    corkedBottles: 0,
     lockedBottles: 0,
     sealedUnknownBottles: 0,
     wildcardSlots: 0,
@@ -852,22 +852,22 @@ function pickLine(arr) {
 
 const MA_UNSTABLE_WARN_2 = {
   A: [
-    "You ignore a full mixed bottle for ten moves and call it ‘momentum’? Adorable.",
-    "Speed without attention breeds instability. Touch it—now.",
+    "You ignore a full mixed bottle for ten moves and call it âmomentumâ? Adorable.",
+    "Speed without attention breeds instability. Touch itânow.",
     "Your pace is impressive. Your discipline is not.",
   ],
   B: [
     "Structure decays when you abandon it. Stabilize the unattended bottle.",
-    "Order is maintained—never assumed. Return to the neglected vial.",
+    "Order is maintainedânever assumed. Return to the neglected vial.",
     "You left a mixed system unattended. Blueprint failure.",
   ],
   N: [
-    "That bottle is shaking because it’s been neglected. Calm it down.",
-    "Stability requires care. Don’t abandon a mixed vial.",
-    "You’re close. But you’re leaving chaos unattended.",
+    "That bottle is shaking because itâs been neglected. Calm it down.",
+    "Stability requires care. Donât abandon a mixed vial.",
+    "Youâre close. But youâre leaving chaos unattended.",
   ],
   K: [
-    "A mixed full bottle left untouched becomes unstable. Yes, it’s your fault.",
+    "A mixed full bottle left untouched becomes unstable. Yes, itâs your fault.",
     "Predictable. Neglected systems degrade. Intervene.",
     "You can compute anything except consequences.",
   ],
@@ -875,17 +875,17 @@ const MA_UNSTABLE_WARN_2 = {
 
 const MA_UNSTABLE_WARN_3 = {
   A: [
-    "Final warning. That vial is about to blow your ‘strategy’ apart.",
-    "You’ve got one job: stabilize the mixed bottle before it collapses.",
-    "This is not a race. It’s a ritual. Stabilize it.",
+    "Final warning. That vial is about to blow your âstrategyâ apart.",
+    "Youâve got one job: stabilize the mixed bottle before it collapses.",
+    "This is not a race. Itâs a ritual. Stabilize it.",
   ],
   B: [
     "Critical instability. A neglected mixed vial will collapse the level.",
     "Blueprints fail at the unattended step. Fix the unstable bottle.",
-    "Your plan is leaking. Stabilize the vial—now.",
+    "Your plan is leaking. Stabilize the vialânow.",
   ],
   N: [
-    "It’s critical. Please—stabilize the unstable bottle before it breaks the run.",
+    "Itâs critical. Pleaseâstabilize the unstable bottle before it breaks the run.",
     "One vial is screaming for attention. Calm it down.",
     "Care first. Then elegance. Stabilize it.",
   ],
@@ -1062,7 +1062,7 @@ function formatDMForPlayer(raw) {
 }
 
 function setDMSpeech({ title, body, small, paginate = true, maxChars = 260 }) {
-  questTitle.textContent = title || "—";
+  questTitle.textContent = title || "â";
   speechSmall.textContent = small || "";
 
   // Clear existing content; callers may append controls after
@@ -1214,6 +1214,7 @@ function useFailMod(mod) {
       showToast("No safe state to retract to.");
       return false;
     }
+    sig.undos++;
     spendUse("TEMPORAL_RETRACTION");
     maOneLiner(MODIFIERS.TEMPORAL_RETRACTION.maLine);
     deadlockActive = false;
@@ -1247,6 +1248,8 @@ function useFailMod(mod) {
     blockedBy: _pourInfo.blockedBy,
     fromType: bottleTypeForTelemetry(from),
     toType: bottleTypeForTelemetry(to),
+    lockedFrom: !!state.locked?.[from],
+    lockedTo: !!state.locked?.[to],
   });
       if (!canPour(from, to)) continue;
 
@@ -1292,8 +1295,8 @@ function showInstabilityFailDM() {
 
   const suggested = getFailModSuggestion();
   const hint = suggested
-    ? `BANK: ${bankPrimary} · Use a Modifier or Retry Level (✕ to auto-retry).`
-    : `BANK: ${bankPrimary} · Press Retry Level (or ✕ to auto-retry).`;
+    ? `BANK: ${bankPrimary} Â· Use a Modifier or Retry Level (â to auto-retry).`
+    : `BANK: ${bankPrimary} Â· Press Retry Level (or â to auto-retry).`;
 
   setDMSpeech({
     title: "Collapse.",
@@ -1301,7 +1304,7 @@ function showInstabilityFailDM() {
 
 Retry the level.
 
-And this time—touch the problem before it becomes the problem.`,
+And this timeâtouch the problem before it becomes the problem.`,
     small: hint,
   });
 
@@ -1397,14 +1400,14 @@ function renderGenReport() {
   if (!genReportEl) return;
   const r = state.genReport;
   if (!r) {
-    genReportEl.textContent = "—";
+    genReportEl.textContent = "â";
     return;
   }
 
   const lines = [];
   lines.push(`attempts: ${r.attempts_used}/${r.max_attempts}`);
   if (r.keystone_active) {
-    lines.push(`keystone: ${r.keystone_element || "—"} @ bottle ${r.keystone_bottle_index ?? "—"}`);
+    lines.push(`keystone: ${r.keystone_element || "â"} @ bottle ${r.keystone_bottle_index ?? "â"}`);
     if (typeof r.accessible_keystone === "number" && typeof r.capacity === "number") {
       lines.push(`keystone accessible: ${r.accessible_keystone}/${r.capacity}`);
     }
@@ -1424,23 +1427,23 @@ function syncInfoPanel() {
   infoLevel.textContent = String(level);
   infoMoves.textContent = String(sig.moves);
   infoInvalid.textContent = String(sig.invalid);
-  infoPlayer.textContent = getPlayerName() || "—";
-  infoThesis.textContent = thesisLabel.textContent.replace("Thesis: ", "") || "—";  renderGenReport();
+  infoPlayer.textContent = getPlayerName() || "â";
+  infoThesis.textContent = thesisLabel.textContent.replace("Thesis: ", "") || "â";  renderGenReport();
 }
 
 
 function renderThesisBar(thesisKey) {
   const thesis = thesisKey ? THESES[thesisKey] : null;
   if (!thesis) {
-    thesisLabel.textContent = "Thesis: —";
-    thesisSub.textContent = "—";
-    infoThesis.textContent = "—";
+    thesisLabel.textContent = "Thesis: â";
+    thesisSub.textContent = "â";
+    infoThesis.textContent = "â";
     return;
   }
   thesisLabel.textContent = `Thesis: ${thesis.name}`;
   thesisSub.textContent = `Must include: ${
-    (thesis.must_include || []).join(", ") || "—"
-  } · Must exclude: ${(thesis.must_exclude || []).join(", ") || "—"}`;
+    (thesis.must_include || []).join(", ") || "â"
+  } Â· Must exclude: ${(thesis.must_exclude || []).join(", ") || "â"}`;
   infoThesis.textContent = thesis.name;
 }
 
@@ -1456,11 +1459,11 @@ function renderGlossary() {
     item.innerHTML = `
       <div class="gSwatch" style="background:${el.color || "#fff"}"></div>
       <div>
-        <div class="gTitle">${el.symbol} — ${el.name}</div>
+        <div class="gTitle">${el.symbol} â ${el.name}</div>
         <div class="gSub">
           ${el.role ? `role: ${el.role}` : ""}
-          ${el.teaches ? `${el.role ? " · " : ""}teaches: ${el.teaches}` : ""}
-          ${el.punishes ? `${el.role || el.teaches ? " · " : ""}punishes: ${el.punishes}` : ""}
+          ${el.teaches ? `${el.role ? " Â· " : ""}teaches: ${el.teaches}` : ""}
+          ${el.punishes ? `${el.role || el.teaches ? " Â· " : ""}punishes: ${el.punishes}` : ""}
         </div>
       </div>
     `;
@@ -1629,6 +1632,7 @@ modSlot2?.addEventListener("click", () => {
       showToast("No safe state to retract to.");
       return;
     }
+    sig.undos++;
     spendUse("TEMPORAL_RETRACTION");
     maOneLiner(MODIFIERS.TEMPORAL_RETRACTION.maLine);
   });
@@ -1691,10 +1695,10 @@ async function getNameRoastFromServer(name) {
 function localNameRoast(name) {
   const n = String(name || "").trim();
   const refs = [
-    `“${n}”? And you felt comfortable submitting that.`,
-    `“${n}”… We’ll unpack that later.`,
-    `“${n}”… We’ll compensate for this decision.`,
-    `“${n}”… Yes. That tracks.`,
+    `â${n}â? And you felt comfortable submitting that.`,
+    `â${n}ââ¦ Weâll unpack that later.`,
+    `â${n}ââ¦ Weâll compensate for this decision.`,
+    `â${n}ââ¦ Yes. That tracks.`,
   ];
   return refs[Math.floor(Math.random() * refs.length)];
 }
@@ -1735,10 +1739,10 @@ function runFirstLoadIntro() {
     title: "At last.",
     body: `Welcome to The Balance Protocol.
 
-There’s a flaw in the lab — the mixtures are unstable.
+Thereâs a flaw in the lab â the mixtures are unstable.
 Your job is to restore order.
 
-Tell me… what do I call you?`,
+Tell meâ¦ what do I call you?`,
     small: "Enter a name (optional), then press Submit. Or skip.",
     paginate: true,
     maxChars: 240,
@@ -1750,7 +1754,7 @@ Tell me… what do I call you?`,
   row.style.alignItems = "center";
   row.style.marginTop = "10px";
 
-  const input = makeInput("Your name…");
+  const input = makeInput("Your nameâ¦");
   const submitBtn = makePrimaryBtn("Submit");
   const skipBtn = makePrimaryBtn("Skip");
 
@@ -1797,16 +1801,16 @@ Tell me… what do I call you?`,
     introStep = 2;
 
     setDMSpeech({
-      title: `…${saved}.`,
+      title: `â¦${saved}.`,
       body: `${roastRes.roast}
 
 Fine. ${saved} it is.
 
-The Balance Protocol doesn’t reward “busy.”
+The Balance Protocol doesnât reward âbusy.â
 It rewards alignment.
 
 Ready?`,
-      small: "Press Start Quest to begin. (✕ always cancels me.)",
+      small: "Press Start Quest to begin. (â always cancels me.)",
       paginate: true,
       maxChars: 240,
     });
@@ -1869,7 +1873,7 @@ function dmReactionForBANK(bankPrimary) {
         mood: "encouraging",
         title: "No moves left.",
         body:
-          "Breathe.\n\nYou’re close — but you protected the wrong stacks.\n\nRetry. Calm hands. Clean pours.",
+          "Breathe.\n\nYouâre close â but you protected the wrong stacks.\n\nRetry. Calm hands. Clean pours.",
       };
     case "K":
     default:
@@ -1877,7 +1881,7 @@ function dmReactionForBANK(bankPrimary) {
         mood: "amused",
         title: "No legal pours remain.",
         body:
-          "Ah. Classic.\n\nYou constructed a perfectly unsolvable state.\n\nRetry — and respect constraints before you pour.",
+          "Ah. Classic.\n\nYou constructed a perfectly unsolvable state.\n\nRetry â and respect constraints before you pour.",
       };
   }
 }
@@ -1897,8 +1901,8 @@ function showOutOfMovesDM() {
 
   const suggested = getFailModSuggestion();
   const hint = suggested
-    ? `BANK: ${bankPrimary} · Use a Modifier or Retry Level (✕ to auto-retry).`
-    : `BANK: ${bankPrimary} · Press Retry Level (or ✕ to auto-retry).`;
+    ? `BANK: ${bankPrimary} Â· Use a Modifier or Retry Level (â to auto-retry).`
+    : `BANK: ${bankPrimary} Â· Press Retry Level (or â to auto-retry).`;
 
   setDMSpeech({
     title: react.title,
@@ -1954,8 +1958,8 @@ async function runDMIfAvailable() {
     setDMAvatar({ mood: "annoyed", seedKey: 222 });
     setDMSpeech({
       title: "No server.",
-      body: "You didn’t connect the lab’s brain.\nSet API Base in Settings.",
-      small: "Open Settings (⚙️) → set API Base.",
+      body: "You didnât connect the labâs brain.\nSet API Base in Settings.",
+      small: "Open Settings (âï¸) â set API Base.",
     });
     return;
   }
@@ -2042,7 +2046,7 @@ function buildLocalRecipe() {
   const cfg = computeLevelConfig(level, makeRng(hashSeed(runSeed, 4242, level, 99001)));
   const elems = chooseElementsForThesis(currentThesisKey, cfg.colors, rng);
 
-  const recipe = {
+  return {
     title: `Level ${level}`,
     colors: cfg.colors,
     bottleCount: cfg.bottleCount,
@@ -2050,7 +2054,7 @@ function buildLocalRecipe() {
     emptyBottles: cfg.emptyBottles,
     corkedBottles: (cfg.corkedBottles ?? cfg.lockedBottles ?? 0),
     lockedBottles: cfg.lockedBottles, // backward compat
-    sealedUnknownBottles: (cfg.sealedUnknownBottles ?? 0),
+    sealedUnknownBottles: 0,
     wildcardSlots: cfg.wildcardSlots,
     // Rule #2 (optional per-level): element symbol that acts as Keystone. Solving a full bottle of this element uncorks all corked bottles.
     keystoneElementSym: null,
@@ -2061,14 +2065,6 @@ function buildLocalRecipe() {
     sinTags,
     appliedModifier: pendingModifier || null,
   };
-
-// Rule #2: Keystone activation
-// If the level has corked bottles, enable a Keystone element (deterministic pick from this level's element list).
-if ((recipe.corkedBottles ?? recipe.lockedBottles ?? 0) > 0 && !recipe.keystoneElementSym) {
-  recipe.keystoneElementSym = recipe.elements?.[0]?.sym ?? recipe.elements?.[0] ?? null;
-}
-
-return recipe;
 }
 
 function shuffle(arr, rng) {
@@ -2299,10 +2295,8 @@ function generateBottlesFromRecipe(recipe) {
       let assigned = 0;
       for (let i = bottleCount - 1; i >= 0 && assigned < suCount; i--) {
         if (state.locked[i]) continue;
-        const len = state.bottles[i]?.length || 0;
-        if (len === 0) continue; // never assign sealed-unknown to empty bottles
         state.sealedUnknown[i] = true;
-        state.revealDepthPct[i] = 1 / cap2; // start: only top segment visible
+        state.revealDepthPct[i] = state.bottles[i]?.length ? 1 / cap2 : 1;
         assigned++;
       }
     }
@@ -2368,7 +2362,6 @@ function generateBottlesFromRecipe(recipe) {
 
 
 function uncorkAllCorkedBottles(reason = "uncork") {
-  const corkedBefore = state.locked?.filter(Boolean)?.length ?? 0;
   let changed = false;
   for (let i = 0; i < state.bottles.length; i++) {
     if (state.locked[i]) {
@@ -2385,7 +2378,7 @@ function uncorkAllCorkedBottles(reason = "uncork") {
       level: level,
       moveIndex: levelMoveIndex,
       method: reason === "keystone" ? "keystone" : (reason === "deco" ? "deco_key" : "other"),
-      corkedCount: corkedBefore,
+      corkedCount: state.locked?.filter(Boolean)?.length ?? null,
     });
 
     playSFX(SFX.bottleOpened);
@@ -2593,14 +2586,14 @@ function drawBottleLiquid(i) {
   const innerH = Math.max(1, h - chTop - chBottom);
   const cellH = innerH / cap;
 
-  // Rule #3 (Sealed Unknown): only the CURRENT top segment is shown in true color.
-  // Lower segments remain clouded until they become the top segment.
-  // We still track revealDepthPct for telemetry/future FX, but it does NOT make multiple
-  // colored layers visible at once.
+  // Rule #3 (Sealed Unknown): revealDepthPct controls how many layers from the TOP are visible.
+  // Visible layer count is based on capacity (future-proof for different segment structures).
   const isSU = !!state.sealedUnknown?.[i];
   const fillCount = b.length;
   const pct = Number.isFinite(state.revealDepthPct?.[i]) ? state.revealDepthPct[i] : 1;
-  const visibleLayersFromTop = isSU ? 1 : cap;
+  const visibleLayersFromTop = isSU
+    ? Math.max(1, Math.min(cap, Math.ceil(Math.max(0, Math.min(1, pct)) * cap)))
+    : cap;
   const visibleCount = Math.min(fillCount, visibleLayersFromTop);
   const hiddenBelow = Math.max(0, fillCount - visibleCount);
 
@@ -2700,13 +2693,13 @@ function requestRedraw() {
 
 window.addEventListener("resize", requestRedraw, { passive: true });
 window.addEventListener("orientationchange", requestRedraw, { passive: true });
-// ✅ iOS Safari: address bar / toolbar changes don't always trigger window.resize until interaction
+// â iOS Safari: address bar / toolbar changes don't always trigger window.resize until interaction
 if (window.visualViewport) {
   window.visualViewport.addEventListener("resize", requestRedraw, { passive: true });
   window.visualViewport.addEventListener("scroll", requestRedraw, { passive: true });
 }
 
-// ✅ Force a redraw after first layout + after fonts settle
+// â Force a redraw after first layout + after fonts settle
 requestAnimationFrame(() => requestAnimationFrame(requestRedraw));
 document.fonts?.ready?.then?.(() => requestRedraw());
 setTimeout(requestRedraw, 80);
@@ -2714,6 +2707,9 @@ setTimeout(requestRedraw, 80);
 /* ---------------- Pour + win ---------------- */
 let levelInvalid = 0;
 let punishedThisLevel = false;
+
+// Rule #2 telemetry: track keystone bottle fill progress (designated bottle only)
+let lastKeystoneProgress = null;
 
 function applyPourState(from, to) {
   pushUndoSnapshot();
@@ -2736,38 +2732,30 @@ function applyPourState(from, to) {
     movedCount: amount,
     fromType: bottleTypeForTelemetry(from),
     toType: bottleTypeForTelemetry(to),
+    lockedFrom: !!state.locked?.[from],
+    lockedTo: !!state.locked?.[to],
   });
 
 
   for (let i = 0; i < amount; i++) b.push(a.pop());
 
   // Rule #3 (Sealed Unknown): each removed top segment reveals one deeper segment.
-if (amount > 0 && state.sealedUnknown?.[from]) {
-  const step = 1 / Math.max(1, state.capacity);
-  const cur = Number.isFinite(state.revealDepthPct?.[from]) ? state.revealDepthPct[from] : 1;
-  const next = Math.min(1, cur + step * amount);
+  if (amount > 0 && state.sealedUnknown?.[from]) {
+    const step = 1 / Math.max(1, state.capacity);
+    const cur = Number.isFinite(state.revealDepthPct?.[from])
+      ? state.revealDepthPct[from]
+      : 1;
+    state.revealDepthPct[from] = Math.min(1, cur + step * amount);
 
-  // If emptied, stop showing as partially revealed.
-  if (!state.bottles[from]?.length) {
-    state.revealDepthPct[from] = 1;
-  } else {
-    state.revealDepthPct[from] = next;
+    // telemetry: unknown reveal (Rule #3)
+    const nextReveal = state.revealDepthPct[from];
+    if (nextReveal > cur + 1e-6) {
+    // If emptied, stop showing as partially revealed.
+    if (!state.bottles[from]?.length) state.revealDepthPct[from] = 1;
   }
 
-  // telemetry: unknown reveal (Rule #3)
-  if (next > cur + 1e-6) {
-    pushTelemetry({
-      eventType: "unknown_reveal",
-      level: level,
-      moveIndex: levelMoveIndex,
-      bottleIndex: from,
-      revealDepthPctBefore: cur,
-      revealDepthPctAfter: state.revealDepthPct[from],
-      remainingSegments: state.bottles[from]?.length || 0,
-    });
   }
-}
-sig.moves++;
+  sig.moves++;
   syncInfoPanel();
 
   levelMoveIndex++;
@@ -2779,6 +2767,30 @@ sig.moves++;
 
   // Rule #2: keystone unlock gate
   checkKeystoneUnlock();
+
+  // telemetry: keystone progress (designated bottle only)
+  try {
+    const ks = state.keystone;
+    const bi = ks?.bottleIndex;
+    const target = ks?.idx;
+    if (bi !== null && bi !== undefined && Number.isInteger(bi) && target !== null && target !== undefined) {
+      const b = state.bottles[bi] || [];
+      const count = b.reduce((n,x)=> n + (x===target), 0);
+      if (lastKeystoneProgress === null) lastKeystoneProgress = count;
+      if (count !== lastKeystoneProgress) {
+        pushTelemetry({
+          eventType: "keystone_progress",
+          level: level,
+          moveIndex: levelMoveIndex,
+          bottleIndex: bi,
+          elementSym: ks.sym,
+          countInBottle: count,
+          delta: count - lastKeystoneProgress,
+        });
+        lastKeystoneProgress = count;
+      }
+    }
+  } catch {}
 
   if (isSolved()) {
 
@@ -3026,6 +3038,8 @@ uncorkAllCorkedBottles("deco");
     blockedBy: _pourInfo.blockedBy,
     fromType: bottleTypeForTelemetry(from),
     toType: bottleTypeForTelemetry(to),
+    lockedFrom: !!state.locked?.[from],
+    lockedTo: !!state.locked?.[to],
   });
 
   if (!canPour(from, to)) {
@@ -3059,6 +3073,7 @@ function startLevel() {
   deadlockActive = false;
   punishedThisLevel = false;
   levelInvalid = 0;
+  lastKeystoneProgress = null;
 
   resetModifiersForLevel();
 
@@ -3149,10 +3164,10 @@ function factoryResetGame() {
       body: `Good.
 
 Burn it down.
-We begin again — clean glass, clean ritual.
+We begin again â clean glass, clean ritual.
 
 Try not to disappoint me twice.`,
-      small: "Resetting…",
+      small: "Resettingâ¦",
     });
   } catch {}
 
